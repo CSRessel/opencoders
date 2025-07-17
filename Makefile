@@ -1,9 +1,14 @@
 .PHONY: generate-openapi build clean help
 
-# Generate OpenAPI specification
+# Generate OpenAPI specification (only if needed)
 generate-openapi:
-	@echo "Generating OpenAPI specification..."
+	@echo "Checking OpenAPI specification..."
 	@./scripts/generate-openapi.sh
+
+# Force regenerate OpenAPI specification
+generate-openapi-force:
+	@echo "Force generating OpenAPI specification..."
+	@./scripts/generate-openapi.sh --force
 
 # Build the Rust project
 build:
@@ -42,7 +47,8 @@ test-with-openapi: generate-openapi test
 # Show available commands
 help:
 	@echo "Available commands:"
-	@echo "  generate-openapi         Generate OpenAPI specification from opencode server"
+	@echo "  generate-openapi         Generate OpenAPI specification (only if needed)"
+	@echo "  generate-openapi-force   Force regenerate OpenAPI specification"
 	@echo "  build                    Build the project (uses committed openapi.json)"
 	@echo "  build-release            Build release version (uses committed openapi.json)"
 	@echo "  build-with-openapi       Build with fresh OpenAPI generation"

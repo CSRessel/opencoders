@@ -1,29 +1,57 @@
 # opencoders
 
-A Rust-based TUI client for the opencode headless server.
+A high-performance, terminal-native client for opencode built with Rust. This TUI provides a responsive interface for interacting with the opencode headless server, leveraging Rust's safety and performance characteristics for a superior developer experience.
 
-## Getting Started
+## Quick Start
 
-```
-# Setup wrapper monorepo for full opencode
+### Prerequisites
+- Rust toolchain (1.70+)
+- Git
+- GitHub CLI (optional, for cloning)
+- Bun toolchain (1.2+)
+
+### Installation
+
+```bash
+# Clone and setup the main opencode monorepo
 gh repo clone sst/opencode
-cd packages/opencode/
+cd opencode/packages/opencode/
 bun install
 
-# Setup the alternate TUI package
-cd ../
+# Navigate back and setup the Rust TUI client
+cd ../../
 gh repo clone CSRessel/opencoders
-cargo install
+cd opencoders
+cargo build --release
 
-# Run the project
+# Launch the TUI
 cargo run
 ```
 
-## OpenAPI Specification Updates
+<!--
+TODO once packaged correctly
+(deps on opencode executable on system)
 
-This package includes scripts to automatically generate the OpenAPI specification from the opencode server. The generated `openapi.json` file can be used for client code generation and API documentation.
+### Alternative Installation
+```bash
+# Install directly from source
+cargo install --git https://github.com/CSRessel/opencoders
+opencoders
+```
+-->
 
-### Usage
+## Features
+
+- **Native Performance**: Built with Rust for minimal resource usage and maximum responsiveness
+- **Terminal Integration**: Supports both alternate screen and inline modes for flexible usage
+- **Type-Safe API**: Auto-generated client bindings ensure compile-time API compatibility
+- **Async Architecture**: Non-blocking I/O keeps the interface responsive during server communication
+
+## API Integration
+
+The client maintains type-safe communication with the opencode server through automatically generated bindings. The OpenAPI specification is dynamically generated from the server to ensure perfect API compatibility.
+
+### OpenAPI Generation
 
 #### Using the Makefile (Recommended)
 
@@ -47,31 +75,65 @@ make clean
 make help
 ```
 
-#### Using Scripts Directly
-
-**Bash Script:**
+#### Manual Generation
 
 ```bash
+# Generate OpenAPI specification directly
 ./scripts/generate-openapi.sh
 ```
 
-#### CI Integration
+#### Continuous Integration
 
-For continuous integration, you can use either script:
+Integrate OpenAPI generation into your CI pipeline:
 
 ```yaml
-# GitHub Actions example
-- name: Generate OpenAPI spec
-  run: |
-    cd packages/opencoders
-    make generate-openapi
+# GitHub Actions workflow
+name: Build opencoders
+on: [push, pull_request]
 
-- name: Build opencoders
-  run: |
-    cd packages/opencoders
-    make build
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Generate API bindings
+        run: |
+          cd packages/opencoders
+          make generate-openapi
 ```
 
 ## Development
 
-The generated `openapi.json` file is excluded from version control via `.gitignore`. Always run the generation scripts before building or testing to ensure you have the latest API specification.
+### Architecture
+
+The application follows **The Elm Architecture** pattern for predictable state management:
+- **Model**: Single source of truth for application state
+- **Update**: Pure functions handling state transitions
+- **View**: Declarative UI rendering with `ratatui`
+
+### Key Dependencies
+- `ratatui` - Terminal UI framework
+- `tokio` - Async runtime
+- `reqwest` - HTTP client for server communication
+- `serde` - JSON serialization
+- `crossterm` - Cross-platform terminal control
+
+### Building from Source
+
+```bash
+# Development build
+cargo build
+
+# Optimized release build
+cargo build --release
+
+# Run tests
+cargo test
+
+# Generate fresh API bindings
+make generate-openapi
+```

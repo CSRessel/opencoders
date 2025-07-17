@@ -35,9 +35,9 @@ impl TestServer {
         // Start the opencode server process
         let mut process = Command::new("opencode")
             .args(&[
-                "server",
+                "serve",
                 "--port", &port.to_string(),
-                "--host", "127.0.0.1",
+                "--hostname", "127.0.0.1",
             ])
             .current_dir(temp_dir.path())
             .stdout(Stdio::piped())
@@ -125,7 +125,6 @@ impl Drop for TestServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio_test;
     
     #[tokio::test]
     async fn test_server_lifecycle() {

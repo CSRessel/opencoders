@@ -5,13 +5,8 @@
 
 mod common;
 
-use common::TestServer;
+use common::{TestServer, assert_api_success};
 use opencoders::sdk::OpenCodeClient;
-use std::fs;
-use std::path::Path;
-
-#[macro_use]
-extern crate opencoders;
 
 #[tokio::test]
 async fn smoke_test_file_status() {

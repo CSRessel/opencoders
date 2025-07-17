@@ -5,11 +5,8 @@
 
 mod common;
 
-use common::TestServer;
+use common::{TestServer, assert_api_success};
 use opencoders::sdk::OpenCodeClient;
-
-#[macro_use]
-extern crate opencoders;
 
 #[tokio::test]
 async fn smoke_test_session_list_empty() {

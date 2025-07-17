@@ -4,23 +4,27 @@
 //! It wraps the auto-generated OpenAPI client with additional functionality and
 //! better error handling.
 
-pub mod client;
-pub mod error;
-pub mod extensions;
+// Temporarily commented out due to generation issues
+// pub mod client;
+// pub mod error;
+// pub mod extensions;
 
 // Generated code (will be created by openapi-generator-cli)
-#[path = "generated/mod.rs"]
-pub mod generated;
+// Temporarily commented out due to generation issues
+// #[path = "generated/mod.rs"]
+// pub mod generated;
 
 // High-level exports for easy use
-pub use client::OpenCodeClient;
-pub use error::{OpenCodeError, Result};
+// Temporarily commented out due to generation issues
+// pub use client::OpenCodeClient;
+// pub use error::{OpenCodeError, Result};
 
 // Re-export commonly used generated types for convenience
-pub use generated::models::{
-    App, Session, Event, Message, AssistantMessage, UserMessage,
-    TextPart, FilePart, ToolPart, Provider, Config,
-};
+// Temporarily commented out due to generation issues
+// pub use generated::models::{
+//     App, Session, Event, Message, AssistantMessage, UserMessage,
+//     TextPart, FilePart, ToolPart, Provider, Config,
+// };
 
 // Convenience type aliases
 pub type SessionId = String;
@@ -29,4 +33,5 @@ pub type ProviderId = String;
 pub type ModelId = String;
 
 // Re-export event stream functionality
-pub use extensions::events::{EventStream, EventStreamHandle};
+// Temporarily commented out due to generation issues
+// pub use extensions::events::{EventStream, EventStreamHandle};

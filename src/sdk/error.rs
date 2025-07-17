@@ -1,6 +1,7 @@
 //! Error types for the OpenCode SDK
 
 use thiserror::Error;
+use crate::sdk::generated::apis;
 
 /// Main error type for the OpenCode SDK
 #[derive(Error, Debug)]
@@ -130,6 +131,23 @@ impl OpenCodeError {
         match self {
             Self::Api { status, .. } => *status >= 500,
             _ => false,
+        }
+    }
+}
+
+// Generic From implementation for generated API errors
+impl<T> From<apis::Error<T>> for OpenCodeError {
+    fn from(error: apis::Error<T>) -> Self {
+        match error {
+            apis::Error::Reqwest(e) => OpenCodeError::Http(e),
+            apis::Error::Serde(e) => OpenCodeError::Serialization(e),
+            apis::Error::Io(e) => OpenCodeError::Unexpected(e.to_string()),
+            apis::Error::ResponseError(response) => {
+                OpenCodeError::Api {
+                    status: response.status.as_u16(),
+                    message: response.content,
+                }
+            }
         }
     }
 }

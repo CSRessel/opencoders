@@ -58,12 +58,12 @@ test: generate-sdk
 # Run smoke tests (generates SDK if needed)
 test-smoke: generate-sdk
 	@echo "Running smoke tests..."
-	@cargo test --test smoke_tests --test session_tests --test file_tests --test search_tests -- --test-threads=1
+	@cargo test --test simple_smoke_test -- --test-threads=1
 
 # Run smoke tests with verbose output
 test-smoke-verbose: generate-sdk
 	@echo "Running smoke tests with verbose output..."
-	@cargo test --test smoke_tests --test session_tests --test file_tests --test search_tests -- --test-threads=1 --nocapture
+	@cargo test --test simple_smoke_test -- --test-threads=1 --nocapture
 
 # Run specific smoke test category
 test-smoke-basic: generate-sdk

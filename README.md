@@ -1,8 +1,25 @@
-# OpenCoders
+# opencoders
 
-A Rust-based client for the opencode API.
+A Rust-based TUI client for the opencode headless server.
 
-## OpenAPI Specification Generation
+## Getting Started
+
+```
+# Setup wrapper monorepo for full opencode
+gh repo clone sst/opencode
+cd packages/opencode/
+bun install
+
+# Setup the alternate TUI package
+cd ../
+gh repo clone CSRessel/opencoders
+cargo install
+
+# Run the project
+cargo run
+```
+
+## OpenAPI Specification Updates
 
 This package includes scripts to automatically generate the OpenAPI specification from the opencode server. The generated `openapi.json` file can be used for client code generation and API documentation.
 

@@ -48,30 +48,51 @@ fn create_colored_ascii_text<'a>(letters: &[Vec<&'a str>], colors: &[Color]) -> 
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[rustfmt::skip]
     let letters = vec![
-        vec!["▄▀▀▄", "█░░█", " ▀▀ "], // o
-        vec!["▄▀▀█", "█░░█", "█▀▀ "], // p
-        vec!["▄▀▀▀", "█▀▀▀", " ▀▀▀"], // e
-        vec!["█▀▀▄", "█░░█", "▀  ▀"], // n
-        vec!["▄▀▀▀", "█░░░", " ▀▀▀"], // c
-        vec!["▄▀▀▄", "█░░█", " ▀▀ "], // o
-        vec!["█▀▀▄", "█░░█", "▀▀▀ "], // d
-        vec!["▄▀▀▀", "█▀▀▀", " ▀▀▀"], // e
-        vec!["█▀▀█", "█▀▀▄", "▀  ▀"], // r
-        vec!["▄▀▀▀", "▀▀▀█", "▀▀▀ "], // s
+        vec!["▄▀▀▄",
+             "█░░█",
+             " ▀▀ "], // o
+        vec!["▄▀▀█",
+             "█░░█",
+             "█▀▀ "], // p
+        vec!["▄▀▀▀",
+             "█▀▀▀",
+             " ▀▀▀"], // e
+        vec!["█▀▀▄",
+             "█░░█",
+             "▀  ▀"], // n
+        vec!["▄▀▀▀",
+             "█░░░",
+             " ▀▀▀"], // c
+        vec!["▄▀▀▄",
+             "█░░█",
+             " ▀▀ "], // o
+        vec!["█▀▀▄",
+             "█░░█",
+             "▀▀▀ "], // d
+        vec!["▄▀▀▀",
+             "█▀▀▀",
+             " ▀▀▀"], // e
+        vec!["█▀▀█",
+             "█▀▀▄",
+             "▀  ▀"], // r
+        vec!["▄▀▀▀",
+             "▀▀▀█",
+             "▀▀▀ "], // s
     ];
 
     let colors = vec![
-        Color::Red,
-        Color::Yellow,
-        Color::Green,
-        Color::Cyan,
-        Color::Blue,
-        Color::Magenta,
+        Color::Gray,
+        Color::Gray,
+        Color::Gray,
+        Color::Gray,
+        Color::White,
+        Color::White,
+        Color::White,
         Color::White,
         Color::Gray,
-        Color::LightRed,
-        Color::LightYellow,
+        Color::Gray,
     ];
 
     // Setup terminal

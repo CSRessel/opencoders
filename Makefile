@@ -55,8 +55,38 @@ test: generate-sdk
 	@echo "Running tests..."
 	@cargo test
 
+# Run smoke tests (generates SDK if needed)
+test-smoke: generate-sdk
+	@echo "Running smoke tests..."
+	@cargo test --test smoke_tests --test session_tests --test file_tests --test search_tests -- --test-threads=1
+
+# Run smoke tests with verbose output
+test-smoke-verbose: generate-sdk
+	@echo "Running smoke tests with verbose output..."
+	@cargo test --test smoke_tests --test session_tests --test file_tests --test search_tests -- --test-threads=1 --nocapture
+
+# Run specific smoke test category
+test-smoke-basic: generate-sdk
+	@echo "Running basic connectivity smoke tests..."
+	@cargo test --test smoke_tests -- --nocapture
+
+test-smoke-sessions: generate-sdk
+	@echo "Running session management smoke tests..."
+	@cargo test --test session_tests -- --nocapture
+
+test-smoke-files: generate-sdk
+	@echo "Running file operations smoke tests..."
+	@cargo test --test file_tests -- --nocapture
+
+test-smoke-search: generate-sdk
+	@echo "Running search operations smoke tests..."
+	@cargo test --test search_tests -- --nocapture
+
 # Run tests with fresh OpenAPI and SDK generation
 test-with-openapi: generate-openapi generate-sdk-force test
+
+# Run smoke tests with fresh OpenAPI and SDK generation
+test-smoke-with-openapi: generate-openapi generate-sdk-force test-smoke
 
 # Development workflow - quick iteration
 dev: generate-sdk
@@ -81,7 +111,14 @@ help:
 	@echo "  build-with-openapi       Build with fresh OpenAPI and SDK generation"
 	@echo "  build-release-with-openapi Build release with fresh OpenAPI and SDK generation"
 	@echo "  test                     Run tests (generates SDK if needed)"
+	@echo "  test-smoke               Run smoke tests against real opencode server"
+	@echo "  test-smoke-verbose       Run smoke tests with verbose output"
+	@echo "  test-smoke-basic         Run basic connectivity smoke tests"
+	@echo "  test-smoke-sessions      Run session management smoke tests"
+	@echo "  test-smoke-files         Run file operations smoke tests"
+	@echo "  test-smoke-search        Run search operations smoke tests"
 	@echo "  test-with-openapi        Run tests with fresh OpenAPI and SDK generation"
+	@echo "  test-smoke-with-openapi  Run smoke tests with fresh OpenAPI and SDK generation"
 	@echo "  dev                      Development workflow - quick iteration"
 	@echo "  check                    Check generated code with clippy"
 	@echo "  clean                    Clean build artifacts (preserves committed files)"

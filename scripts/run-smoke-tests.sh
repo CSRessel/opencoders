@@ -90,7 +90,11 @@ run_smoke_tests() {
     fi
     
     local test_files=(
-        "simple_smoke_test"
+        "simple_smoke_test",
+        # "file_tests",
+        # "search_tests"
+        # "session_tests",
+        # "smoke_tests",
     )
     
     local failed_tests=()

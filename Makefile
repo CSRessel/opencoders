@@ -19,7 +19,7 @@ generate-sdk:
 # Force regenerate SDK (cleans first)
 generate-sdk-force:
 	@echo "Force regenerating Rust SDK..."
-	@rm -rf src/sdk/generated
+	@rm -rf opencode-sdk
 	@chmod +x scripts/generate-sdk.sh
 	@./scripts/generate-sdk.sh
 
@@ -48,7 +48,7 @@ clean:
 clean-all: clean
 	@echo "Removing generated files..."
 	@rm -f openapi.json
-	@rm -rf src/sdk/generated
+	@rm -rf opencode-sdk
 
 # Run tests (generates SDK if needed)
 test: generate-sdk

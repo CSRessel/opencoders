@@ -1,14 +1,16 @@
+mod sdk;
+
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
-    Terminal,
     backend::CrosstermBackend,
     style::{Color, Style},
     text::{Line, Span, Text},
     widgets::Paragraph,
+    Terminal,
 };
 use std::io;
 
@@ -28,7 +30,9 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>, Box<dyn st
     Ok(terminal)
 }
 
-fn cleanup_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) -> Result<(), Box<dyn std::error::Error>> {
+fn cleanup_terminal(
+    mut terminal: Terminal<CrosstermBackend<io::Stdout>>,
+) -> Result<(), Box<dyn std::error::Error>> {
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -129,7 +133,10 @@ fn wait_for_exit() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn render_welcome_screen(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, text: &Text) -> Result<(), Box<dyn std::error::Error>> {
+fn render_welcome_screen(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    text: &Text,
+) -> Result<(), Box<dyn std::error::Error>> {
     terminal.draw(|f| {
         let paragraph = Paragraph::new(text.clone());
         f.render_widget(paragraph, f.area());
@@ -140,12 +147,12 @@ fn render_welcome_screen(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (letters, colors) = get_opencoders_ascii_art();
     let mut terminal = setup_terminal()?;
-    
+
     let colored_text = create_colored_ascii_text(&letters, &colors);
     render_welcome_screen(&mut terminal, &colored_text)?;
-    
+
     wait_for_exit()?;
     cleanup_terminal(terminal)?;
-    
+
     Ok(())
 }

@@ -3,8 +3,8 @@
 use crate::common::{find_available_port, wait_for_server_ready, TestConfig};
 use anyhow::{Context, Result};
 use std::process::Stdio;
-use tokio::process::{Child, Command};
 use tempfile::TempDir;
+use tokio::process::{Child, Command};
 
 /// Manages a test instance of the opencode server
 pub struct TestServer {
@@ -19,24 +19,29 @@ impl TestServer {
     pub async fn start() -> Result<Self> {
         Self::start_with_config(TestConfig::default()).await
     }
-    
+
     /// Start a new test server instance with custom configuration
     pub async fn start_with_config(config: TestConfig) -> Result<Self> {
         // Create a temporary directory for the test
-        let temp_dir = tempfile::tempdir()
-            .context("Failed to create temporary directory")?;
-        
+        let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
+
         // Find an available port
-        let port = find_available_port().await
+        let port = find_available_port()
+            .await
             .context("Failed to find available port")?;
-        
-        println!("Starting test server on port {} in directory {:?}", port, temp_dir.path());
-        
+        let port = 8080;
+
+        println!(
+            "Starting test server on port {} in directory {:?}",
+            port,
+            temp_dir.path()
+        );
+
         // Start the opencode server process
         let mut process = Command::new("opencode")
             .args(&[
                 "serve",
-                "--port", &port.to_string(),
+                "--port", "8081",
                 "--hostname", "127.0.0.1",
             ])
             .current_dir(temp_dir.path())
@@ -44,9 +49,9 @@ impl TestServer {
             .stderr(Stdio::piped())
             .spawn()
             .context("Failed to start opencode server. Make sure 'opencode' is installed and available in PATH")?;
-        
+
         let base_url = format!("http://127.0.0.1:{}", port);
-        
+
         // Wait for the server to be ready
         match wait_for_server_ready(port, config.server_timeout).await {
             Ok(()) => {
@@ -65,17 +70,17 @@ impl TestServer {
             }
         }
     }
-    
+
     /// Get the base URL of the test server
     pub fn base_url(&self) -> &str {
         &self.base_url
     }
-    
+
     /// Get the port the server is running on
     pub fn port(&self) -> u16 {
         self.port
     }
-    
+
     /// Check if the server process is still running
     pub fn is_running(&mut self) -> bool {
         match self.process.try_wait() {
@@ -84,16 +89,16 @@ impl TestServer {
             Err(_) => false,      // Error checking status, assume not running
         }
     }
-    
+
     /// Gracefully shutdown the server
     pub async fn shutdown(mut self) -> Result<()> {
         println!("Shutting down test server on port {}", self.port);
-        
+
         // Try to terminate gracefully first
         if let Err(e) = self.process.kill().await {
             eprintln!("Warning: Failed to kill server process: {}", e);
         }
-        
+
         // Wait for the process to exit
         match self.process.wait().await {
             Ok(status) => {
@@ -107,7 +112,7 @@ impl TestServer {
                 eprintln!("Warning: Error waiting for server to exit: {}", e);
             }
         }
-        
+
         Ok(())
     }
 }
@@ -116,7 +121,10 @@ impl Drop for TestServer {
     fn drop(&mut self) {
         // Ensure the process is killed when the TestServer is dropped
         if self.is_running() {
-            println!("Force killing server process on port {} during cleanup", self.port);
+            println!(
+                "Force killing server process on port {} during cleanup",
+                self.port
+            );
             let _ = self.process.start_kill();
         }
     }
@@ -125,18 +133,24 @@ impl Drop for TestServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_server_lifecycle() {
         // This test verifies that we can start and stop a test server
-        let server = TestServer::start().await.expect("Failed to start test server");
-        
+        let server = TestServer::start()
+            .await
+            .expect("Failed to start test server");
+
         // Verify server is accessible
         let client = reqwest::Client::new();
-        let response = client.get(&format!("{}/app", server.base_url())).send().await;
+        let response = client
+            .get(&format!("{}/app", server.base_url()))
+            .send()
+            .await;
         assert!(response.is_ok(), "Server should be accessible");
-        
+
         // Shutdown server
         server.shutdown().await.expect("Failed to shutdown server");
     }
 }
+

@@ -29,7 +29,7 @@ impl TestServer {
         let port = find_available_port()
             .await
             .context("Failed to find available port")?;
-        let port = 8080;
+        // let port = 8080;
 
         println!(
             "Starting test server on port {} in directory {:?}",
@@ -41,7 +41,7 @@ impl TestServer {
         let mut process = Command::new("opencode")
             .args(&[
                 "serve",
-                "--port", "8081",
+                "--port", &port.to_string(),
                 "--hostname", "127.0.0.1",
             ])
             .current_dir(temp_dir.path())
@@ -153,4 +153,3 @@ mod tests {
         server.shutdown().await.expect("Failed to shutdown server");
     }
 }
-

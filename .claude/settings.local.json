@@ -4,7 +4,8 @@
       "Bash(cargo check:*)",
       "Bash(cargo build:*)",
       "Bash(cargo test:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(./scripts/run-smoke-tests.sh:*)"
     ],
     "deny": []
   }

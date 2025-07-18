@@ -17,7 +17,7 @@ pub use error::{OpenCodeError, Result};
 // Re-export commonly used generated types for convenience
 // Temporarily commented out due to generation issues
 pub use opencode_sdk::models::{
-    App, AssistantMessage, Config, Event, FilePart, Message, Provider, Session, TextPart, ToolPart,
+    App, AssistantMessage, Config, Event, FilePart, Message, Mode, Provider, Session, TextPart, ToolPart,
     UserMessage,
 };
 

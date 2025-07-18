@@ -6,7 +6,7 @@
 mod common;
 
 use common::{assert_api_success, TestServer};
-use opencoder_sdk::OpenCodeClient;
+use opencoders::sdk::OpenCodeClient;
 
 #[tokio::test]
 async fn smoke_test_find_files() {

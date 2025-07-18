@@ -6,13 +6,12 @@ use crate::sdk::{
 };
 use opencode_sdk::{
     apis::{configuration::Configuration, default_api},
-    models::*,
+    models::{*, post_log_request},
 };
 use reqwest::Client;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-type DefaultApi = ();
 
 /// High-level client for the OpenCode API
 ///
@@ -105,7 +104,10 @@ impl OpenCodeClient {
 
     /// Delete a session
     pub async fn delete_session(&self, session_id: &str) -> Result<bool> {
-        default_api::delete_session_by_id(&self.config, session_id)
+        let params = default_api::DeleteSessionByIdParams {
+            id: session_id.to_string(),
+        };
+        default_api::delete_session_by_id(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -124,28 +126,42 @@ impl OpenCodeClient {
             model_id: model_id.to_string(),
         };
 
-        default_api::post_session_by_id_init(&self.config, request)
+        let params = default_api::PostSessionByIdInitParams {
+            id: session_id.to_string(),
+            post_session_by_id_init_request: Some(request),
+        };
+
+        default_api::post_session_by_id_init(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Abort a session
     pub async fn abort_session(&self, session_id: &str) -> Result<bool> {
-        default_api::post_session_by_id_abort(&self.config, session_id)
+        let params = default_api::PostSessionByIdAbortParams {
+            id: session_id.to_string(),
+        };
+        default_api::post_session_by_id_abort(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Share a session
     pub async fn share_session(&self, session_id: &str) -> Result<Session> {
-        default_api::post_session_by_id_share(&self.config, session_id)
+        let params = default_api::PostSessionByIdShareParams {
+            id: session_id.to_string(),
+        };
+        default_api::post_session_by_id_share(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Unshare a session
     pub async fn unshare_session(&self, session_id: &str) -> Result<Session> {
-        default_api::delete_session_by_id_share(&self.config, session_id)
+        let params = default_api::DeleteSessionByIdShareParams {
+            id: session_id.to_string(),
+        };
+        default_api::delete_session_by_id_share(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -162,7 +178,12 @@ impl OpenCodeClient {
             model_id: model_id.to_string(),
         };
 
-        default_api::post_session_by_id_summarize(&self.config, request)
+        let params = default_api::PostSessionByIdSummarizeParams {
+            id: session_id.to_string(),
+            post_session_by_id_summarize_request: Some(request),
+        };
+
+        default_api::post_session_by_id_summarize(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -174,7 +195,10 @@ impl OpenCodeClient {
         &self,
         session_id: &str,
     ) -> Result<Vec<GetSessionByIdMessage200ResponseInner>> {
-        default_api::get_session_by_id_message(&self.config, session_id)
+        let params = default_api::GetSessionByIdMessageParams {
+            id: session_id.to_string(),
+        };
+        default_api::get_session_by_id_message(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -188,7 +212,10 @@ impl OpenCodeClient {
 
     /// Read a file
     pub async fn read_file(&self, path: &str) -> Result<GetFile200Response> {
-        default_api::get_file(&self.config, path)
+        let params = default_api::GetFileParams {
+            path: path.to_string(),
+        };
+        default_api::get_file(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -204,21 +231,30 @@ impl OpenCodeClient {
 
     /// Find text in files
     pub async fn find_text(&self, pattern: &str) -> Result<Vec<Match>> {
-        default_api::get_find(&self.config, pattern)
+        let params = default_api::GetFindParams {
+            pattern: pattern.to_string(),
+        };
+        default_api::get_find(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Find files
     pub async fn find_files(&self, query: &str) -> Result<Vec<String>> {
-        default_api::get_find_file(&self.config, query)
+        let params = default_api::GetFindFileParams {
+            query: query.to_string(),
+        };
+        default_api::get_find_file(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Find symbols
     pub async fn find_symbols(&self, query: &str) -> Result<Vec<Symbol>> {
-        default_api::get_find_symbol(&self.config, query)
+        let params = default_api::GetFindSymbolParams {
+            query: query.to_string(),
+        };
+        default_api::get_find_symbol(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -229,18 +265,30 @@ impl OpenCodeClient {
     pub async fn write_log(
         &self,
         service: &str,
-        level: &str,
+        level: LogLevel,
         message: &str,
-        extra: Option<serde_json::Value>,
+        extra: Option<std::collections::HashMap<String, serde_json::Value>>,
     ) -> Result<bool> {
+        // Convert LogLevel to the Level enum expected by PostLogRequest
+        let post_log_level = match level {
+            LogLevel::Debug => post_log_request::Level::Debug,
+            LogLevel::Info => post_log_request::Level::Info,
+            LogLevel::Warn => post_log_request::Level::Warn,
+            LogLevel::Error => post_log_request::Level::Error,
+        };
+
         let request = PostLogRequest {
             service: service.to_string(),
-            level: level.to_string(),
+            level: post_log_level,
             message: message.to_string(),
             extra,
         };
 
-        default_api::post_log(&self.config, request)
+        let params = default_api::PostLogParams {
+            post_log_request: Some(request),
+        };
+
+        default_api::post_log(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -249,7 +297,7 @@ impl OpenCodeClient {
 
     /// Subscribe to real-time events
     pub async fn subscribe_to_events(&mut self) -> Result<EventStreamHandle> {
-        let stream = EventStream::new().await?;
+        let stream = EventStream::new(self.config.clone()).await?;
         let handle = stream.handle();
         self.event_stream = Some(Arc::new(RwLock::new(stream)));
         Ok(handle)
@@ -304,42 +352,42 @@ impl MessageBuilder {
 
     /// Add a text part to the message
     pub fn add_text_part(mut self, text: &str) -> Self {
-        // Note: The exact structure will depend on the generated types
-        // This is a placeholder that will need to be adjusted based on the actual generated code
-        self.parts
-            .push(PostSessionByIdMessageRequestPartsInner::TextPart(
-                TextPart {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    session_id: self.session_id.clone(),
-                    message_id: self.message_id.clone().unwrap_or_default(),
-                    r#type: "text".to_string(),
-                    text: text.to_string(),
-                    synthetic: None,
-                    time: None,
-                },
-            ));
+        let part = PostSessionByIdMessageRequestPartsInner {
+            id: uuid::Uuid::new_v4().to_string(),
+            session_id: self.session_id.clone(),
+            message_id: self.message_id.clone().unwrap_or_default(),
+            r#type: "text".to_string(),
+            mime: "text/plain".to_string(),
+            filename: None,
+            url: "".to_string(),
+            text: text.to_string(),
+            synthetic: None,
+            time: None,
+        };
+        self.parts.push(part);
         self
     }
 
     /// Add a file part to the message
     pub fn add_file_part(mut self, filename: &str, mime: &str, url: &str) -> Self {
-        self.parts
-            .push(PostSessionByIdMessageRequestPartsInner::FilePart(
-                FilePart {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    session_id: self.session_id.clone(),
-                    message_id: self.message_id.clone().unwrap_or_default(),
-                    r#type: "file".to_string(),
-                    mime: mime.to_string(),
-                    filename: Some(filename.to_string()),
-                    url: url.to_string(),
-                },
-            ));
+        let part = PostSessionByIdMessageRequestPartsInner {
+            id: uuid::Uuid::new_v4().to_string(),
+            session_id: self.session_id.clone(),
+            message_id: self.message_id.clone().unwrap_or_default(),
+            r#type: "file".to_string(),
+            mime: mime.to_string(),
+            filename: Some(filename.to_string()),
+            url: url.to_string(),
+            text: "".to_string(),
+            synthetic: None,
+            time: None,
+        };
+        self.parts.push(part);
         self
     }
 
     /// Send the message
-    pub async fn send(self) -> Result<AssistantMessage> {
+    pub async fn send(self, config: &Configuration) -> Result<AssistantMessage> {
         let request = PostSessionByIdMessageRequest {
             message_id: self
                 .message_id
@@ -356,7 +404,12 @@ impl MessageBuilder {
             parts: self.parts,
         };
 
-        default_api::post_session_by_id_message(&self.session_id, request)
+        let params = default_api::PostSessionByIdMessageParams {
+            id: self.session_id,
+            post_session_by_id_message_request: Some(request),
+        };
+
+        default_api::post_session_by_id_message(config, params)
             .await
             .map_err(OpenCodeError::from)
     }

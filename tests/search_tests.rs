@@ -85,7 +85,7 @@ async fn smoke_test_find_text() {
 
                 // Verify match structure if we have results
                 for match_result in &matches {
-                    common::assert_string_not_empty(&match_result.path, "match file path");
+                    common::assert_string_not_empty(&match_result.path.text, "match file path");
                     // Note: We don't validate line numbers or content as they depend on the specific files
                 }
             }

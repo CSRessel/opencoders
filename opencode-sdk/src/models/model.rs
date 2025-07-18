@@ -31,12 +31,12 @@ pub struct Model {
     pub cost: Box<models::ConfigProviderValueModelsValueCost>,
     #[serde(rename = "limit")]
     pub limit: Box<models::ConfigProviderValueModelsValueLimit>,
-    #[serde(rename = "options")]
-    pub options: std::collections::HashMap<String, serde_json::Value>,
+    #[serde(rename = "options", skip_serializing_if = "Option::is_none")]
+    pub options: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
 impl Model {
-    pub fn new(id: String, name: String, release_date: String, attachment: bool, reasoning: bool, temperature: bool, tool_call: bool, cost: models::ConfigProviderValueModelsValueCost, limit: models::ConfigProviderValueModelsValueLimit, options: std::collections::HashMap<String, serde_json::Value>) -> Model {
+    pub fn new(id: String, name: String, release_date: String, attachment: bool, reasoning: bool, temperature: bool, tool_call: bool, cost: models::ConfigProviderValueModelsValueCost, limit: models::ConfigProviderValueModelsValueLimit) -> Model {
         Model {
             id,
             name,
@@ -47,7 +47,7 @@ impl Model {
             tool_call,
             cost: Box::new(cost),
             limit: Box::new(limit),
-            options,
+            options: None,
         }
     }
 }

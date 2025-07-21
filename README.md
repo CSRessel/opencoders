@@ -1,8 +1,18 @@
 # opencoders
 
-A high-performance, terminal-native client for opencode built with Rust. This TUI provides a responsive interface for interacting with the opencode headless server, leveraging Rust's safety and performance characteristics for a superior developer experience.
+A high-performance, terminal-native client for opencode built with Rust.
+This TUI provides a responsive interface for interacting with the opencode headless server, leveraging Rust's characteristics for a superior TUI experience:
+enforcement of no multiple ownership reduces bugs in a multi-session implementation,
+strict compile-time type checking enforces all allowable program states,
+and highly performant execution provides a responsiveness you can feel.
 
 ## Quick Start
+
+> [!WARNING]
+> **Currently this tool is WIP.**
+>
+> The below steps are for a development setup, and are not yet friendly for a
+> convenient end-user installation.
 
 ### Prerequisites
 - Rust toolchain (1.70+)
@@ -49,7 +59,8 @@ opencoders
 
 ## API Integration
 
-The client maintains type-safe communication with the opencode server through automatically generated bindings. The OpenAPI specification is dynamically generated from the server to ensure perfect API compatibility.
+The client maintains type-safe communication with the opencode server through automatically generated bindings.
+The OpenAPI specification is dynamically generated from the server to ensure perfect API compatibility.
 
 ### OpenAPI Generation
 
@@ -119,8 +130,6 @@ The application follows **The Elm Architecture** pattern for predictable state m
 - `ratatui` - Terminal UI framework
 - `tokio` - Async runtime
 - `reqwest` - HTTP client for server communication
-- `serde` - JSON serialization
-- `crossterm` - Cross-platform terminal control
 
 ### Building from Source
 

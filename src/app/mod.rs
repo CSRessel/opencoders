@@ -1,13 +1,13 @@
-mod components;
-mod model;
-mod msg;
-mod program;
-mod subscriptions;
-mod terminal;
-mod update;
-mod view;
+mod app_program;
+mod event_msg;
+mod event_subscriptions;
+mod tea_model;
+mod tea_update;
+mod tea_view;
+mod ui_components;
+mod ui_terminal;
 
-pub use program::Program;
+pub use app_program::Program;
 
 const INLINE_MODE: bool = false;
 

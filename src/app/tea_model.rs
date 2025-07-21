@@ -1,4 +1,4 @@
-use crate::app::components::TextInput;
+use crate::app::ui_components::TextInput;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
@@ -18,7 +18,7 @@ impl Model {
     pub fn new() -> Self {
         let mut text_input = TextInput::new();
         text_input.set_focus(true);
-        
+
         Model {
             state: AppState::Welcome,
             text_input,
@@ -26,3 +26,4 @@ impl Model {
         }
     }
 }
+

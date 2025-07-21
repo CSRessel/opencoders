@@ -4,7 +4,7 @@ pub enum Msg {
     Backspace,
     SubmitInput,
     ClearInput,
-    ChangeState(crate::app::model::AppState),
+    ChangeState(crate::app::tea_model::AppState),
     Quit,
 }
 
@@ -18,3 +18,4 @@ pub enum Cmd {
 pub enum Sub {
     KeyboardInput,
 }
+

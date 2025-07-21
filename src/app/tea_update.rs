@@ -30,6 +30,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             model.text_input.clear();
             model.last_input = None;
             model.input_history.clear();
+            model.printed_to_stdout_count = 0;
             (model, Cmd::None)
         }
 
@@ -39,6 +40,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 model.text_input.clear();
                 model.last_input = None;
                 model.input_history.clear();
+                model.printed_to_stdout_count = 0;
             }
             (model, Cmd::None)
         }

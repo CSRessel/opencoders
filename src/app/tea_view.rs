@@ -1,9 +1,6 @@
-use crate::app::{
-    tea_model::{AppState, Model},
-    ui_components::MessageHistory,
-};
+use crate::app::tea_model::{AppState, Model};
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Alignment},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Style},
     text::{Line, Span, Text},
     widgets::Paragraph,
@@ -25,7 +22,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
 }
 
 fn render_welcome_screen(frame: &mut Frame) {
-    let text = create_opencoders_ascii_art();
+    let text = Text::from("Press Enter to start text input, 'q' or 'Esc' to exit...");
     let paragraph = Paragraph::new(text);
     frame.render_widget(paragraph, frame.area());
 }
@@ -48,27 +45,20 @@ fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
 
     let content_area = horizontal_chunks[1];
 
-    // Create vertical layout within the centered content area
+    // Create vertical layout for centering the input box
     let input_height = 3;
-    let history_height = content_area.height.saturating_sub(input_height + 1);
     
     let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(history_height),
-            Constraint::Length(1), // Spacing
-            Constraint::Length(input_height),
+            Constraint::Min(0),           // Top spacing
+            Constraint::Length(input_height), // Input box
+            Constraint::Min(0),           // Bottom spacing
         ])
         .split(content_area);
 
-    // Render message history
-    if !model.input_history.is_empty() {
-        let message_history = MessageHistory::new(model.input_history.clone());
-        frame.render_widget(&message_history, vertical_chunks[0]);
-    }
-
-    // Render text input
-    frame.render_widget(&model.text_input, vertical_chunks[2]);
+    // Render only the text input - no history
+    frame.render_widget(&model.text_input, vertical_chunks[1]);
 }
 
 fn create_opencoders_ascii_art() -> Text<'static> {

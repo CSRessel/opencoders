@@ -18,3 +18,8 @@ opencode-sdk = { path = "./opencode-sdk" }
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.0"
+
+[lints.rust]
+# Temporary during development
+unused_imports = "allow"
+dead_code = "allow"

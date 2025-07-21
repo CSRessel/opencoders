@@ -5,6 +5,7 @@ pub struct Model {
     pub state: AppState,
     pub text_input: TextInput,
     pub last_input: Option<String>,
+    pub input_history: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -23,6 +24,7 @@ impl Model {
             state: AppState::Welcome,
             text_input,
             last_input: None,
+            input_history: Vec::new(),
         }
     }
 }

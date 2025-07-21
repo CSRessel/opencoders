@@ -1,11 +1,20 @@
-use crate::app::tea_model::{AppState, Model};
+use crate::app::{
+    tea_model::{AppState, Model},
+    ui_components::MessageHistory,
+};
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Alignment},
     style::{Color, Style},
     text::{Line, Span, Text},
     widgets::Paragraph,
     Frame,
 };
+
+fn calculate_content_width(terminal_width: u16) -> u16 {
+    let min_width = 80;
+    let ninety_percent = (terminal_width * 90) / 100;
+    min_width.max(ninety_percent).min(terminal_width)
+}
 
 pub fn view(model: &Model, frame: &mut Frame) {
     match model.state {
@@ -22,20 +31,44 @@ fn render_welcome_screen(frame: &mut Frame) {
 }
 
 fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(3)])
+    let terminal_width = frame.area().width;
+    let content_width = calculate_content_width(terminal_width);
+    let left_padding = (terminal_width.saturating_sub(content_width)) / 2;
+    let right_padding = terminal_width.saturating_sub(content_width + left_padding);
+
+    // Create horizontal layout for centering
+    let horizontal_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(left_padding),
+            Constraint::Length(content_width),
+            Constraint::Length(right_padding),
+        ])
         .split(frame.area());
 
-    // Main content area
-    if let Some(ref last_input) = model.last_input {
-        let response_text = format!("You entered: {}", last_input);
-        let paragraph = Paragraph::new(response_text);
-        frame.render_widget(paragraph, chunks[0]);
+    let content_area = horizontal_chunks[1];
+
+    // Create vertical layout within the centered content area
+    let input_height = 3;
+    let history_height = content_area.height.saturating_sub(input_height + 1);
+    
+    let vertical_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(history_height),
+            Constraint::Length(1), // Spacing
+            Constraint::Length(input_height),
+        ])
+        .split(content_area);
+
+    // Render message history
+    if !model.input_history.is_empty() {
+        let message_history = MessageHistory::new(model.input_history.clone());
+        frame.render_widget(&message_history, vertical_chunks[0]);
     }
 
-    // Text input at bottom
-    frame.render_widget(&model.text_input, chunks[1]);
+    // Render text input
+    frame.render_widget(&model.text_input, vertical_chunks[2]);
 }
 
 fn create_opencoders_ascii_art() -> Text<'static> {

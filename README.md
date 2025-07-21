@@ -6,26 +6,32 @@ enforcement of no multiple ownership reduces bugs in a multi-session implementat
 strict compile-time type checking enforces all allowable program states,
 and highly performant execution provides a responsiveness you can feel.
 
-> [!INFO] TODO
+> [!NOTE]
 >
-> Required:
+> **Required:**
 > - REPL loop
 > - pretty printing
->   a. diffs
->   a. markdown
->   a. checklist
->   a. file tree
->   a. thinking tokens
->   a. tool calls
+>     1. diffs
+>     1. markdown
+>     1. checklist
+>     1. file tree
+>     1. thinking tokens
+>     1. tool calls
 > - config handling (flags and rc)
->   a. inline vs alt screen
->   b. model selection
+>     1. inline vs alt screen
+>     1. model selection
+> - CI/CD
+>     1. full unit test suite
+>     1. e2e test with local model
+>     1. error handling and recovery
+>     1. cargo deployment via git repo
 > 
-> Nice to have:
-> - token usage
+> **Nice-to-have:**
+> - multi-session
 > - cmd permissions
 > - theming
-> - UI @ files
+> - UI token usage
+> - UI @ file finder
 > - UI model select
 > - UI slash commands
 > - UI modal toggle (PLAN vs. BUILD vs. DEBUG)

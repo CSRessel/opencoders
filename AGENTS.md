@@ -43,9 +43,18 @@ opencoders/
 │   ├── generate-sdk.sh      # Script to generate SDK from OpenAPI
 │   └── run-smoke-tests.sh   # Script to run integration tests
 ├── src/                     # Main source code
-│   ├── main.rs              # Entry point, terminal setup, main event loop
+│   ├── main.rs              # Entry point, calls app::run()
 │   ├── lib.rs               # Library root for shared functionality
-│   ├── app/                 # Business logic and TUI architecture (to be implemented)
+│   ├── app/                 # TEA architecture with async event handling
+│   │   ├── mod.rs           # Public API: run(), INLINE_MODE
+│   │   ├── model.rs         # Model struct, AppState, initialization
+│   │   ├── msg.rs           # Msg/Cmd/Sub enums for messaging
+│   │   ├── update.rs        # Pure update: (Model, Msg) -> (Model, Cmd)
+│   │   ├── view.rs          # Pure view: render(Model, Frame)
+│   │   ├── subscriptions.rs # Event polling, crossterm → Msg translation
+│   │   ├── program.rs       # Async TEA runtime with tokio::select!
+│   │   ├── terminal.rs      # Terminal setup/cleanup, TerminalGuard
+│   │   └── components/      # Reusable UI components
 │   └── sdk/                 # Wrapping functionality around server SDK
 │       ├── mod.rs           # SDK module root
 │       ├── client.rs        # Main API client implementation
@@ -86,37 +95,60 @@ considered for the project.
 
 ## Core Architecture
 
-The application will strictly follow **The Elm Architecture**, a functional design pattern that separates state, logic, and rendering. This promotes predictability and simplifies state management.
+The application follows **The Elm Architecture (TEA)** with **Async Event Handling** and **Centralized Message Passing**. This combines TEA's predictability with async concurrency and ratatui's event handling best practices.
 
-The architecture consists of three main parts:
+### TEA Components
 
-  - **Model**: A single Rust `struct` (e.g., `App`) that holds the entire state of the application. This includes user input, message history, file system state, agent status, etc. It is the single source of truth.
+- **Model**: Immutable state container (`src/app/model.rs`)
+- **Messages**: Domain events (`src/app/msg.rs`) - `Msg`, `Cmd`, `Sub` enums
+- **Update**: Pure function `(Model, Msg) -> (Model, Cmd)` (`src/app/update.rs`)
+- **View**: Pure rendering function (`src/app/view.rs`)
 
-  - **Update**: A function or method (e.g., `App::update`) that contains all business logic. It takes the current `Model` and an `Event` as input and produces a new `Model`. It is the only part of the application that can modify the state.
+### Event Architecture
 
-  - **View**: A function (e.g., `ui`) that renders the user interface based on the current `Model`. It is stateless and declarative, receiving the `Model` and drawing to the terminal using `ratatui`. It does not contain any application logic.
+- **Centralized Catching**: Single event polling in `subscriptions.rs`
+- **Message Translation**: `crossterm::Event` → `Msg` conversion
+- **Async Runtime**: Non-blocking I/O, concurrent command execution
+- **Command System**: Side effects as data, executed asynchronously
 
-An asynchronous main event loop will drive the application, polling for user input and network events, dispatching them to the **Update** function, and triggering a re-render by the **View** function.
+### `src/app/` Module Structure
 
-As the application grows, the `Model`, `Update`, and `View` components may be extracted from `main.rs` into their own dedicated modules (e.g., `app.rs`, `ui.rs`, `event.rs`, and similar), structured within the `src/app/` folder.
+```text
+src/app/
+├── mod.rs           // Public API: run(), INLINE_MODE constant
+├── model.rs         // Model struct, AppState enum, initialization
+├── msg.rs           // Msg/Cmd/Sub enums for TEA messaging
+├── update.rs        // Pure update function: (Model, Msg) -> (Model, Cmd)
+├── view.rs          // Pure view function: render(Model, Frame)
+├── subscriptions.rs // Event polling, crossterm → Msg translation
+├── program.rs       // Async TEA runtime, tokio::select! event loop
+├── terminal.rs      // Terminal setup/cleanup, TerminalGuard RAII
+└── components/      // Reusable UI components
+    ├── mod.rs
+    └── text_input.rs
+```
+
+### Rules
+
+1. **Pure Functions**: `update()` and `view()` have zero side effects
+2. **Single State**: All state lives in `Model`, updated immutably
+3. **Message-Driven**: All changes flow through `Msg` → `update()` → `Model`
+4. **Async Commands**: Side effects execute concurrently via `Cmd` system
+5. **Centralized Events**: Only `subscriptions.rs` calls `crossterm::event::read()`
 
 ## Key Implementation Details
 
 ### API Communication
 
-  - All communication with the backend will be via HTTP requests made by the `ApiClient` defined in `src/sdk/`.
-  - The `ApiClient` will use `reqwest` to perform asynchronous `POST`, `GET`, etc. operations.
-  - All JSON request payloads and response bodies will be represented by strongly-typed Rust structs using `serde::Serialize` and `serde::Deserialize`.
-  - The API contract is defined by the `openapi.json` file, which is generated by calling into the server's command line functionality.
+- HTTP requests via `ApiClient` in `src/sdk/`
+- Async `reqwest` operations executed as `Cmd::ApiCall`
+- Strongly-typed `serde` structs from `openapi.json`
+- API responses become `Msg::ApiResponse` messages
 
-### Terminal Handling (Alternate vs. Inline Mode)
+### Terminal Handling
 
-  - The TUI must support running in two modes:
-    1.  **Alternate Screen**: The default mode, where the TUI takes over the
-        full terminal window, and can place dynamic UI features at all parts of
-        the window.
-    2.  **Inline Mode**: The TUI renders within the existing terminal history,
-        and rewrites lines as necessary in the bottom most area of the terminal
-        for dyanmic UI features..
-  - This will be controlled via a command-line flag. The main function will conditionally execute `crossterm`'s `EnterAlternateScreen` and `LeaveAlternateScreen` commands based on this flag.
-  - Terminal setup and restoration will be handled in a way that guarantees restoration even in the event of an application panic.
+- **Alternate Screen**: Full terminal takeover (default)
+- **Inline Mode**: Render within terminal history
+- Temporarily set by `INLINE_MODE` constant in `src/app/mod.rs`
+- `TerminalGuard` RAII pattern ensures cleanup on panic
+- Only `terminal.rs` directly calls crossterm terminal functions

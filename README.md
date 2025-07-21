@@ -6,6 +6,31 @@ enforcement of no multiple ownership reduces bugs in a multi-session implementat
 strict compile-time type checking enforces all allowable program states,
 and highly performant execution provides a responsiveness you can feel.
 
+> [!INFO] TODO
+>
+> Required:
+> - REPL loop
+> - pretty printing
+>   a. diffs
+>   a. markdown
+>   a. checklist
+>   a. file tree
+>   a. thinking tokens
+>   a. tool calls
+> - config handling (flags and rc)
+>   a. inline vs alt screen
+>   b. model selection
+> 
+> Nice to have:
+> - token usage
+> - cmd permissions
+> - theming
+> - UI @ files
+> - UI model select
+> - UI slash commands
+> - UI modal toggle (PLAN vs. BUILD vs. DEBUG)
+> - nvim hook-in
+
 ## Quick Start
 
 > [!WARNING]

@@ -47,14 +47,14 @@ opencoders/
 │   ├── lib.rs               # Library root for shared functionality
 │   ├── app/                 # TEA architecture with async event handling
 │   │   ├── mod.rs           # Public API: run(), INLINE_MODE
-│   │   ├── model.rs         # Model struct, AppState, initialization
-│   │   ├── msg.rs           # Msg/Cmd/Sub enums for messaging
-│   │   ├── update.rs        # Pure update: (Model, Msg) -> (Model, Cmd)
-│   │   ├── view.rs          # Pure view: render(Model, Frame)
-│   │   ├── subscriptions.rs # Event polling, crossterm → Msg translation
-│   │   ├── program.rs       # Async TEA runtime with tokio::select!
-│   │   ├── terminal.rs      # Terminal setup/cleanup, TerminalGuard
-│   │   └── components/      # Reusable UI components
+│   │   ├── app_program.rs   # Async TEA runtime with tokio::select!
+│   │   ├── event_msg.rs     # Msg/Cmd/Sub enums for messaging
+│   │   ├── event_subscriptions.rs # Event polling, crossterm → Msg translation
+│   │   ├── tea_model.rs     # Model struct, AppState, initialization
+│   │   ├── tea_update.rs    # Pure update: (Model, Msg) -> (Model, Cmd)
+│   │   ├── tea_view.rs      # Pure view: render(Model, Frame)
+│   │   ├── ui_terminal.rs   # Terminal setup/cleanup, TerminalGuard
+│   │   └── ui_components/   # Reusable UI components
 │   └── sdk/                 # Wrapping functionality around server SDK
 │       ├── mod.rs           # SDK module root
 │       ├── client.rs        # Main API client implementation
@@ -99,14 +99,14 @@ The application follows **The Elm Architecture (TEA)** with **Async Event Handli
 
 ### TEA Components
 
-- **Model**: Immutable state container (`src/app/model.rs`)
-- **Messages**: Domain events (`src/app/msg.rs`) - `Msg`, `Cmd`, `Sub` enums
-- **Update**: Pure function `(Model, Msg) -> (Model, Cmd)` (`src/app/update.rs`)
-- **View**: Pure rendering function (`src/app/view.rs`)
+- **Model**: Immutable state container (`src/app/tea_model.rs`)
+- **Messages**: Domain events (`src/app/event_msg.rs`) - `Msg`, `Cmd`, `Sub` enums
+- **Update**: Pure function `(Model, Msg) -> (Model, Cmd)` (`src/app/tea_update.rs`)
+- **View**: Pure rendering function (`src/app/tea_view.rs`)
 
 ### Event Architecture
 
-- **Centralized Catching**: Single event polling in `subscriptions.rs`
+- **Centralized Catching**: Single event polling in `event_subscriptions.rs`
 - **Message Translation**: `crossterm::Event` → `Msg` conversion
 - **Async Runtime**: Non-blocking I/O, concurrent command execution
 - **Command System**: Side effects as data, executed asynchronously
@@ -115,15 +115,15 @@ The application follows **The Elm Architecture (TEA)** with **Async Event Handli
 
 ```text
 src/app/
-├── mod.rs           // Public API: run(), INLINE_MODE constant
-├── model.rs         // Model struct, AppState enum, initialization
-├── msg.rs           // Msg/Cmd/Sub enums for TEA messaging
-├── update.rs        // Pure update function: (Model, Msg) -> (Model, Cmd)
-├── view.rs          // Pure view function: render(Model, Frame)
-├── subscriptions.rs // Event polling, crossterm → Msg translation
-├── program.rs       // Async TEA runtime, tokio::select! event loop
-├── terminal.rs      // Terminal setup/cleanup, TerminalGuard RAII
-└── components/      // Reusable UI components
+├── mod.rs                 // Public API: run(), INLINE_MODE constant
+├── app_program.rs         // Async TEA runtime, tokio::select! event loop
+├── event_msg.rs           // Msg/Cmd/Sub enums for TEA messaging
+├── event_subscriptions.rs // Event polling, crossterm → Msg translation
+├── tea_model.rs           // Model struct, AppState enum, initialization
+├── tea_update.rs          // Pure update function: (Model, Msg) -> (Model, Cmd)
+├── tea_view.rs            // Pure view function: render(Model, Frame)
+├── ui_terminal.rs         // Terminal setup/cleanup, TerminalGuard RAII
+└── ui_components/         // Reusable UI components
     ├── mod.rs
     └── text_input.rs
 ```
@@ -134,7 +134,7 @@ src/app/
 2. **Single State**: All state lives in `Model`, updated immutably
 3. **Message-Driven**: All changes flow through `Msg` → `update()` → `Model`
 4. **Async Commands**: Side effects execute concurrently via `Cmd` system
-5. **Centralized Events**: Only `subscriptions.rs` calls `crossterm::event::read()`
+5. **Centralized Events**: Only `event_subscriptions.rs` calls `crossterm::event::read()`
 
 ## Key Implementation Details
 
@@ -151,4 +151,4 @@ src/app/
 - **Inline Mode**: Render within terminal history
 - Temporarily set by `INLINE_MODE` constant in `src/app/mod.rs`
 - `TerminalGuard` RAII pattern ensures cleanup on panic
-- Only `terminal.rs` directly calls crossterm terminal functions
+- Only `ui_terminal.rs` directly calls crossterm terminal functions

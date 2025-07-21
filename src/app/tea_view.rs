@@ -1,3 +1,4 @@
+use crate::app::tea_model::{AppState, Model};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -5,7 +6,6 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
-use crate::app::model::{Model, AppState};
 
 pub fn view(model: &Model, frame: &mut Frame) {
     match model.state {
@@ -24,10 +24,7 @@ fn render_welcome_screen(frame: &mut Frame) {
 fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(0),
-            Constraint::Length(3),
-        ])
+        .constraints([Constraint::Min(0), Constraint::Length(3)])
         .split(frame.area());
 
     // Main content area
@@ -44,21 +41,49 @@ fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
 fn create_opencoders_ascii_art() -> Text<'static> {
     #[rustfmt::skip]
     let letters = vec![
-        vec!["▄▀▀█", "█░░█", "▀▀▀ "], // o
-        vec!["▄▀▀█", "█░░█", "█▀▀ "], // p
-        vec!["▄▀▀▀", "█▀▀▀", "▀▀▀▀"], // e
-        vec!["█▀▀▄", "█░░█", "▀  ▀"], // n
-        vec!["▄▀▀▀", "█░░░", "▀▀▀▀"], // c
-        vec!["▄▀▀█", "█░░█", "▀▀▀ "], // o
-        vec!["█▀▀▄", "█░░█", "▀▀▀ "], // d
-        vec!["▄▀▀▀", "█▀▀▀", "▀▀▀▀"], // e
-        vec!["█▀▀█", "█▀▀▄", "▀  ▀"], // r
-        vec!["▄▀▀▀", "▀▀▀█", "▀▀▀ "], // s
+        vec!["▄▀▀█",
+             "█░░█",
+             "▀▀▀ "], // o
+        vec!["▄▀▀█",
+             "█░░█",
+             "█▀▀ "], // p
+        vec!["▄▀▀▀",
+             "█▀▀▀",
+             "▀▀▀▀"], // e
+        vec!["█▀▀▄",
+             "█░░█",
+             "▀  ▀"], // n
+        vec!["▄▀▀▀",
+             "█░░░",
+             "▀▀▀▀"], // c
+        vec!["▄▀▀█",
+             "█░░█",
+             "▀▀▀ "], // o
+        vec!["█▀▀▄",
+             "█░░█",
+             "▀▀▀ "], // d
+        vec!["▄▀▀▀",
+             "█▀▀▀",
+             "▀▀▀▀"], // e
+        vec!["█▀▀█",
+             "█▀▀▄",
+             "▀  ▀"], // r
+        vec!["▄▀▀▀",
+             "▀▀▀█",
+             "▀▀▀ "], // s
     ];
 
     let colors = vec![
-        Color::Gray, Color::Gray, Color::Gray, Color::Gray, Color::White,
-        Color::White, Color::White, Color::White, Color::Gray, Color::Gray,
+        Color::Gray,
+        Color::Gray,
+        Color::Gray,
+        Color::Gray,
+        Color::White,
+        Color::White,
+        Color::White,
+        Color::White,
+        Color::Gray,
+        Color::Gray,
     ];
 
     let mut lines = vec![Line::from("")];
@@ -81,6 +106,9 @@ fn create_opencoders_ascii_art() -> Text<'static> {
     }
 
     lines.push(Line::from(""));
-    lines.push(Line::from("Press Enter to start text input, 'q' or 'Esc' to exit..."));
+    lines.push(Line::from(
+        "Press Enter to start text input, 'q' or 'Esc' to exit...",
+    ));
     Text::from(lines)
 }
+

@@ -1,6 +1,6 @@
 use crate::app::{
     tea_model::{AppState, Model},
-    ui_components::banner::create_welcome_text,
+    ui_components::{banner::create_welcome_text, message_log::render_message_log},
 };
 use core::error;
 use ratatui::{
@@ -85,35 +85,38 @@ fn render_welcome_screen(model: &Model, frame: &mut Frame) {
 }
 
 fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
-    let terminal_width = frame.area().width;
-    let content_width = calculate_content_width(terminal_width);
-    let left_padding = (terminal_width.saturating_sub(content_width)) / 2;
-    let right_padding = terminal_width.saturating_sub(content_width + left_padding);
+    if model.inline_mode {
+        // Render only the text input for inline mode
+        frame.render_widget(&model.text_input, frame.area());
+    } else {
+        let terminal_width = frame.area().width;
+        let content_width = calculate_content_width(terminal_width);
+        let left_padding = (terminal_width.saturating_sub(content_width)) / 2;
+        let right_padding = terminal_width.saturating_sub(content_width + left_padding);
 
-    // Create horizontal layout for centering
-    let horizontal_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Length(left_padding),
-            Constraint::Length(content_width),
-            Constraint::Length(right_padding),
-        ])
-        .split(frame.area());
+        // Create horizontal layout for centering
+        let horizontal_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(left_padding),
+                Constraint::Length(content_width),
+                Constraint::Length(right_padding),
+            ])
+            .split(frame.area());
 
-    let content_area = horizontal_chunks[1];
+        let content_area = horizontal_chunks[1];
 
-    // Create vertical layout for centering the input box
-    let input_height = 3;
+        // Create vertical layout for message log and input box
+        let input_height = 3;
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(0),               // Message log
+                Constraint::Length(input_height), // Input box
+            ])
+            .split(content_area);
 
-    let vertical_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(0),               // Top spacing
-            Constraint::Length(input_height), // Input box
-            Constraint::Min(0),               // Bottom spacing
-        ])
-        .split(content_area);
-
-    // Render only the text input - no history
-    frame.render_widget(&model.text_input, vertical_chunks[1]);
+        render_message_log(frame, vertical_chunks[0], model);
+        frame.render_widget(&model.text_input, vertical_chunks[1]);
+    }
 }

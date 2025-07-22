@@ -49,6 +49,11 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             model.state = AppState::Quit;
             (model, Cmd::None)
         }
+        Msg::ScrollMessageLog(direction) => {
+            let new_scroll = model.message_log_scroll as i16 + direction;
+            model.message_log_scroll = new_scroll.max(0) as u16;
+            (model, Cmd::None)
+        }
     }
 }
 

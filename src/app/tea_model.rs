@@ -2,11 +2,12 @@ use crate::app::ui_components::TextInput;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
-    pub state: AppState,
+    pub printed_to_stdout_count: usize,
     pub text_input: TextInput,
     pub last_input: Option<String>,
     pub input_history: Vec<String>,
-    pub printed_to_stdout_count: usize,
+    pub state: AppState,
+    pub inline_mode: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -25,6 +26,7 @@ impl Model {
             state: AppState::Welcome,
             text_input,
             last_input: None,
+            inline_mode: true,
             input_history: Vec::new(),
             printed_to_stdout_count: 0,
         }
@@ -44,4 +46,3 @@ impl Model {
         self.printed_to_stdout_count += count;
     }
 }
-

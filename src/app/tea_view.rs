@@ -1,4 +1,5 @@
 use crate::app::tea_model::{AppState, Model};
+use core::error;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -6,6 +7,7 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
+use std::io::{self, Write};
 
 fn calculate_content_width(terminal_width: u16) -> u16 {
     let min_width = 80;
@@ -13,18 +15,78 @@ fn calculate_content_width(terminal_width: u16) -> u16 {
     min_width.max(ninety_percent).min(terminal_width)
 }
 
+pub fn view_prefix_inline(
+    model: &Model,
+    frame: &mut Frame,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Handle any printing before the dynamic TUI interface
+
+    match model.state {
+        AppState::TextEntry => render_text_entry_inline_prefix(model, frame)?,
+        AppState::Welcome => {}
+        AppState::Quit => {}
+    };
+    Ok(())
+}
+
 pub fn view(model: &Model, frame: &mut Frame) {
     match model.state {
         AppState::Welcome => render_welcome_screen(frame),
         AppState::TextEntry => render_text_entry_screen(model, frame),
         AppState::Quit => {} // No rendering needed for quit state
-    }
+    };
 }
 
 fn render_welcome_screen(frame: &mut Frame) {
     let text = Text::from("Press Enter to start text input, 'q' or 'Esc' to exit...");
     let paragraph = Paragraph::new(text);
     frame.render_widget(paragraph, frame.area());
+}
+
+fn force_manual_carriage_return_inline(
+    lines: Option<u16>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Restart line first
+    print!("\r");
+    // Scroll down once for space
+    crossterm::execute!(
+        io::stdout(),
+        crossterm::terminal::ScrollUp(lines.unwrap_or(1)),
+        crossterm::cursor::MoveUp(lines.unwrap_or(1)),
+    )?;
+    Ok(())
+}
+
+fn print_inline_overflow_messages(messages: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    // Simple approach: temporarily exit raw mode, print to stdout, then re-enter
+    crossterm::terminal::disable_raw_mode()?;
+    // Move cursor up height many lines
+    force_manual_carriage_return_inline(Some(3))?;
+
+    for message in messages {
+        print!("> {}\n", message);
+    }
+    print!("\n");
+    crossterm::terminal::enable_raw_mode()?;
+    Ok(())
+}
+
+fn render_text_entry_inline_prefix(
+    model: &Model,
+    frame: &mut Frame,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let messages_to_print = model.messages_needing_stdout_print();
+
+    if messages_to_print.is_empty() {
+        return Ok(());
+    }
+
+    // And rewrite an empty frame to force full redraw of all cells
+    frame.render_widget(Paragraph::new(""), frame.area());
+
+    print_inline_overflow_messages(messages_to_print)?;
+
+    Ok(())
 }
 
 fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
@@ -47,91 +109,16 @@ fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
 
     // Create vertical layout for centering the input box
     let input_height = 3;
-    
+
     let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(0),           // Top spacing
+            Constraint::Min(0),               // Top spacing
             Constraint::Length(input_height), // Input box
-            Constraint::Min(0),           // Bottom spacing
+            Constraint::Min(0),               // Bottom spacing
         ])
         .split(content_area);
 
     // Render only the text input - no history
     frame.render_widget(&model.text_input, vertical_chunks[1]);
 }
-
-fn create_opencoders_ascii_art() -> Text<'static> {
-    #[rustfmt::skip]
-    let letters = vec![
-        vec!["▄▀▀█",
-             "█░░█",
-             "▀▀▀ "], // o
-        vec!["▄▀▀█",
-             "█░░█",
-             "█▀▀ "], // p
-        vec!["▄▀▀▀",
-             "█▀▀▀",
-             "▀▀▀▀"], // e
-        vec!["█▀▀▄",
-             "█░░█",
-             "▀  ▀"], // n
-        vec!["▄▀▀▀",
-             "█░░░",
-             "▀▀▀▀"], // c
-        vec!["▄▀▀█",
-             "█░░█",
-             "▀▀▀ "], // o
-        vec!["█▀▀▄",
-             "█░░█",
-             "▀▀▀ "], // d
-        vec!["▄▀▀▀",
-             "█▀▀▀",
-             "▀▀▀▀"], // e
-        vec!["█▀▀█",
-             "█▀▀▄",
-             "▀  ▀"], // r
-        vec!["▄▀▀▀",
-             "▀▀▀█",
-             "▀▀▀ "], // s
-    ];
-
-    let colors = vec![
-        Color::Gray,
-        Color::Gray,
-        Color::Gray,
-        Color::Gray,
-        Color::White,
-        Color::White,
-        Color::White,
-        Color::White,
-        Color::Gray,
-        Color::Gray,
-    ];
-
-    let mut lines = vec![Line::from("")];
-
-    for row in 0..3 {
-        let mut spans = Vec::new();
-
-        for (letter_idx, letter) in letters.iter().enumerate() {
-            let color = colors.get(letter_idx).unwrap_or(&Color::White);
-            let style = Style::default().fg(*color);
-
-            spans.push(Span::styled(letter[row], style));
-
-            if letter_idx < letters.len() - 1 {
-                spans.push(Span::raw(" "));
-            }
-        }
-
-        lines.push(Line::from(spans));
-    }
-
-    lines.push(Line::from(""));
-    lines.push(Line::from(
-        "Press Enter to start text input, 'q' or 'Esc' to exit...",
-    ));
-    Text::from(lines)
-}
-

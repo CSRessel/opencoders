@@ -1,6 +1,10 @@
-use crate::app::tea_model::{AppState, Model};
+use crate::app::{
+    tea_model::{AppState, Model},
+    ui_components::banner::create_welcome_text,
+};
 use core::error;
 use ratatui::{
+    crossterm,
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
     text::{Line, Span, Text},
@@ -15,78 +19,69 @@ fn calculate_content_width(terminal_width: u16) -> u16 {
     min_width.max(ninety_percent).min(terminal_width)
 }
 
-pub fn view_prefix_inline(
-    model: &Model,
-    frame: &mut Frame,
-) -> Result<(), Box<dyn std::error::Error>> {
-    // Handle any printing before the dynamic TUI interface
+pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
+    // Handle any prints that precede the dynamic TUI interface
+
+    crossterm::terminal::disable_raw_mode()?;
+    // Move cursor up outside the TUI height
+    crossterm::execute!(io::stdout(), crossterm::cursor::MoveUp(model.height),)?;
 
     match model.state {
-        AppState::TextEntry => render_text_entry_inline_prefix(model, frame)?,
+        AppState::TextEntry => render_manual_history(&model)?,
         AppState::Welcome => {}
         AppState::Quit => {}
     };
+
+    // Move cursor back down to TUI
+    crossterm::execute!(io::stdout(), crossterm::cursor::MoveDown(model.height))?;
+    crossterm::terminal::enable_raw_mode()?;
+    Ok(())
+}
+
+fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
+    let messages = model.messages_needing_stdout_print();
+
+    for message in messages {
+        // TODO: handle multiple scrolls for multi-line wrapping
+        crossterm::execute!(io::stdout(), crossterm::terminal::ScrollUp(1),)?;
+        // Go to start of line
+        crossterm::execute!(io::stdout(), crossterm::cursor::MoveToColumn(0))?;
+        print!("> {}", message);
+    }
+
     Ok(())
 }
 
 pub fn view(model: &Model, frame: &mut Frame) {
     match model.state {
-        AppState::Welcome => render_welcome_screen(frame),
+        AppState::Welcome => render_welcome_screen(model, frame),
         AppState::TextEntry => render_text_entry_screen(model, frame),
         AppState::Quit => {} // No rendering needed for quit state
     };
 }
 
-fn render_welcome_screen(frame: &mut Frame) {
+pub fn view_clear(_model: &Model, frame: &mut Frame) {
+    // Write an empty frame to force full redraw of all cells
+    frame.render_widget(Paragraph::new(""), frame.area());
+}
+
+fn render_welcome_screen(model: &Model, frame: &mut Frame) {
     let text = Text::from("Press Enter to start text input, 'q' or 'Esc' to exit...");
     let paragraph = Paragraph::new(text);
-    frame.render_widget(paragraph, frame.area());
-}
 
-fn force_manual_carriage_return_inline(
-    lines: Option<u16>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    // Restart line first
-    print!("\r");
-    // Scroll down once for space
-    crossterm::execute!(
-        io::stdout(),
-        crossterm::terminal::ScrollUp(lines.unwrap_or(1)),
-        crossterm::cursor::MoveUp(lines.unwrap_or(1)),
-    )?;
-    Ok(())
-}
+    if model.inline_mode {
+        frame.render_widget(paragraph, frame.area());
+    } else {
+        let constraints = vec![Constraint::Length(4), Constraint::Length(2)];
 
-fn print_inline_overflow_messages(messages: &[String]) -> Result<(), Box<dyn std::error::Error>> {
-    // Simple approach: temporarily exit raw mode, print to stdout, then re-enter
-    crossterm::terminal::disable_raw_mode()?;
-    // Move cursor up height many lines
-    force_manual_carriage_return_inline(Some(3))?;
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(constraints)
+            .split(frame.area());
 
-    for message in messages {
-        print!("> {}\n", message);
-    }
-    print!("\n");
-    crossterm::terminal::enable_raw_mode()?;
-    Ok(())
-}
-
-fn render_text_entry_inline_prefix(
-    model: &Model,
-    frame: &mut Frame,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let messages_to_print = model.messages_needing_stdout_print();
-
-    if messages_to_print.is_empty() {
-        return Ok(());
-    }
-
-    // And rewrite an empty frame to force full redraw of all cells
-    frame.render_widget(Paragraph::new(""), frame.area());
-
-    print_inline_overflow_messages(messages_to_print)?;
-
-    Ok(())
+        frame.render_widget(create_welcome_text(), vertical_chunks[0]);
+        frame.render_widget(paragraph, vertical_chunks[1]);
+    };
 }
 
 fn render_text_entry_screen(model: &Model, frame: &mut Frame) {

@@ -6,6 +6,7 @@ pub struct Model {
     pub text_input: TextInput,
     pub last_input: Option<String>,
     pub input_history: Vec<String>,
+    pub height: u16,
     pub state: AppState,
     pub inline_mode: bool,
 }
@@ -23,13 +24,18 @@ impl Model {
         text_input.set_focus(true);
 
         Model {
-            state: AppState::Welcome,
+            printed_to_stdout_count: 0,
             text_input,
             last_input: None,
-            inline_mode: true,
             input_history: Vec::new(),
-            printed_to_stdout_count: 0,
+            height: 5,
+            state: AppState::Welcome,
+            inline_mode: false,
         }
+    }
+
+    pub fn needs_manual_output(&self) -> bool {
+        return self.inline_mode & (self.messages_needing_stdout_print().len() > 0);
     }
 
     pub fn messages_needing_stdout_print(&self) -> &[String] {
@@ -44,5 +50,9 @@ impl Model {
 
     pub fn mark_messages_printed_to_stdout(&mut self, count: usize) {
         self.printed_to_stdout_count += count;
+    }
+
+    pub fn consume_viewed_state(&mut self) {
+        self.mark_messages_printed_to_stdout(self.messages_needing_stdout_print().len());
     }
 }

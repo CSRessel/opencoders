@@ -52,6 +52,11 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             (model, Cmd::None)
         }
 
+        Msg::ChangeInline => {
+            let new_inline = !model.init.inline_mode().clone();
+            (model, Cmd::RebootTerminalWithInline(new_inline))
+        }
+
         Msg::Quit => {
             model.state = AppState::Quit;
             (model, Cmd::None)

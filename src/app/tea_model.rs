@@ -2,11 +2,9 @@ use crate::app::ui_components::{MessageLog, TextInput};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
-    // Init properties
-    pub height: u16,
-    pub inline_mode: bool,
-    pub state: AppState,
+    pub init: ModelInit,
     // App state
+    pub state: AppState,
     pub input_history: Vec<String>,
     pub last_input: Option<String>,
     pub printed_to_stdout_count: usize,
@@ -14,6 +12,34 @@ pub struct Model {
     pub message_log: MessageLog,
     pub text_input: TextInput,
 }
+
+mod model_init {
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct ModelInit {
+        // Immutable initialization properties
+        // that can't be changed without restarting the terminal
+        init_height: u16,
+        init_inline_mode: bool,
+    }
+
+    impl ModelInit {
+        pub fn height(&self) -> u16 {
+            self.init_height
+        }
+
+        pub fn inline_mode(&self) -> bool {
+            self.init_inline_mode
+        }
+        pub fn new(height: u16, inline_mode: bool) -> ModelInit {
+            ModelInit {
+                init_height: height,
+                init_inline_mode: inline_mode,
+            }
+        }
+    }
+}
+
+pub use model_init::ModelInit;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppState {
@@ -30,8 +56,7 @@ impl Model {
         let message_log = MessageLog::new();
 
         Model {
-            height: 5,
-            inline_mode: false,
+            init: ModelInit::new(5, false),
             state: AppState::Welcome,
             input_history: Vec::new(),
             last_input: None,
@@ -42,7 +67,7 @@ impl Model {
     }
 
     pub fn needs_manual_output(&self) -> bool {
-        return self.inline_mode & (self.messages_needing_stdout_print().len() > 0);
+        return self.init.inline_mode() & (self.messages_needing_stdout_print().len() > 0);
     }
 
     pub fn messages_needing_stdout_print(&self) -> &[String] {

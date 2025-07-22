@@ -4,6 +4,7 @@ pub enum Msg {
     Backspace,
     SubmitInput,
     ClearInput,
+    ChangeInline,
     ChangeState(crate::app::tea_model::AppState),
     Quit,
     ScrollMessageLog(i16),
@@ -11,6 +12,7 @@ pub enum Msg {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {
+    RebootTerminalWithInline(bool),
     None,
     // Future: API calls, file operations, etc.
 }
@@ -19,4 +21,3 @@ pub enum Cmd {
 pub enum Sub {
     KeyboardInput,
 }
-

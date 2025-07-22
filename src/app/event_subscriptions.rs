@@ -38,6 +38,9 @@ fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 }
                 (AppState::TextEntry, KeyCode::Esc, _) => Some(Msg::ChangeState(AppState::Welcome)),
 
+                // Settings toggle
+                (AppState::Welcome, KeyCode::Tab, _) => Some(Msg::ChangeInline),
+
                 // Text input events
                 (AppState::TextEntry, KeyCode::Char(c), _) => Some(Msg::KeyPressed(c)),
                 (AppState::TextEntry, KeyCode::Backspace, _) => Some(Msg::Backspace),

@@ -1,4 +1,4 @@
-use crate::app::tea_model::Model;
+use crate::app::tea_model::ModelInit;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
@@ -8,25 +8,25 @@ use ratatui::{backend::CrosstermBackend, Terminal, TerminalOptions, Viewport};
 use std::io::{self, Write};
 
 pub struct TerminalGuard {
-    model: Model,
+    init: ModelInit,
 }
 
 impl TerminalGuard {
     pub fn new(
-        model: &Model,
+        init: &ModelInit,
     ) -> Result<(Self, Terminal<CrosstermBackend<io::Stdout>>), Box<dyn std::error::Error>> {
         enable_raw_mode()?;
         let mut stdout = io::stdout();
         execute!(stdout, EnableMouseCapture)?;
 
-        if !model.inline_mode {
+        if !init.inline_mode() {
             execute!(stdout, EnterAlternateScreen)?;
         }
 
         let backend = CrosstermBackend::new(stdout);
 
-        let viewport = if model.inline_mode {
-            Viewport::Inline(model.height)
+        let viewport = if init.inline_mode() {
+            Viewport::Inline(init.height())
         } else {
             Viewport::Fullscreen
         };
@@ -37,9 +37,7 @@ impl TerminalGuard {
         terminal.clear()?;
         terminal.hide_cursor()?;
 
-        let guard = TerminalGuard {
-            model: model.clone(),
-        };
+        let guard = TerminalGuard { init: init.clone() };
 
         Ok((guard, terminal))
     }
@@ -50,7 +48,7 @@ impl Drop for TerminalGuard {
         let _ = disable_raw_mode();
         let mut stdout = io::stdout();
         let _ = execute!(stdout, DisableMouseCapture);
-        if !self.model.inline_mode {
+        if !self.init.inline_mode() {
             let _ = execute!(stdout, LeaveAlternateScreen);
         }
         let _ = stdout.flush();

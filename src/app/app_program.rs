@@ -1,7 +1,7 @@
 use crate::app::{
     event_msg::{Cmd, Msg},
     event_subscriptions::poll_subscriptions,
-    tea_model::{AppState, Model},
+    tea_model::{AppState, Model, ModelInit},
     tea_update::update,
     tea_view::{view, view_clear, view_manual},
     ui_components::{banner::create_welcome_text, terminal::TerminalGuard},
@@ -11,24 +11,24 @@ use std::io::{self, Write};
 
 pub struct Program {
     model: Model,
-    terminal: Terminal<CrosstermBackend<io::Stdout>>,
-    _guard: TerminalGuard,
+    terminal: Option<Terminal<CrosstermBackend<io::Stdout>>>,
+    guard: Option<TerminalGuard>,
 }
 
 impl Program {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let model = Model::new();
-        if model.inline_mode {
+        if model.init.inline_mode() {
             // Print welcome message to stdout before entering TUI in inline mode
             let welcome_text = create_welcome_text();
             print!("{}", welcome_text);
         }
-        let (guard, terminal) = TerminalGuard::new(&model)?;
+        let (guard, terminal) = TerminalGuard::new(&model.init)?;
 
         Ok(Program {
             model,
-            terminal,
-            _guard: guard,
+            terminal: Some(terminal),
+            guard: Some(guard),
         })
     }
 
@@ -41,14 +41,18 @@ impl Program {
 
             // View: Manual rendering outside the TUI viewport
             if self.model.needs_manual_output() {
-                // Clear the TUI
-                self.terminal.draw(|f| view_clear(&self.model, f))?;
+                if let Some(terminal) = self.terminal.as_mut() {
+                    // Clear the TUI
+                    terminal.draw(|f| view_clear(&self.model, f))?;
+                }
                 // Manually execute with crossterm
                 view_manual(&self.model)?;
             }
 
             // View: Pure rendering, within the TUI
-            self.terminal.draw(|f| view(&self.model, f))?;
+            if let Some(terminal) = self.terminal.as_mut() {
+                terminal.draw(|f| view(&self.model, f))?;
+            }
 
             // Update the model for all consumed state
             // TODO: move to Msg::ChangeState()
@@ -69,6 +73,22 @@ impl Program {
 
     fn execute_command(&mut self, cmd: Cmd) -> Result<(), Box<dyn std::error::Error>> {
         match cmd {
+            Cmd::RebootTerminalWithInline(inline_mode) => {
+                // Deconstruct the old terminal by taking ownership from the Option
+                let old_guard = self.guard.take();
+                let old_terminal = self.terminal.take();
+
+                // Explicitly drop the old guard and terminal
+                drop(old_guard);
+                drop(old_terminal);
+
+                let new_init = ModelInit::new(self.model.init.height(), inline_mode);
+                let (guard, terminal) = TerminalGuard::new(&new_init)?;
+                self.guard = Some(guard);
+                self.terminal = Some(terminal);
+                self.model.init = new_init;
+                Ok(())
+            }
             Cmd::None => Ok(()),
             // Future: Handle other commands like API calls, file operations, etc.
         }

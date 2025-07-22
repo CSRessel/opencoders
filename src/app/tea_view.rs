@@ -24,7 +24,7 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
 
     crossterm::terminal::disable_raw_mode()?;
     // Move cursor up outside the TUI height
-    crossterm::execute!(io::stdout(), crossterm::cursor::MoveUp(model.height),)?;
+    crossterm::execute!(io::stdout(), crossterm::cursor::MoveUp(model.init.height()),)?;
 
     match model.state {
         AppState::TextEntry => render_manual_history(&model)?,
@@ -33,7 +33,10 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Move cursor back down to TUI
-    crossterm::execute!(io::stdout(), crossterm::cursor::MoveDown(model.height))?;
+    crossterm::execute!(
+        io::stdout(),
+        crossterm::cursor::MoveDown(model.init.height())
+    )?;
     crossterm::terminal::enable_raw_mode()?;
     Ok(())
 }
@@ -66,10 +69,12 @@ pub fn view_clear(_model: &Model, frame: &mut Frame) {
 }
 
 fn render_welcome_screen(model: &Model, frame: &mut Frame) {
-    let text = Text::from("Press Enter to start text input, 'q' or 'Esc' to exit...");
+    let text = Text::from(
+        "Press Enter to start text input, Tab to toggle inline, 'q' or 'Esc' to exit...",
+    );
     let paragraph = Paragraph::new(text);
 
-    if model.inline_mode {
+    if model.init.inline_mode() {
         frame.render_widget(paragraph, frame.area());
     } else {
         let constraints = vec![Constraint::Length(4), Constraint::Length(2)];
@@ -85,7 +90,7 @@ fn render_welcome_screen(model: &Model, frame: &mut Frame) {
 }
 
 fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
-    if model.inline_mode {
+    if model.init.inline_mode() {
         // Render only the text input for inline mode
         frame.render_widget(&model.text_input, frame.area());
     } else {

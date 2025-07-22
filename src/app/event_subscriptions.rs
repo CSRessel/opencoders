@@ -47,8 +47,16 @@ fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppState::TextEntry, KeyCode::Enter, _) => Some(Msg::SubmitInput),
 
                 // Message log scrolling
-                (AppState::TextEntry, KeyCode::PageUp, _) => Some(Msg::ScrollMessageLog(-1)),
-                (AppState::TextEntry, KeyCode::PageDown, _) => Some(Msg::ScrollMessageLog(1)),
+                (AppState::TextEntry, KeyCode::PageUp, _) => Some(Msg::ScrollMessageLog(-10)),
+                (AppState::TextEntry, KeyCode::PageDown, _) => Some(Msg::ScrollMessageLog(10)),
+                (AppState::TextEntry, KeyCode::Up, _) => Some(Msg::ScrollMessageLog(-10)),
+                (AppState::TextEntry, KeyCode::Down, _) => Some(Msg::ScrollMessageLog(10)),
+                (AppState::TextEntry, KeyCode::Left, _) => {
+                    Some(Msg::ScrollMessageLogHorizontal(-10))
+                }
+                (AppState::TextEntry, KeyCode::Right, _) => {
+                    Some(Msg::ScrollMessageLogHorizontal(10))
+                }
 
                 _ => None,
             }

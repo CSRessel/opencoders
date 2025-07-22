@@ -48,6 +48,9 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 model.last_input = None;
                 model.input_history.clear();
                 model.printed_to_stdout_count = 0;
+            } else if matches!(model.state, AppState::TextEntry) {
+                // Auto-scroll to bottom when entering text entry mode
+                model.message_log.scroll_to_bottom();
             }
             (model, Cmd::None)
         }
@@ -63,6 +66,10 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
         Msg::ScrollMessageLog(direction) => {
             model.message_log.move_message_log_scroll(&direction);
+            (model, Cmd::None)
+        }
+        Msg::ScrollMessageLogHorizontal(direction) => {
+            model.message_log.scroll_horizontal(direction);
             (model, Cmd::None)
         }
     }

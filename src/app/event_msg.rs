@@ -8,6 +8,7 @@ pub enum Msg {
     ChangeState(crate::app::tea_model::AppState),
     Quit,
     ScrollMessageLog(i16),
+    ScrollMessageLogHorizontal(i16),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,17 +1,18 @@
-use crate::app::ui_components::TextInput;
-use opencode_sdk::models::GetSessionByIdMessage200ResponseInner;
+use crate::app::ui_components::{MessageLog, TextInput};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
-    pub printed_to_stdout_count: usize,
-    pub text_input: TextInput,
-    pub last_input: Option<String>,
-    pub input_history: Vec<String>,
+    // Init properties
     pub height: u16,
-    pub state: AppState,
     pub inline_mode: bool,
-    pub messages: Vec<GetSessionByIdMessage200ResponseInner>,
-    pub message_log_scroll: u16,
+    pub state: AppState,
+    // App state
+    pub input_history: Vec<String>,
+    pub last_input: Option<String>,
+    pub printed_to_stdout_count: usize,
+    // Stateful components:
+    pub message_log: MessageLog,
+    pub text_input: TextInput,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,16 +27,17 @@ impl Model {
         let mut text_input = TextInput::new();
         text_input.set_focus(true);
 
+        let message_log = MessageLog::new();
+
         Model {
-            printed_to_stdout_count: 0,
-            text_input,
-            last_input: None,
-            input_history: Vec::new(),
             height: 5,
-            state: AppState::Welcome,
             inline_mode: false,
-            messages: Vec::new(),
-            message_log_scroll: 0,
+            state: AppState::Welcome,
+            input_history: Vec::new(),
+            last_input: None,
+            printed_to_stdout_count: 0,
+            message_log,
+            text_input,
         }
     }
 

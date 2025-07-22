@@ -1,6 +1,6 @@
 use crate::app::{
     tea_model::{AppState, Model},
-    ui_components::{banner::create_welcome_text, message_log::render_message_log},
+    ui_components::create_welcome_text,
 };
 use core::error;
 use ratatui::{
@@ -116,7 +116,7 @@ fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
             ])
             .split(content_area);
 
-        render_message_log(frame, vertical_chunks[0], model);
+        frame.render_widget(&model.message_log, vertical_chunks[0]);
         frame.render_widget(&model.text_input, vertical_chunks[1]);
     }
 }

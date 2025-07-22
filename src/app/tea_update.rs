@@ -26,29 +26,9 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 model.input_history.push(submitted_text.clone());
                 model.last_input = Some(submitted_text.clone());
 
-                let user_message = UserMessage {
-                    id: "".to_string(),
-                    session_id: "".to_string(),
-                    role: "user".to_string(),
-                    time: Default::default(),
-                };
-
-                let text_part = TextPart {
-                    id: "".to_string(),
-                    session_id: "".to_string(),
-                    message_id: "".to_string(),
-                    r#type: "text".to_string(),
-                    text: submitted_text,
-                    synthetic: None,
-                    time: None,
-                };
-
-                let message_container = GetSessionByIdMessage200ResponseInner {
-                    info: Box::new(Message::User(Box::new(user_message))),
-                    parts: vec![Part::Text(Box::new(text_part))],
-                };
-
-                model.messages.push(message_container);
+                model
+                    .message_log
+                    .create_and_push_user_message(&submitted_text)
             }
             (model, Cmd::None)
         }
@@ -77,10 +57,8 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             (model, Cmd::None)
         }
         Msg::ScrollMessageLog(direction) => {
-            let new_scroll = model.message_log_scroll as i16 + direction;
-            model.message_log_scroll = new_scroll.max(0) as u16;
+            model.message_log.move_message_log_scroll(&direction);
             (model, Cmd::None)
         }
     }
 }
-

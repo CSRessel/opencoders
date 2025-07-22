@@ -3,11 +3,11 @@ use crate::app::{
     event_subscriptions::poll_subscriptions,
     tea_model::{AppState, Model},
     tea_update::update,
-    tea_view::view,
-    ui_terminal::TerminalGuard,
+    tea_view::{view, view_clear, view_manual},
+    ui_components::{banner::create_welcome_text, terminal::TerminalGuard},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
-use std::io;
+use ratatui::{backend::CrosstermBackend, style::Color, text::Text, Terminal};
+use std::io::{self, Write};
 
 pub struct Program {
     model: Model,
@@ -16,9 +16,14 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn new(inline_mode: bool) -> Result<Self, Box<dyn std::error::Error>> {
-        let (guard, terminal) = TerminalGuard::new(inline_mode)?;
+    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let model = Model::new();
+        if model.inline_mode {
+            // Print welcome message to stdout before entering TUI in inline mode
+            let welcome_text = create_welcome_text();
+            print!("{}", welcome_text);
+        }
+        let (guard, terminal) = TerminalGuard::new(&model)?;
 
         Ok(Program {
             model,
@@ -29,13 +34,25 @@ impl Program {
 
     pub fn run(mut self) -> Result<(), Box<dyn std::error::Error>> {
         loop {
-            // View: Pure rendering
-            self.terminal.draw(|f| view(&self.model, f))?;
-
             // Check for quit state
             if matches!(self.model.state, AppState::Quit) {
                 break;
             }
+
+            // View: Manual rendering outside the TUI viewport
+            if self.model.needs_manual_output() {
+                // Clear the TUI
+                self.terminal.draw(|f| view_clear(&self.model, f))?;
+                // Manually execute with crossterm
+                view_manual(&self.model)?;
+            }
+
+            // View: Pure rendering, within the TUI
+            self.terminal.draw(|f| view(&self.model, f))?;
+
+            // Update the model for all consumed state
+            // TODO: move to Msg::ChangeState()
+            self.model.consume_viewed_state();
 
             // Subscriptions: Convert external events to messages
             if let Some(msg) = poll_subscriptions(&self.model)? {
@@ -57,4 +74,3 @@ impl Program {
         }
     }
 }
-

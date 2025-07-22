@@ -2,9 +2,13 @@ use crate::app::ui_components::TextInput;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
-    pub state: AppState,
+    pub printed_to_stdout_count: usize,
     pub text_input: TextInput,
     pub last_input: Option<String>,
+    pub input_history: Vec<String>,
+    pub height: u16,
+    pub state: AppState,
+    pub inline_mode: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -20,10 +24,35 @@ impl Model {
         text_input.set_focus(true);
 
         Model {
-            state: AppState::Welcome,
+            printed_to_stdout_count: 0,
             text_input,
             last_input: None,
+            input_history: Vec::new(),
+            height: 5,
+            state: AppState::Welcome,
+            inline_mode: false,
         }
     }
-}
 
+    pub fn needs_manual_output(&self) -> bool {
+        return self.inline_mode & (self.messages_needing_stdout_print().len() > 0);
+    }
+
+    pub fn messages_needing_stdout_print(&self) -> &[String] {
+        // All messages that haven't been printed to stdout yet
+        let printed_count = self.printed_to_stdout_count;
+        if printed_count < self.input_history.len() {
+            &self.input_history[printed_count..]
+        } else {
+            &[]
+        }
+    }
+
+    pub fn mark_messages_printed_to_stdout(&mut self, count: usize) {
+        self.printed_to_stdout_count += count;
+    }
+
+    pub fn consume_viewed_state(&mut self) {
+        self.mark_messages_printed_to_stdout(self.messages_needing_stdout_print().len());
+    }
+}

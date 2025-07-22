@@ -20,6 +20,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         Msg::SubmitInput => {
             if let Some(submitted_text) = model.text_input.handle_event(TextInputEvent::Submit) {
+                model.input_history.push(submitted_text.clone());
                 model.last_input = Some(submitted_text);
             }
             (model, Cmd::None)
@@ -28,6 +29,8 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         Msg::ClearInput => {
             model.text_input.clear();
             model.last_input = None;
+            model.input_history.clear();
+            model.printed_to_stdout_count = 0;
             (model, Cmd::None)
         }
 
@@ -36,6 +39,8 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             if matches!(model.state, AppState::Welcome) {
                 model.text_input.clear();
                 model.last_input = None;
+                model.input_history.clear();
+                model.printed_to_stdout_count = 0;
             }
             (model, Cmd::None)
         }

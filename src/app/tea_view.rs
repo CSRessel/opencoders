@@ -75,7 +75,11 @@ fn render_welcome_screen(model: &Model, frame: &mut Frame) {
     let paragraph = Paragraph::new(text);
 
     if model.init.inline_mode() {
-        frame.render_widget(paragraph, frame.area());
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
+            .split(frame.area());
+        frame.render_widget(paragraph, vertical_chunks[1]);
     } else {
         let constraints = vec![Constraint::Length(4), Constraint::Length(2)];
 
@@ -90,29 +94,31 @@ fn render_welcome_screen(model: &Model, frame: &mut Frame) {
 }
 
 fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
+    let terminal_width = frame.area().width;
+    let content_width = calculate_content_width(terminal_width);
+    let left_padding = (terminal_width.saturating_sub(content_width)) / 2;
+    let right_padding = terminal_width.saturating_sub(content_width + left_padding);
+
+    // Create horizontal layout for centering
+    let horizontal_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(left_padding),
+            Constraint::Length(content_width),
+            Constraint::Length(right_padding),
+        ])
+        .split(frame.area());
+
+    let mut content_area = horizontal_chunks[1];
+
+    let input_height = 3;
+
     if model.init.inline_mode() {
         // Render only the text input for inline mode
-        frame.render_widget(&model.text_input, frame.area());
+        content_area.height = input_height;
+        frame.render_widget(&model.text_input, content_area);
     } else {
-        let terminal_width = frame.area().width;
-        let content_width = calculate_content_width(terminal_width);
-        let left_padding = (terminal_width.saturating_sub(content_width)) / 2;
-        let right_padding = terminal_width.saturating_sub(content_width + left_padding);
-
-        // Create horizontal layout for centering
-        let horizontal_chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Length(left_padding),
-                Constraint::Length(content_width),
-                Constraint::Length(right_padding),
-            ])
-            .split(frame.area());
-
-        let content_area = horizontal_chunks[1];
-
         // Create vertical layout for message log and input box
-        let input_height = 3;
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([

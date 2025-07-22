@@ -75,8 +75,5 @@ pub fn create_welcome_text() -> Text<'static> {
     }
 
     lines.push(Line::from(""));
-    lines.push(Line::from(
-        "Press Enter to start text input, 'q' or 'Esc' to exit...",
-    ));
     Text::from(lines)
 }

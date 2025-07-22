@@ -18,11 +18,11 @@ pub struct Program {
 impl Program {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let model = Model::new();
-        if model.init.inline_mode() {
-            // Print welcome message to stdout before entering TUI in inline mode
-            let welcome_text = create_welcome_text();
-            print!("{}", welcome_text);
-        }
+
+        // Print welcome message to stdout before entering TUI
+        let welcome_text = create_welcome_text();
+        print!("{}\n\n", welcome_text);
+
         let (guard, terminal) = TerminalGuard::new(&model.init)?;
 
         Ok(Program {

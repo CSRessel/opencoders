@@ -3,6 +3,9 @@ use crate::app::{
     tea_model::{AppState, Model},
     ui_components::text_input::TextInputEvent,
 };
+use opencode_sdk::models::{
+    GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
+};
 
 pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
     match msg {
@@ -21,7 +24,31 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         Msg::SubmitInput => {
             if let Some(submitted_text) = model.text_input.handle_event(TextInputEvent::Submit) {
                 model.input_history.push(submitted_text.clone());
-                model.last_input = Some(submitted_text);
+                model.last_input = Some(submitted_text.clone());
+
+                let user_message = UserMessage {
+                    id: "".to_string(),
+                    session_id: "".to_string(),
+                    role: "user".to_string(),
+                    time: Default::default(),
+                };
+
+                let text_part = TextPart {
+                    id: "".to_string(),
+                    session_id: "".to_string(),
+                    message_id: "".to_string(),
+                    r#type: "text".to_string(),
+                    text: submitted_text,
+                    synthetic: None,
+                    time: None,
+                };
+
+                let message_container = GetSessionByIdMessage200ResponseInner {
+                    info: Box::new(Message::User(Box::new(user_message))),
+                    parts: vec![Part::Text(Box::new(text_part))],
+                };
+
+                model.messages.push(message_container);
             }
             (model, Cmd::None)
         }
@@ -47,6 +74,11 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         Msg::Quit => {
             model.state = AppState::Quit;
+            (model, Cmd::None)
+        }
+        Msg::ScrollMessageLog(direction) => {
+            let new_scroll = model.message_log_scroll as i16 + direction;
+            model.message_log_scroll = new_scroll.max(0) as u16;
             (model, Cmd::None)
         }
     }

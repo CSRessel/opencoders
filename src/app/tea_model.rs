@@ -1,4 +1,5 @@
 use crate::app::ui_components::TextInput;
+use opencode_sdk::models::GetSessionByIdMessage200ResponseInner;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
@@ -9,6 +10,8 @@ pub struct Model {
     pub height: u16,
     pub state: AppState,
     pub inline_mode: bool,
+    pub messages: Vec<GetSessionByIdMessage200ResponseInner>,
+    pub message_log_scroll: u16,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -31,6 +34,8 @@ impl Model {
             height: 5,
             state: AppState::Welcome,
             inline_mode: false,
+            messages: Vec::new(),
+            message_log_scroll: 0,
         }
     }
 

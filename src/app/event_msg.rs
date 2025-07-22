@@ -6,6 +6,7 @@ pub enum Msg {
     ClearInput,
     ChangeState(crate::app::tea_model::AppState),
     Quit,
+    ScrollMessageLog(i16),
 }
 
 #[derive(Debug, Clone, PartialEq)]

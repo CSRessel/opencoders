@@ -41,6 +41,10 @@ fn crossterm_to_msg(key: crossterm::event::KeyEvent, model: &Model) -> Option<Ms
         (AppState::TextEntry, KeyCode::Backspace, _) => Some(Msg::Backspace),
         (AppState::TextEntry, KeyCode::Enter, _) => Some(Msg::SubmitInput),
 
+        // Message log scrolling
+        (AppState::TextEntry, KeyCode::PageUp, _) => Some(Msg::ScrollMessageLog(-1)),
+        (AppState::TextEntry, KeyCode::PageDown, _) => Some(Msg::ScrollMessageLog(1)),
+
         _ => None,
     }
 }

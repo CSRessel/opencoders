@@ -212,6 +212,12 @@ impl Widget for &MessageLog {
         let mut message_log = self.clone();
 
         // Calculate scrollbar areas to match content length properly
+        // let vertical_scrollbar_area = Rect {
+        //     x: area.x + area.width - 1,
+        //     y: area.y + 1,
+        //     width: 1,
+        //     height: if has_horizontal_scrollbar { area.height - 1 } else { area.height - 1 },
+        // };
         let vertical_scrollbar_area = area.inner(Margin {
             vertical: 1,
             horizontal: 0,
@@ -242,14 +248,34 @@ impl Widget for &MessageLog {
         message_log.horizontal_scroll = message_log.horizontal_scroll.min(max_horizontal_scroll);
 
         // Set content length and position based on actual scrollbar area dimensions
+        // For vertical scrollbar: translate scroll offset to visual position within scrollbar area
+        let visual_vertical_position = if max_vertical_scroll > 0 {
+            let scroll_percentage = message_log.vertical_scroll as f32 / max_vertical_scroll as f32;
+            let scrollbar_height = vertical_scrollbar_area.height as f32;
+            (scroll_percentage * (scrollbar_height - 1.0)) as usize
+        } else {
+            0
+        };
+
         message_log.vertical_scroll_state = message_log
             .vertical_scroll_state
-            .content_length(content_lines)
-            .position(message_log.vertical_scroll);
+            .content_length(vertical_scrollbar_area.height as usize)
+            .position(visual_vertical_position);
+
+        // For horizontal scrollbar: translate scroll offset to visual position within scrollbar area
+        let visual_horizontal_position = if max_horizontal_scroll > 0 {
+            let scroll_percentage =
+                message_log.horizontal_scroll as f32 / max_horizontal_scroll as f32;
+            let scrollbar_width = horizontal_scrollbar_area.width as f32;
+            (scroll_percentage * (scrollbar_width - 1.0)) as usize
+        } else {
+            0
+        };
+
         message_log.horizontal_scroll_state = message_log
             .horizontal_scroll_state
-            .content_length(self.longest_line_length)
-            .position(message_log.horizontal_scroll);
+            .content_length(horizontal_scrollbar_area.width as usize)
+            .position(visual_horizontal_position);
 
         let paragraph = Paragraph::new(content)
             .block(

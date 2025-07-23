@@ -1,7 +1,8 @@
 use crate::{
     app::{
+        event_async_task_manager::AsyncTaskManager,
         event_msg::{Cmd, Msg},
-        event_subscriptions::poll_subscriptions,
+        event_sync_subscriptions::poll_subscriptions,
         tea_model::{AppState, Model, ModelInit},
         tea_update::update,
         tea_view::{view, view_clear, view_manual},
@@ -10,14 +11,18 @@ use crate::{
     },
     sdk::OpenCodeClient,
 };
+use crossterm::event::{self, Event};
 use ratatui::{backend::CrosstermBackend, style::Color, text::Text, Terminal};
 use std::io::{self, Write};
+use std::time::Duration;
+use tokio::time::{interval, Interval};
 
 pub struct Program {
     model: Model,
     terminal: Option<Terminal<CrosstermBackend<io::Stdout>>>,
     guard: Option<TerminalGuard>,
-    runtime: tokio::runtime::Runtime,
+    task_manager: AsyncTaskManager,
+    needs_render: bool,
 }
 
 impl Program {
@@ -26,61 +31,128 @@ impl Program {
 
         // Print welcome message to stdout before entering TUI
         let welcome_text = create_welcome_text();
-        print!("{}\n\n", welcome_text);
+        print!("{}\n\n\n", welcome_text);
 
         let (guard, terminal) = TerminalGuard::new(&model.init)?;
-        
-        // Create tokio runtime for async operations
-        let runtime = tokio::runtime::Runtime::new()?;
+
+        // Create async task manager
+        let task_manager = AsyncTaskManager::new();
 
         Ok(Program {
             model,
             terminal: Some(terminal),
             guard: Some(guard),
-            runtime,
+            task_manager,
+            needs_render: true, // Initial render needed
         })
     }
 
-    pub fn run(mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(self) -> Result<(), Box<dyn std::error::Error>> {
+        // Create a Tokio runtime for this blocking function
+        let runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(self.run_async())
+    }
+
+    async fn run_async(mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // Create tick interval for periodic updates (60 FPS) - must be inside tokio runtime
+        let mut tick_interval = interval(Duration::from_millis(16));
+
         loop {
             // Check for quit state
             if matches!(self.model.state, AppState::Quit) {
                 break;
             }
 
-            // View: Manual rendering outside the TUI viewport
-            if self.model.needs_manual_output() {
-                if let Some(terminal) = self.terminal.as_mut() {
-                    // Clear the TUI
-                    terminal.draw(|f| view_clear(&self.model, f))?;
+            // Process all available events and messages first
+            let mut had_events = false;
+
+            // Check for async task completions (non-blocking)
+            let async_messages = self.task_manager.poll_messages();
+            if !async_messages.is_empty() {
+                had_events = true;
+                for msg in async_messages {
+                    let (new_model, cmd) = update(self.model, msg);
+                    self.model = new_model;
+                    self.needs_render = true;
+                    self.spawn_command(cmd).await?;
                 }
-                // Manually execute with crossterm
-                view_manual(&self.model)?;
             }
 
-            // View: Pure rendering, within the TUI
-            if let Some(terminal) = self.terminal.as_mut() {
-                terminal.draw(|f| view(&self.model, f))?;
-            }
-
-            // Update the model for all consumed state
-            // TODO: move to Msg::ChangeState()
-            self.model.consume_viewed_state();
-
-            // Subscriptions: Convert external events to messages
-            if let Some(msg) = poll_subscriptions(&self.model)? {
-                // Update: Pure state transition
+            // Check for input events (non-blocking)
+            if let Some(msg) = self.poll_input_events().await? {
+                had_events = true;
                 let (new_model, cmd) = update(self.model, msg);
                 self.model = new_model;
+                self.needs_render = true;
+                self.spawn_command(cmd).await?;
+            }
 
-                // Commands: Execute side effects
-                self.execute_command(cmd)?;
+            // If we had events, continue loop immediately to process more
+            if had_events {
+                continue;
+            }
+
+            // No events - wait for either a tick or go back to polling
+            tokio::select! {
+                // Periodic tick for cleanup and rendering
+                _ = tick_interval.tick() => {
+                    // Cleanup completed tasks periodically
+                    self.task_manager.cleanup_completed_tasks();
+
+                    // Only render if needed
+                    if self.needs_render {
+                        self.render_view()?;
+                        let (new_model, cmd) = update(self.model, Msg::MarkMessagesViewed);
+                        self.model = new_model;
+                        self.spawn_command(cmd).await?;
+                        self.needs_render = false;
+                    }
+                },
             }
         }
         Ok(())
     }
 
-    fn execute_command(&mut self, cmd: Cmd) -> Result<(), Box<dyn std::error::Error>> {
+    fn render_view(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // View: Manual rendering outside the TUI viewport
+        if self.model.needs_manual_output() {
+            if let Some(terminal) = self.terminal.as_mut() {
+                // Clear the TUI
+                terminal.draw(|f| view_clear(&self.model, f))?;
+            }
+            // Manually execute with crossterm
+            view_manual(&self.model)?;
+        }
+
+        // View: Pure rendering, within the TUI
+        if let Some(terminal) = self.terminal.as_mut() {
+            terminal.draw(|f| view(&self.model, f))?;
+        }
+
+        Ok(())
+    }
+
+    async fn poll_input_events(&self) -> Result<Option<Msg>, Box<dyn std::error::Error>> {
+        // Check if we should listen for input events
+        let subs = crate::app::event_sync_subscriptions::subscriptions(&self.model);
+
+        if !subs.contains(&crate::app::event_msg::Sub::KeyboardInput) {
+            return Ok(None);
+        }
+
+        // Use async crossterm event polling
+        if event::poll(Duration::from_millis(0))? {
+            let event = event::read()?;
+            return Ok(crate::app::event_sync_subscriptions::crossterm_to_msg(
+                event,
+                &self.model,
+            ));
+        }
+
+        Ok(None)
+    }
+
+    async fn spawn_command(&mut self, cmd: Cmd) -> Result<(), Box<dyn std::error::Error>> {
         match cmd {
             Cmd::RebootTerminalWithInline(inline_mode) => {
                 // Deconstruct the old terminal by taking ownership from the Option
@@ -96,55 +168,57 @@ impl Program {
                 self.guard = Some(guard);
                 self.terminal = Some(terminal);
                 self.model.init = new_init;
-                Ok(())
             }
-            Cmd::None => Ok(()),
-            
-            Cmd::DiscoverAndConnectClient => {
-                // Execute async client discovery in the runtime
-                let result = self.runtime.block_on(async {
-                    OpenCodeClient::discover().await
-                });
-                
-                match result {
-                    Ok(client) => {
-                        // Send success message back to the model
-                        let (new_model, new_cmd) = update(self.model.clone(), Msg::ClientConnected(client));
-                        self.model = new_model;
-                        self.execute_command(new_cmd)?;
+
+            Cmd::AsyncSpawnClientDiscovery => {
+                // Spawn async client discovery task
+                self.task_manager.spawn_task(async move {
+                    match OpenCodeClient::discover().await {
+                        Ok(client) => Msg::ClientConnected(client),
+                        Err(error) => Msg::ClientConnectionFailed(error),
                     }
-                    Err(error) => {
-                        // Send error message back to the model
-                        let (new_model, new_cmd) = update(self.model.clone(), Msg::ClientConnectionFailed(error));
-                        self.model = new_model;
-                        self.execute_command(new_cmd)?;
+                });
+            }
+
+            Cmd::AsyncSpawnSessionInit(client) => {
+                // Spawn async session initialization task
+                self.task_manager.spawn_task(async move {
+                    match client.get_or_create_session().await {
+                        Ok(session) => Msg::SessionReady(session),
+                        Err(error) => Msg::SessionInitializationFailed(error),
+                    }
+                });
+            }
+
+            Cmd::AsyncCancelTask(task_id) => {
+                self.task_manager.cancel_task(task_id);
+            }
+
+            Cmd::Batch(commands) => {
+                // Handle batch commands by processing them in the main loop
+                // rather than recursively to avoid infinite future size
+                for cmd in commands {
+                    match cmd {
+                        Cmd::AsyncSpawnClientDiscovery
+                        | Cmd::AsyncSpawnSessionInit(_)
+                        | Cmd::AsyncCancelTask(_)
+                        | Cmd::RebootTerminalWithInline(_) => {
+                            Box::pin(self.spawn_command(cmd)).await?;
+                        }
+                        Cmd::None => {}
+                        Cmd::Batch(_) => {
+                            return Err(format!(
+                                "Nested Cmd::Batch detected in spawn_command. This indicates a logic error in the update() function. \
+                                Batch commands should only contain non-batch commands to avoid infinite recursion and stack overflow. \
+                                Please review the update() logic that produced this nested batch."
+                            ).into());
+                        }
                     }
                 }
-                Ok(())
             }
-            
-            Cmd::InitializeSessionForClient(client) => {
-                // Execute async session initialization in the runtime
-                let result = self.runtime.block_on(async {
-                    client.get_or_create_session().await
-                });
-                
-                match result {
-                    Ok(session) => {
-                        // Send success message back to the model
-                        let (new_model, new_cmd) = update(self.model.clone(), Msg::SessionReady(session));
-                        self.model = new_model;
-                        self.execute_command(new_cmd)?;
-                    }
-                    Err(error) => {
-                        // Send error message back to the model
-                        let (new_model, new_cmd) = update(self.model.clone(), Msg::SessionInitializationFailed(error));
-                        self.model = new_model;
-                        self.execute_command(new_cmd)?;
-                    }
-                }
-                Ok(())
-            }
+
+            Cmd::None => {}
         }
+        Ok(())
     }
 }

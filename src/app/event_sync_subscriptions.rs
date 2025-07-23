@@ -6,8 +6,11 @@ use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
 pub fn subscriptions(model: &Model) -> Vec<Sub> {
     match model.state {
-        AppState::Welcome | AppState::TextEntry | AppState::ConnectingToServer 
-        | AppState::InitializingSession | AppState::ConnectionError(_) => vec![Sub::KeyboardInput],
+        AppState::Welcome
+        | AppState::TextEntry
+        | AppState::ConnectingToServer
+        | AppState::InitializingSession
+        | AppState::ConnectionError(_) => vec![Sub::KeyboardInput],
         AppState::Quit => vec![],
     }
 }
@@ -24,7 +27,7 @@ pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::err
     Ok(None)
 }
 
-fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
+pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
     match event {
         Event::Key(key) => {
             match (&model.state, key.code, key.modifiers) {
@@ -66,7 +69,9 @@ fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 }
 
                 // Retry connection
-                (AppState::ConnectionError(_), KeyCode::Char('r'), _) => Some(Msg::InitializeClient),
+                (AppState::ConnectionError(_), KeyCode::Char('r'), _) => {
+                    Some(Msg::InitializeClient)
+                }
 
                 _ => None,
             }

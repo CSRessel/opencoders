@@ -51,12 +51,12 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             } else if matches!(model.state, AppState::TextEntry) {
                 // Auto-scroll to bottom when entering text entry mode
                 model.message_log.scroll_to_bottom();
-                
+
                 // If entering text entry mode, ensure we have a client and session
                 if !model.is_session_ready() {
                     model.state = AppState::ConnectingToServer;
                     model.connection_status = ConnectionStatus::Connecting;
-                    return (model, Cmd::DiscoverAndConnectClient);
+                    return (model, Cmd::AsyncSpawnClientDiscovery);
                 }
             }
             (model, Cmd::None)
@@ -66,14 +66,14 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         Msg::InitializeClient => {
             model.state = AppState::ConnectingToServer;
             model.connection_status = ConnectionStatus::Connecting;
-            (model, Cmd::DiscoverAndConnectClient)
+            (model, Cmd::AsyncSpawnClientDiscovery)
         }
 
         Msg::ClientConnected(client) => {
             model.client = Some(client.clone());
             model.connection_status = ConnectionStatus::Connected;
             model.state = AppState::InitializingSession;
-            (model, Cmd::InitializeSessionForClient(client))
+            (model, Cmd::AsyncSpawnSessionInit(client))
         }
 
         Msg::ClientConnectionFailed(error) => {
@@ -88,12 +88,12 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             if let Some(client) = model.client.clone() {
                 model.connection_status = ConnectionStatus::InitializingSession;
                 model.state = AppState::InitializingSession;
-                (model, Cmd::InitializeSessionForClient(client))
+                (model, Cmd::AsyncSpawnSessionInit(client))
             } else {
                 // No client available, need to connect first
                 model.state = AppState::ConnectingToServer;
                 model.connection_status = ConnectionStatus::Connecting;
-                (model, Cmd::DiscoverAndConnectClient)
+                (model, Cmd::AsyncSpawnClientDiscovery)
             }
         }
 
@@ -128,6 +128,39 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
         Msg::ScrollMessageLogHorizontal(direction) => {
             model.message_log.scroll_horizontal(direction);
+            (model, Cmd::None)
+        }
+
+        // Task lifecycle messages
+        Msg::TaskStarted(_task_id, _description) => {
+            // Could update UI to show active tasks
+            (model, Cmd::None)
+        }
+
+        Msg::TaskCompleted(_task_id) => {
+            // Could update UI to remove completed task indicator
+            (model, Cmd::None)
+        }
+
+        Msg::TaskFailed(_task_id, _error) => {
+            // Could show error message or update connection status
+            (model, Cmd::None)
+        }
+
+        // Progress reporting messages
+        Msg::ConnectionProgress(_progress) => {
+            // Could update a progress bar in UI
+            (model, Cmd::None)
+        }
+
+        Msg::SessionProgress(_progress) => {
+            // Could update a progress bar in UI
+            (model, Cmd::None)
+        }
+
+        Msg::MarkMessagesViewed => {
+            let count = model.messages_needing_stdout_print().len();
+            model.mark_messages_printed_to_stdout(count);
             (model, Cmd::None)
         }
     }

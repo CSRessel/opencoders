@@ -4,7 +4,8 @@ use crate::app::{
     tea_model::{AppState, Model, ModelInit},
     tea_update::update,
     tea_view::{view, view_clear, view_manual},
-    ui_components::{banner::create_welcome_text, terminal::TerminalGuard},
+    terminal::TerminalGuard,
+    ui_components::banner::create_welcome_text,
 };
 use ratatui::{backend::CrosstermBackend, style::Color, text::Text, Terminal};
 use std::io::{self, Write};

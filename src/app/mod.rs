@@ -4,6 +4,7 @@ mod event_subscriptions;
 mod tea_model;
 mod tea_update;
 mod tea_view;
+mod terminal;
 mod ui_components;
 
 pub use app_program::Program;

@@ -2,9 +2,10 @@
 
 ## Overview
 
-This project is a new Terminal User Interface (TUI) frontend for the `opencode` project. The frontend will be a standalone Rust application that communicates with the existing headless javascript server. It replaces the previous Go-based TUI.
+This project is a new Terminal User Interface (TUI) frontend for the `opencode` project. The frontend will be a standalone TUI built in Rust that communicates with the existing headless javascript server. It is an alternate implementation to the previous Go-based bubbletea TUI.
 
-The primary goals are to leverage Rust's performance and safety, establish a robust and maintainable architecture, and ensure compatibility with the project's existing backend services.
+The primary goal is to build a seamless experience that integrates the same functionality inline, fullscreen, and in-editor.
+The project will leverage Rust's performance and safety to architect a TUI that ensures ongoing compatibility with the project's existing backend services.
 
 ## Project Structure
 
@@ -50,10 +51,10 @@ opencoders/
 │   │   ├── app_program.rs   # Async TEA runtime with tokio::select!
 │   │   ├── event_msg.rs     # Msg/Cmd/Sub enums for messaging
 │   │   ├── event_subscriptions.rs # Event polling, crossterm → Msg translation
-│   │   ├── tea_model.rs     # Model struct, AppState, initialization
+│   │   ├── tea_model.rs     # Model struct, AppState, ModelInit with inline mode
 │   │   ├── tea_update.rs    # Pure update: (Model, Msg) -> (Model, Cmd)
 │   │   ├── tea_view.rs      # Pure view: render(Model, Frame)
-│   │   ├── ui_terminal.rs   # Terminal setup/cleanup, TerminalGuard
+│   │   ├── terminal.rs      # Terminal setup/cleanup, TerminalGuard
 │   │   └── ui_components/   # Reusable UI components
 │   └── sdk/                 # Wrapping functionality around server SDK
 │       ├── mod.rs           # SDK module root
@@ -115,14 +116,14 @@ The application follows **The Elm Architecture (TEA)** with **Async Event Handli
 
 ```text
 src/app/
-├── mod.rs                 // Public API: run(), INLINE_MODE constant
+├── mod.rs                 // Public API: run()
 ├── app_program.rs         // Async TEA runtime, tokio::select! event loop
 ├── event_msg.rs           // Msg/Cmd/Sub enums for TEA messaging
 ├── event_subscriptions.rs // Event polling, crossterm → Msg translation
 ├── tea_model.rs           // Model struct, AppState enum, initialization
 ├── tea_update.rs          // Pure update function: (Model, Msg) -> (Model, Cmd)
 ├── tea_view.rs            // Pure view function: render(Model, Frame)
-├── ui_terminal.rs         // Terminal setup/cleanup, TerminalGuard RAII
+├── terminal.rs            // Terminal setup/cleanup, TerminalGuard RAII
 └── ui_components/         // Reusable UI components
     ├── mod.rs
     └── text_input.rs
@@ -149,6 +150,6 @@ src/app/
 
 - **Alternate Screen**: Full terminal takeover (default)
 - **Inline Mode**: Render within terminal history
-- Temporarily set by `INLINE_MODE` constant in `src/app/mod.rs`
+- Mode determined by `ModelInit.inline_mode()` in `src/app/tea_model.rs`
 - `TerminalGuard` RAII pattern ensures cleanup on panic
-- Only `ui_terminal.rs` directly calls crossterm terminal functions
+- Only `terminal.rs` directly calls crossterm terminal functions

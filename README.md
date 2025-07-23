@@ -1,10 +1,17 @@
 # opencoders
 
-A high-performance, terminal-native client for opencode built with Rust.
-This TUI provides a responsive interface for interacting with the opencode headless server, leveraging Rust's characteristics for a superior TUI experience:
-enforcement of no multiple ownership reduces bugs in a multi-session implementation,
-strict compile-time type checking enforces all allowable program states,
-and highly performant execution provides a responsiveness you can feel.
+**A terminal-native, high-performance, model-agnostic client for coding tools.**
+
+This TUI provides a responsive and lighning fast interface for interacting with the [`sst/opencode`](https://github.com/sst/opencode) headless server.
+The primary goal is to build a seamless experience that integrates identical functionality between inline, fullscreen, and in-editor modes.
+
+The project leverages Rust's characteristics for an ideal TUI experience:
+strict compile-time type checking enforces allowable program states,
+and performant execution gives a responsiveness you can feel.
+
+And in the future:
+no multiple ownership provides for a concurrent and safe implementation of multi-session coding,
+and Rust wasm build targets can hook in `crossterm` against `xterm.js` for browser deployments.
 
 > [!NOTE]
 >
@@ -161,6 +168,116 @@ The application follows **The Elm Architecture** pattern for predictable state m
 - `ratatui` - Terminal UI framework
 - `tokio` - Async runtime
 - `reqwest` - HTTP client for server communication
+
+### OpenCode Server
+
+The application is built against the server implemented at [`sst/opencode`]()
+
+At the time of writing, the general flow with this server implementation is as follows:
+
+**Session Management:**
+- `GET /session` - List all sessions
+- `POST /session` - Create new session
+- `DELETE /session/{id}` - Delete session
+- `POST /session/{id}/message` - Send user message
+- `GET /session/{id}/message` - Get message history
+- `POST /session/{id}/abort` - Abort session
+- `POST /session/{id}/init` - Initialize session with AGENTS.md analysis
+
+**Real-time Communication:**
+- `GET /event` - Server-Sent Events stream for live updates (continuous)
+
+**File Operations:**
+- `GET /file?path={path}` - Read file content
+- `GET /file/status` - Get file change status
+
+**Configuration:**
+- `GET /config` - Get app configuration
+- `GET /config/providers` - Get available AI providers
+
+```mermaid
+sequenceDiagram
+    participant TUI as TUI Client
+    participant Server as OpenCode Server
+    participant AI as AI Provider
+
+    Note over TUI,AI: Session Initialization
+    TUI->>Server: POST /session
+    Server-->>TUI: session created
+    TUI->>Server: POST /session/{id}/init
+    Server->>AI: analyze codebase
+    AI-->>Server: AGENTS.md analysis
+    Server-->>TUI: initialization complete
+
+    Note over TUI,AI: Real-time Event Stream
+    TUI->>Server: GET /event (SSE)
+    Server-->>TUI: continuous event stream
+
+    Note over TUI,AI: Message Exchange Loop
+    TUI->>Server: POST /session/{id}/message
+    Server->>AI: process message
+    AI-->>Server: response with tool calls
+    Server-->>TUI: message.updated events
+    Server->>Server: execute tools (file ops, etc.)
+    Server-->>TUI: message.part.updated events
+    AI-->>Server: final response
+    Server-->>TUI: message completed
+
+    Note over TUI,AI: File Operations
+    TUI->>Server: GET /file?path={path}
+    Server-->>TUI: file content
+    TUI->>Server: GET /file/status
+    Server-->>TUI: file changes
+```
+
+### Example HTTP Traffic
+
+Capture example HTTP traffic like:
+
+```
+# Capture port 8080 traffic in the background
+sudo tcpdump -i lo -s 0 -A -U -# -w capture-edits.pcap 'port 8080' &
+
+# Then make some edits
+opencode --port 8080
+
+# Then view the traffic in various ways
+sudo pkill tcpdump
+tcpdump -i lo -s 0 -A -U -# -r capture-edits.pcap
+tcpdump -r ../../capture-edits.pcap -A | grep -o -e '(POST|GET) /[^ ]*' | sort | uniq -c | sort -nr
+```
+
+With output like:
+
+```
+reading from file capture-edits.pcap, link-type EN10MB (Ethernet), snapshot length 262144
+   2818 POST /log
+     63 GET /event`)\n
+     15 POST /session`
+     15 POST /session/{id}/message`
+     15 POST /session/{id}/init`
+     15 POST /session/{id}/abort`
+     15 GET /session`
+     15 GET /session/{id}/message`
+     15 GET /file?path={path}`
+     15 GET /file/status`
+     15 GET /event`
+     15 GET /event
+     15 GET /config`
+     15 GET /config/providers`
+     13 POST /session\n
+     13 POST /session/{id}/message\n
+     13 POST /session/{id}/init\n
+     13 GET /file?path={path}\n
+     13 GET /file/status\n
+      2 POST /session\n00055|
+      2 POST /session/{id}/message\n00067|
+      2 POST /session/{id}/init\n00057|
+      2 POST /session/ses_7cb083d9affexkZALb1l7Cn6JC/message
+      2 GET /file?path={path}\n00077|
+      2 GET /file/status\n00079|
+      2 GET /event`)","time":{"start":1753235334533}}}}
+```
 
 ### Building from Source
 

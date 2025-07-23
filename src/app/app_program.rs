@@ -1,6 +1,6 @@
 use crate::{
     app::{
-        event_async_tasks::AsyncTaskManager,
+        event_async_task_manager::AsyncTaskManager,
         event_msg::{Cmd, Msg},
         event_sync_subscriptions::poll_subscriptions,
         tea_model::{AppState, Model, ModelInit},
@@ -197,39 +197,20 @@ impl Program {
                 // rather than recursively to avoid infinite future size
                 for cmd in commands {
                     match cmd {
-                        Cmd::AsyncSpawnClientDiscovery => {
-                            self.task_manager.spawn_task(async move {
-                                match OpenCodeClient::discover().await {
-                                    Ok(client) => Msg::ClientConnected(client),
-                                    Err(error) => Msg::ClientConnectionFailed(error),
-                                }
-                            });
-                        }
-                        Cmd::AsyncSpawnSessionInit(client) => {
-                            self.task_manager.spawn_task(async move {
-                                match client.get_or_create_session().await {
-                                    Ok(session) => Msg::SessionReady(session),
-                                    Err(error) => Msg::SessionInitializationFailed(error),
-                                }
-                            });
-                        }
-                        Cmd::AsyncCancelTask(task_id) => {
-                            self.task_manager.cancel_task(task_id);
-                        }
-                        Cmd::RebootTerminalWithInline(inline_mode) => {
-                            let old_guard = self.guard.take();
-                            let old_terminal = self.terminal.take();
-                            drop(old_guard);
-                            drop(old_terminal);
-
-                            let new_init = ModelInit::new(self.model.init.height(), inline_mode);
-                            let (guard, terminal) = TerminalGuard::new(&new_init)?;
-                            self.guard = Some(guard);
-                            self.terminal = Some(terminal);
-                            self.model.init = new_init;
+                        Cmd::AsyncSpawnClientDiscovery
+                        | Cmd::AsyncSpawnSessionInit(_)
+                        | Cmd::AsyncCancelTask(_)
+                        | Cmd::RebootTerminalWithInline(_) => {
+                            Box::pin(self.spawn_command(cmd)).await?;
                         }
                         Cmd::None => {}
-                        Cmd::Batch(_) => {} // Ignore nested batches to prevent complexity
+                        Cmd::Batch(_) => {
+                            return Err(format!(
+                                "Nested Cmd::Batch detected in spawn_command. This indicates a logic error in the update() function. \
+                                Batch commands should only contain non-batch commands to avoid infinite recursion and stack overflow. \
+                                Please review the update() logic that produced this nested batch."
+                            ).into());
+                        }
                     }
                 }
             }

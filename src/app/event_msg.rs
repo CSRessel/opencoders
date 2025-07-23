@@ -1,5 +1,5 @@
 use crate::{
-    app::{event_async_tasks::TaskId, tea_model::AppState},
+    app::{event_async_task_manager::TaskId, tea_model::AppState},
     sdk::{OpenCodeClient, OpenCodeError},
 };
 use opencode_sdk::models::Session;

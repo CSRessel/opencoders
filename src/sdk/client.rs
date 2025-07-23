@@ -1,24 +1,26 @@
 //! High-level client wrapper for the OpenCode API
 
 use crate::sdk::{
+    discovery::{discover_opencode_server, DiscoveryConfig},
     error::{OpenCodeError, Result},
     extensions::events::{EventStream, EventStreamHandle},
 };
 use opencode_sdk::{
     apis::{configuration::Configuration, default_api},
-    models::{*, post_log_request},
+    models::{post_log_request, *},
 };
 use reqwest::Client;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-
 /// High-level client for the OpenCode API
 ///
 /// This client provides an ergonomic interface to the OpenCode API,
 /// wrapping the generated client with additional functionality.
+#[derive(Clone)]
 pub struct OpenCodeClient {
     config: Configuration,
+    #[allow(dead_code)]
     event_stream: Option<Arc<RwLock<EventStream>>>,
 }
 
@@ -44,6 +46,37 @@ impl OpenCodeClient {
         Self {
             config,
             event_stream: None,
+        }
+    }
+
+    /// Discover and connect to a running OpenCode server
+    pub async fn discover() -> Result<Self> {
+        let server_url = discover_opencode_server().await?;
+        Ok(Self::new(&server_url))
+    }
+
+    /// Discover and connect to a running OpenCode server with custom configuration
+    pub async fn discover_with_config(config: DiscoveryConfig) -> Result<Self> {
+        let server_url =
+            crate::sdk::discovery::discover_opencode_server_with_config(config).await?;
+        Ok(Self::new(&server_url))
+    }
+
+    /// Get the base URL this client is connected to
+    pub fn base_url(&self) -> &str {
+        &self.config.base_path
+    }
+
+    /// Test connection to the server
+    pub async fn test_connection(&self) -> Result<()> {
+        self.get_app_info().await.map(|_| ())
+    }
+
+    /// Create a clone of this client (without event stream)
+    pub fn clone_client(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            event_stream: None, // Don't clone event stream
         }
     }
 
@@ -304,6 +337,21 @@ impl OpenCodeClient {
     }
 }
 
+impl std::fmt::Debug for OpenCodeClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OpenCodeClient")
+            .field("base_url", &self.config.base_path)
+            .field("has_event_stream", &self.event_stream.is_some())
+            .finish()
+    }
+}
+
+impl PartialEq for OpenCodeClient {
+    fn eq(&self, other: &Self) -> bool {
+        self.config.base_path == other.config.base_path
+    }
+}
+
 /// Builder for constructing complex message requests
 pub struct MessageBuilder {
     session_id: String,
@@ -414,4 +462,3 @@ impl MessageBuilder {
             .map_err(OpenCodeError::from)
     }
 }
-

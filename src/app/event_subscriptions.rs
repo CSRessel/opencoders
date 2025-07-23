@@ -6,7 +6,8 @@ use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
 pub fn subscriptions(model: &Model) -> Vec<Sub> {
     match model.state {
-        AppState::Welcome | AppState::TextEntry => vec![Sub::KeyboardInput],
+        AppState::Welcome | AppState::TextEntry | AppState::ConnectingToServer 
+        | AppState::InitializingSession | AppState::ConnectionError(_) => vec![Sub::KeyboardInput],
         AppState::Quit => vec![],
     }
 }
@@ -31,6 +32,12 @@ fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (_, KeyCode::Char('q'), KeyModifiers::CONTROL) => Some(Msg::Quit),
                 (AppState::Welcome, KeyCode::Char('q'), _) => Some(Msg::Quit),
                 (AppState::Welcome, KeyCode::Esc, _) => Some(Msg::Quit),
+                (AppState::ConnectingToServer, KeyCode::Char('q'), _) => Some(Msg::Quit),
+                (AppState::ConnectingToServer, KeyCode::Esc, _) => Some(Msg::Quit),
+                (AppState::InitializingSession, KeyCode::Char('q'), _) => Some(Msg::Quit),
+                (AppState::InitializingSession, KeyCode::Esc, _) => Some(Msg::Quit),
+                (AppState::ConnectionError(_), KeyCode::Char('q'), _) => Some(Msg::Quit),
+                (AppState::ConnectionError(_), KeyCode::Esc, _) => Some(Msg::Quit),
 
                 // State transitions
                 (AppState::Welcome, KeyCode::Enter, _) => {
@@ -57,6 +64,9 @@ fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppState::TextEntry, KeyCode::Right, _) => {
                     Some(Msg::ScrollMessageLogHorizontal(10))
                 }
+
+                // Retry connection
+                (AppState::ConnectionError(_), KeyCode::Char('r'), _) => Some(Msg::InitializeClient),
 
                 _ => None,
             }

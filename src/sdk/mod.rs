@@ -5,12 +5,16 @@
 //! better error handling.
 
 pub mod client;
+pub mod discovery;
 pub mod error;
 pub mod extensions;
+pub mod session_manager;
 
 // High-level exports for easy use
 pub use client::OpenCodeClient;
+pub use discovery::{discover_opencode_server, DiscoveryConfig};
 pub use error::{OpenCodeError, Result};
+pub use session_manager::SessionManager;
 
 // Re-export commonly used generated types for convenience
 pub use opencode_sdk::models::{

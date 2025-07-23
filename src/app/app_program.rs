@@ -1,11 +1,14 @@
-use crate::app::{
-    event_msg::{Cmd, Msg},
-    event_subscriptions::poll_subscriptions,
-    tea_model::{AppState, Model, ModelInit},
-    tea_update::update,
-    tea_view::{view, view_clear, view_manual},
-    terminal::TerminalGuard,
-    ui_components::banner::create_welcome_text,
+use crate::{
+    app::{
+        event_msg::{Cmd, Msg},
+        event_subscriptions::poll_subscriptions,
+        tea_model::{AppState, Model, ModelInit},
+        tea_update::update,
+        tea_view::{view, view_clear, view_manual},
+        terminal::TerminalGuard,
+        ui_components::banner::create_welcome_text,
+    },
+    sdk::OpenCodeClient,
 };
 use ratatui::{backend::CrosstermBackend, style::Color, text::Text, Terminal};
 use std::io::{self, Write};
@@ -14,6 +17,7 @@ pub struct Program {
     model: Model,
     terminal: Option<Terminal<CrosstermBackend<io::Stdout>>>,
     guard: Option<TerminalGuard>,
+    runtime: tokio::runtime::Runtime,
 }
 
 impl Program {
@@ -25,11 +29,15 @@ impl Program {
         print!("{}\n\n", welcome_text);
 
         let (guard, terminal) = TerminalGuard::new(&model.init)?;
+        
+        // Create tokio runtime for async operations
+        let runtime = tokio::runtime::Runtime::new()?;
 
         Ok(Program {
             model,
             terminal: Some(terminal),
             guard: Some(guard),
+            runtime,
         })
     }
 
@@ -91,7 +99,52 @@ impl Program {
                 Ok(())
             }
             Cmd::None => Ok(()),
-            // Future: Handle other commands like API calls, file operations, etc.
+            
+            Cmd::DiscoverAndConnectClient => {
+                // Execute async client discovery in the runtime
+                let result = self.runtime.block_on(async {
+                    OpenCodeClient::discover().await
+                });
+                
+                match result {
+                    Ok(client) => {
+                        // Send success message back to the model
+                        let (new_model, new_cmd) = update(self.model.clone(), Msg::ClientConnected(client));
+                        self.model = new_model;
+                        self.execute_command(new_cmd)?;
+                    }
+                    Err(error) => {
+                        // Send error message back to the model
+                        let (new_model, new_cmd) = update(self.model.clone(), Msg::ClientConnectionFailed(error));
+                        self.model = new_model;
+                        self.execute_command(new_cmd)?;
+                    }
+                }
+                Ok(())
+            }
+            
+            Cmd::InitializeSessionForClient(client) => {
+                // Execute async session initialization in the runtime
+                let result = self.runtime.block_on(async {
+                    client.get_or_create_session().await
+                });
+                
+                match result {
+                    Ok(session) => {
+                        // Send success message back to the model
+                        let (new_model, new_cmd) = update(self.model.clone(), Msg::SessionReady(session));
+                        self.model = new_model;
+                        self.execute_command(new_cmd)?;
+                    }
+                    Err(error) => {
+                        // Send error message back to the model
+                        let (new_model, new_cmd) = update(self.model.clone(), Msg::SessionInitializationFailed(error));
+                        self.model = new_model;
+                        self.execute_command(new_cmd)?;
+                    }
+                }
+                Ok(())
+            }
         }
     }
 }

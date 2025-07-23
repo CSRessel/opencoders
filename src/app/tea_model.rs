@@ -1,4 +1,5 @@
-use crate::app::ui_components::{MessageLog, TextInput};
+use crate::{app::ui_components::{MessageLog, TextInput}, sdk::{OpenCodeClient, OpenCodeError}};
+use opencode_sdk::models::Session;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
@@ -11,6 +12,10 @@ pub struct Model {
     // Stateful components:
     pub message_log: MessageLog,
     pub text_input: TextInput,
+    // Client and session state
+    pub client: Option<OpenCodeClient>,
+    pub session: Option<Session>,
+    pub connection_status: ConnectionStatus,
 }
 
 mod model_init {
@@ -44,8 +49,21 @@ pub use model_init::ModelInit;
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppState {
     Welcome,
+    ConnectingToServer,
+    InitializingSession,
     TextEntry,
+    ConnectionError(String),
     Quit,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConnectionStatus {
+    Disconnected,
+    Connecting,
+    Connected,
+    InitializingSession,
+    SessionReady,
+    Error(String),
 }
 
 impl Model {
@@ -63,6 +81,9 @@ impl Model {
             printed_to_stdout_count: 0,
             message_log,
             text_input,
+            client: None,
+            session: None,
+            connection_status: ConnectionStatus::Disconnected,
         }
     }
 
@@ -86,5 +107,25 @@ impl Model {
 
     pub fn consume_viewed_state(&mut self) {
         self.mark_messages_printed_to_stdout(self.messages_needing_stdout_print().len());
+    }
+
+    /// Check if the client is ready for use
+    pub fn is_client_ready(&self) -> bool {
+        self.client.is_some() && matches!(self.connection_status, ConnectionStatus::Connected | ConnectionStatus::SessionReady)
+    }
+
+    /// Check if session is ready for text entry
+    pub fn is_session_ready(&self) -> bool {
+        self.client.is_some() && self.session.is_some() && matches!(self.connection_status, ConnectionStatus::SessionReady)
+    }
+
+    /// Get a reference to the client if available
+    pub fn client(&self) -> Option<&OpenCodeClient> {
+        self.client.as_ref()
+    }
+
+    /// Get a reference to the session if available
+    pub fn session(&self) -> Option<&Session> {
+        self.session.as_ref()
     }
 }

@@ -3,6 +3,11 @@
 use opencode_sdk::apis;
 use thiserror::Error;
 
+
+
+/// Result type alias for OpenCode SDK operations
+pub type Result<T> = std::result::Result<T, OpenCodeError>;
+
 /// Main error type for the OpenCode SDK
 #[derive(Error, Debug)]
 pub enum OpenCodeError {
@@ -49,13 +54,72 @@ pub enum OpenCodeError {
     #[error("Request timeout: {0}")]
     Timeout(String),
 
+    /// Server not found during discovery
+    #[error("OpenCode server not found - check if server is running")]
+    ServerNotFound,
+
+    /// Connection timeout
+    #[error("Connection timeout")]
+    ConnectionTimeout,
+
+    /// Process detection failed
+    #[error("Failed to detect running OpenCode processes")]
+    ProcessDetectionFailed,
+
+    /// Session persistence error
+    #[error("Session persistence error: {0}")]
+    SessionPersistence(String),
+
     /// Generic error for unexpected situations
     #[error("Unexpected error: {0}")]
     Unexpected(String),
 }
 
-/// Result type alias for OpenCode SDK operations
-pub type Result<T> = std::result::Result<T, OpenCodeError>;
+impl Clone for OpenCodeError {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Http(_) => Self::Unexpected("HTTP error (cannot clone)".to_string()),
+            Self::Serialization(_) => Self::Unexpected("Serialization error (cannot clone)".to_string()),
+            Self::Api { status, message } => Self::Api { status: *status, message: message.clone() },
+            Self::Auth(msg) => Self::Auth(msg.clone()),
+            Self::SessionNotFound { session_id } => Self::SessionNotFound { session_id: session_id.clone() },
+            Self::MessageNotFound { session_id, message_id } => Self::MessageNotFound { session_id: session_id.clone(), message_id: message_id.clone() },
+            Self::EventStream(msg) => Self::EventStream(msg.clone()),
+            Self::Configuration(msg) => Self::Configuration(msg.clone()),
+            Self::InvalidRequest(msg) => Self::InvalidRequest(msg.clone()),
+            Self::Timeout(msg) => Self::Timeout(msg.clone()),
+            Self::ServerNotFound => Self::ServerNotFound,
+            Self::ConnectionTimeout => Self::ConnectionTimeout,
+            Self::ProcessDetectionFailed => Self::ProcessDetectionFailed,
+            Self::SessionPersistence(msg) => Self::SessionPersistence(msg.clone()),
+            Self::Unexpected(msg) => Self::Unexpected(msg.clone()),
+        }
+    }
+}
+
+impl PartialEq for OpenCodeError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Http(_), Self::Http(_)) => false, // Cannot compare HTTP errors
+            (Self::Serialization(_), Self::Serialization(_)) => false, // Cannot compare serialization errors
+            (Self::Api { status: s1, message: m1 }, Self::Api { status: s2, message: m2 }) => s1 == s2 && m1 == m2,
+            (Self::Auth(a), Self::Auth(b)) => a == b,
+            (Self::SessionNotFound { session_id: a }, Self::SessionNotFound { session_id: b }) => a == b,
+            (Self::MessageNotFound { session_id: s1, message_id: m1 }, Self::MessageNotFound { session_id: s2, message_id: m2 }) => s1 == s2 && m1 == m2,
+            (Self::EventStream(a), Self::EventStream(b)) => a == b,
+            (Self::Configuration(a), Self::Configuration(b)) => a == b,
+            (Self::InvalidRequest(a), Self::InvalidRequest(b)) => a == b,
+            (Self::Timeout(a), Self::Timeout(b)) => a == b,
+            (Self::ServerNotFound, Self::ServerNotFound) => true,
+            (Self::ConnectionTimeout, Self::ConnectionTimeout) => true,
+            (Self::ProcessDetectionFailed, Self::ProcessDetectionFailed) => true,
+            (Self::SessionPersistence(a), Self::SessionPersistence(b)) => a == b,
+            (Self::Unexpected(a), Self::Unexpected(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
 
 impl OpenCodeError {
     /// Create an API error from status code and message
@@ -106,6 +170,11 @@ impl OpenCodeError {
         Self::Timeout(message.into())
     }
 
+    /// Create a session persistence error
+    pub fn session_persistence_error(message: impl Into<String>) -> Self {
+        Self::SessionPersistence(message.into())
+    }
+
     /// Check if this error is retryable
     pub fn is_retryable(&self) -> bool {
         match self {
@@ -113,6 +182,8 @@ impl OpenCodeError {
             Self::Api { status, .. } => *status >= 500,
             Self::Timeout(_) => true,
             Self::EventStream(_) => true,
+            Self::ConnectionTimeout => true,
+            Self::ProcessDetectionFailed => true,
             _ => false,
         }
     }

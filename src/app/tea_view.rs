@@ -1,5 +1,5 @@
 use crate::app::{
-    tea_model::{AppState, Model},
+    tea_model::{AppState, ConnectionStatus, Model},
     ui_components::create_welcome_text,
 };
 use core::error;
@@ -29,6 +29,9 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     match model.state {
         AppState::TextEntry => render_manual_history(&model)?,
         AppState::Welcome => {}
+        AppState::ConnectingToServer => {}
+        AppState::InitializingSession => {}
+        AppState::ConnectionError(_) => {}
         AppState::Quit => {}
     };
 
@@ -56,9 +59,12 @@ fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>
 }
 
 pub fn view(model: &Model, frame: &mut Frame) {
-    match model.state {
+    match &model.state {
         AppState::Welcome => render_welcome_screen(model, frame),
+        AppState::ConnectingToServer => render_connecting_screen(model, frame),
+        AppState::InitializingSession => render_initializing_session_screen(model, frame),
         AppState::TextEntry => render_text_entry_screen(model, frame),
+        AppState::ConnectionError(error) => render_error_screen(model, frame, error),
         AppState::Quit => {} // No rendering needed for quit state
     };
 }
@@ -129,5 +135,86 @@ fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
 
         frame.render_widget(&model.message_log, vertical_chunks[0]);
         frame.render_widget(&model.text_input, vertical_chunks[1]);
+    }
+}
+
+fn render_connecting_screen(model: &Model, frame: &mut Frame) {
+    let text = Text::from(vec![
+        Line::from("Connecting to OpenCode server..."),
+        Line::from(""),
+        Line::from("Looking for running OpenCode processes..."),
+        Line::from("Press 'q' or 'Esc' to cancel"),
+    ]);
+    let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Yellow));
+
+    if model.init.inline_mode() {
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(4)])
+            .split(frame.area());
+        frame.render_widget(paragraph, vertical_chunks[1]);
+    } else {
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(4), Constraint::Min(0)])
+            .split(frame.area());
+        frame.render_widget(paragraph, vertical_chunks[1]);
+    }
+}
+
+fn render_initializing_session_screen(model: &Model, frame: &mut Frame) {
+    let client_url = model.client().map(|c| c.base_url()).unwrap_or("unknown");
+    
+    let text = Text::from(vec![
+        Line::from("Initializing session..."),
+        Line::from(""),
+        Line::from(format!("Connected to: {}", client_url)),
+        Line::from("Setting up your coding session..."),
+        Line::from("Press 'q' or 'Esc' to cancel"),
+    ]);
+    let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Blue));
+
+    if model.init.inline_mode() {
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(5)])
+            .split(frame.area());
+        frame.render_widget(paragraph, vertical_chunks[1]);
+    } else {
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(5), Constraint::Min(0)])
+            .split(frame.area());
+        frame.render_widget(paragraph, vertical_chunks[1]);
+    }
+}
+
+fn render_error_screen(model: &Model, frame: &mut Frame, error: &str) {
+    let text = Text::from(vec![
+        Line::from("Connection Error"),
+        Line::from(""),
+        Line::from(error),
+        Line::from(""),
+        Line::from("Suggestions:"),
+        Line::from("• Make sure OpenCode server is running"),
+        Line::from("• Check OPENCODE_SERVER_URL environment variable"),
+        Line::from("• Try running: opencode serve"),
+        Line::from(""),
+        Line::from("Press 'r' to retry, 'q' or 'Esc' to quit"),
+    ]);
+    let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Red));
+
+    if model.init.inline_mode() {
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(10)])
+            .split(frame.area());
+        frame.render_widget(paragraph, vertical_chunks[1]);
+    } else {
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(10), Constraint::Min(0)])
+            .split(frame.area());
+        frame.render_widget(paragraph, vertical_chunks[1]);
     }
 }

@@ -1,6 +1,6 @@
 //! Event stream handling for real-time updates
 
-use crate::sdk::error::Result;
+use crate::sdk::error::{OpenCodeError, Result};
 use opencode_sdk::{apis::{configuration::Configuration, default_api}, models::Event};
 use std::time::Duration;
 use tokio::sync::broadcast;

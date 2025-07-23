@@ -1,6 +1,6 @@
 use crate::app::{
     event_msg::{Cmd, Msg},
-    tea_model::{AppState, Model},
+    tea_model::{AppState, ConnectionStatus, Model},
     ui_components::text_input::TextInputEvent,
 };
 use opencode_sdk::models::{
@@ -42,7 +42,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::ChangeState(new_state) => {
-            model.state = new_state;
+            model.state = new_state.clone();
             if matches!(model.state, AppState::Welcome) {
                 model.text_input.clear();
                 model.last_input = None;
@@ -51,7 +51,65 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             } else if matches!(model.state, AppState::TextEntry) {
                 // Auto-scroll to bottom when entering text entry mode
                 model.message_log.scroll_to_bottom();
+                
+                // If entering text entry mode, ensure we have a client and session
+                if !model.is_session_ready() {
+                    model.state = AppState::ConnectingToServer;
+                    model.connection_status = ConnectionStatus::Connecting;
+                    return (model, Cmd::DiscoverAndConnectClient);
+                }
             }
+            (model, Cmd::None)
+        }
+
+        // Client initialization messages
+        Msg::InitializeClient => {
+            model.state = AppState::ConnectingToServer;
+            model.connection_status = ConnectionStatus::Connecting;
+            (model, Cmd::DiscoverAndConnectClient)
+        }
+
+        Msg::ClientConnected(client) => {
+            model.client = Some(client.clone());
+            model.connection_status = ConnectionStatus::Connected;
+            model.state = AppState::InitializingSession;
+            (model, Cmd::InitializeSessionForClient(client))
+        }
+
+        Msg::ClientConnectionFailed(error) => {
+            let error_msg = format!("Failed to connect to OpenCode server: {}", error);
+            model.connection_status = ConnectionStatus::Error(error_msg.clone());
+            model.state = AppState::ConnectionError(error_msg);
+            (model, Cmd::None)
+        }
+
+        // Session management messages
+        Msg::InitializeSession => {
+            if let Some(client) = model.client.clone() {
+                model.connection_status = ConnectionStatus::InitializingSession;
+                model.state = AppState::InitializingSession;
+                (model, Cmd::InitializeSessionForClient(client))
+            } else {
+                // No client available, need to connect first
+                model.state = AppState::ConnectingToServer;
+                model.connection_status = ConnectionStatus::Connecting;
+                (model, Cmd::DiscoverAndConnectClient)
+            }
+        }
+
+        Msg::SessionReady(session) => {
+            model.session = Some(session);
+            model.connection_status = ConnectionStatus::SessionReady;
+            model.state = AppState::TextEntry;
+            // Auto-scroll to bottom when session is ready
+            model.message_log.scroll_to_bottom();
+            (model, Cmd::None)
+        }
+
+        Msg::SessionInitializationFailed(error) => {
+            let error_msg = format!("Failed to initialize session: {}", error);
+            model.connection_status = ConnectionStatus::Error(error_msg.clone());
+            model.state = AppState::ConnectionError(error_msg);
             (model, Cmd::None)
         }
 

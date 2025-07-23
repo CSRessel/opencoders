@@ -49,6 +49,13 @@ pub async fn discover_opencode_server_with_config(config: DiscoveryConfig) -> Re
         }
     }
 
+    // 3. In development mode, try to start the server automatically
+    if is_development_mode() {
+        if let Ok(url) = start_server_and_discover(&config).await {
+            return Ok(url);
+        }
+    }
+
     Err(OpenCodeError::ServerNotFound)
 }
 
@@ -135,6 +142,54 @@ fn extract_server_url_from_process_line(line: &str) -> Option<String> {
     port.map(|p| format!("http://{}:{}", hostname, p))
 }
 
+/// Check if we're running in development mode
+fn is_development_mode() -> bool {
+    // Check if we're in debug mode (cargo run/cargo build without --release)
+    cfg!(debug_assertions) ||
+    // Check for development environment variables
+    std::env::var("NODE_ENV").map(|v| v == "development").unwrap_or(false) ||
+    std::env::var("OPENCODE_DEV").is_ok()
+}
+
+/// Start the opencode server and attempt discovery
+async fn start_server_and_discover(_config: &DiscoveryConfig) -> Result<String> {
+    // Default server configuration
+    let hostname = "127.0.0.1";
+    let port = 8080u16;
+    let server_url = format!("http://{}:{}", hostname, port);
+    
+    // Try to start the server
+    let mut child = Command::new("opencode")
+        .args(&["serve", "--port", &port.to_string(), "--hostname", hostname])
+        .spawn()
+        .map_err(|e| OpenCodeError::server_start_failed(format!("Failed to spawn opencode serve: {}", e)))?;
+    
+    // Give the server some time to start up
+    tokio::time::sleep(Duration::from_millis(2000)).await;
+    
+    // Extended retry configuration for server startup
+    let startup_config = DiscoveryConfig {
+        validation_timeout: Duration::from_secs(10),
+        max_retries: 10,
+        retry_delay: Duration::from_millis(1000),
+    };
+    
+    // Try to validate the server is running
+    match validate_server_with_config(&server_url, &startup_config).await {
+        Ok(()) => {
+            // Server is running, detach the child process so it continues running
+            // We don't want to keep a handle to it since it should run independently
+            std::mem::forget(child);
+            Ok(server_url)
+        }
+        Err(e) => {
+            // Kill the child process if validation failed
+            let _ = child.kill().await;
+            Err(OpenCodeError::server_start_failed(format!("Server started but validation failed: {}", e)))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,5 +207,20 @@ mod tests {
         let line3 = "user  12347  0.1  0.5  123456  7890 ?  S  10:30  0:01 opencode serve --hostname localhost --port 8000";
         let url3 = extract_server_url_from_process_line(line3);
         assert_eq!(url3, Some("http://localhost:8000".to_string()));
+    }
+
+    #[test]
+    fn test_is_development_mode() {
+        // In debug builds, should return true
+        #[cfg(debug_assertions)]
+        assert!(is_development_mode());
+        
+        // In release builds without env vars, should return false
+        #[cfg(not(debug_assertions))]
+        {
+            std::env::remove_var("NODE_ENV");
+            std::env::remove_var("OPENCODE_DEV");
+            assert!(!is_development_mode());
+        }
     }
 }

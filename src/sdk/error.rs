@@ -70,6 +70,10 @@ pub enum OpenCodeError {
     #[error("Session persistence error: {0}")]
     SessionPersistence(String),
 
+    /// Server start failed
+    #[error("Failed to start OpenCode server: {0}")]
+    ServerStartFailed(String),
+
     /// Generic error for unexpected situations
     #[error("Unexpected error: {0}")]
     Unexpected(String),
@@ -92,6 +96,7 @@ impl Clone for OpenCodeError {
             Self::ConnectionTimeout => Self::ConnectionTimeout,
             Self::ProcessDetectionFailed => Self::ProcessDetectionFailed,
             Self::SessionPersistence(msg) => Self::SessionPersistence(msg.clone()),
+            Self::ServerStartFailed(msg) => Self::ServerStartFailed(msg.clone()),
             Self::Unexpected(msg) => Self::Unexpected(msg.clone()),
         }
     }
@@ -114,6 +119,7 @@ impl PartialEq for OpenCodeError {
             (Self::ConnectionTimeout, Self::ConnectionTimeout) => true,
             (Self::ProcessDetectionFailed, Self::ProcessDetectionFailed) => true,
             (Self::SessionPersistence(a), Self::SessionPersistence(b)) => a == b,
+            (Self::ServerStartFailed(a), Self::ServerStartFailed(b)) => a == b,
             (Self::Unexpected(a), Self::Unexpected(b)) => a == b,
             _ => false,
         }
@@ -175,6 +181,11 @@ impl OpenCodeError {
         Self::SessionPersistence(message.into())
     }
 
+    /// Create a server start failed error
+    pub fn server_start_failed(message: impl Into<String>) -> Self {
+        Self::ServerStartFailed(message.into())
+    }
+
     /// Check if this error is retryable
     pub fn is_retryable(&self) -> bool {
         match self {
@@ -184,6 +195,7 @@ impl OpenCodeError {
             Self::EventStream(_) => true,
             Self::ConnectionTimeout => true,
             Self::ProcessDetectionFailed => true,
+            Self::ServerStartFailed(_) => false,
             _ => false,
         }
     }

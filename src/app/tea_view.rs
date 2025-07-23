@@ -28,11 +28,7 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
 
     match model.state {
         AppState::TextEntry => render_manual_history(&model)?,
-        AppState::Welcome => {}
-        AppState::ConnectingToServer => {}
-        AppState::InitializingSession => {}
-        AppState::ConnectionError(_) => {}
-        AppState::Quit => {}
+        _ => {}
     };
 
     // Move cursor back down to TUI
@@ -156,7 +152,11 @@ fn render_connecting_screen(model: &Model, frame: &mut Frame) {
     } else {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(4), Constraint::Min(0)])
+            .constraints([
+                Constraint::Min(0),
+                Constraint::Length(4),
+                Constraint::Min(0),
+            ])
             .split(frame.area());
         frame.render_widget(paragraph, vertical_chunks[1]);
     }
@@ -164,7 +164,7 @@ fn render_connecting_screen(model: &Model, frame: &mut Frame) {
 
 fn render_initializing_session_screen(model: &Model, frame: &mut Frame) {
     let client_url = model.client().map(|c| c.base_url()).unwrap_or("unknown");
-    
+
     let text = Text::from(vec![
         Line::from("Initializing session..."),
         Line::from(""),
@@ -183,7 +183,11 @@ fn render_initializing_session_screen(model: &Model, frame: &mut Frame) {
     } else {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(5), Constraint::Min(0)])
+            .constraints([
+                Constraint::Min(0),
+                Constraint::Length(5),
+                Constraint::Min(0),
+            ])
             .split(frame.area());
         frame.render_widget(paragraph, vertical_chunks[1]);
     }
@@ -213,7 +217,11 @@ fn render_error_screen(model: &Model, frame: &mut Frame, error: &str) {
     } else {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(10), Constraint::Min(0)])
+            .constraints([
+                Constraint::Min(0),
+                Constraint::Length(10),
+                Constraint::Min(0),
+            ])
             .split(frame.area());
         frame.render_widget(paragraph, vertical_chunks[1]);
     }

@@ -1,4 +1,7 @@
-use crate::{app::ui_components::{MessageLog, TextInput}, sdk::{OpenCodeClient, OpenCodeError}};
+use crate::{
+    app::ui_components::{MessageLog, TextInput},
+    sdk::{OpenCodeClient, OpenCodeError},
+};
 use opencode_sdk::models::Session;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -109,22 +112,24 @@ impl Model {
         self.mark_messages_printed_to_stdout(self.messages_needing_stdout_print().len());
     }
 
-    /// Check if the client is ready for use
     pub fn is_client_ready(&self) -> bool {
-        self.client.is_some() && matches!(self.connection_status, ConnectionStatus::Connected | ConnectionStatus::SessionReady)
+        self.client.is_some()
+            && matches!(
+                self.connection_status,
+                ConnectionStatus::Connected | ConnectionStatus::SessionReady
+            )
     }
 
-    /// Check if session is ready for text entry
     pub fn is_session_ready(&self) -> bool {
-        self.client.is_some() && self.session.is_some() && matches!(self.connection_status, ConnectionStatus::SessionReady)
+        self.client.is_some()
+            && self.session.is_some()
+            && matches!(self.connection_status, ConnectionStatus::SessionReady)
     }
 
-    /// Get a reference to the client if available
     pub fn client(&self) -> Option<&OpenCodeClient> {
         self.client.as_ref()
     }
 
-    /// Get a reference to the session if available
     pub fn session(&self) -> Option<&Session> {
         self.session.as_ref()
     }

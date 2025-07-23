@@ -279,6 +279,88 @@ reading from file capture-edits.pcap, link-type EN10MB (Ethernet), snapshot leng
       2 GET /event`)","time":{"start":1753235334533}}}}
 ```
 
+### State Transition Diagram
+
+The application follows a complex state machine pattern with the following transitions:
+
+```mermaid
+flowchart TD
+    subgraph Screens
+    direction TB
+
+    Welcome[Welcome] 
+    TextEntry[TextEntry]
+    Quit[Quit]
+
+    %% Initial state and basic navigation
+    Welcome e0@-->|Msg::ChangeState TextEntry| TextEntry
+    Welcome e1@-->|Msg::Quit| Quit
+
+    %% Text entry mode transitions
+    TextEntry e2@-->|Msg::ChangeState Welcome| Welcome
+    TextEntry e3@-->|Msg::Quit| Quit
+
+    end
+    subgraph Connections
+
+    ConnectingToServer[ConnectingToServer]
+    InitializingSession[InitializingSession]
+    ConnectionError[ConnectionError]
+
+    %% from above, but here so nodes are correctly located
+    Welcome e4@-->|Msg::InitializeClient| ConnectingToServer
+    TextEntry e5@-->|Cmd::DiscoverAndConnectClient| ConnectingToServer
+
+    %% Connection flow
+    ConnectingToServer e6@-->|Cmd::DiscoverAndConnectClient| ConnectingToServer
+    ConnectingToServer e7@-->|Msg::ClientConnected| InitializingSession
+    ConnectingToServer e8@-->|Msg::ClientConnectionFailed| ConnectionError
+
+    %% Session initialization
+    InitializingSession e9@-->|Cmd::InitializeSessionForClient| InitializingSession
+    InitializingSession e10@-->|Msg::SessionReady| TextEntry
+    InitializingSession e11@-->|Msg::SessionInitializationFailed| ConnectionError
+
+    %% Error recovery
+    ConnectionError e12@-->|Msg::ChangeState Welcome| Welcome
+    ConnectionError e13@-->|Msg::InitializeClient| ConnectingToServer
+    ConnectionError e14@-->|Msg::Quit| Quit
+
+    end
+
+    %% Animation and thick for API request
+    e5@{ animate: true }
+    e6@{ animate: true }
+    e9@{ animate: true }
+    %% Animation and thin for API response
+    e7@{ animate: true }
+    e8@{ animate: true }
+    e10@{ animate: true }
+    e11@{ animate: true }
+
+    %% Style the links - purple for Cmd, blue for Msg
+    linkStyle 0 stroke:#4590ff,stroke-width:4px
+    linkStyle 1 stroke:#4590ff,stroke-width:4px
+    linkStyle 2 stroke:#4590ff,stroke-width:4px
+    linkStyle 3 stroke:#4590ff,stroke-width:4px
+    linkStyle 4 stroke:#4590ff,stroke-width:4px
+    linkStyle 5 stroke:#8a2be2,stroke-width:6px
+    linkStyle 6 stroke:#8a2be2,stroke-width:6px
+    linkStyle 7 stroke:#4590ff,stroke-width:2px
+    linkStyle 8 stroke:#4590ff,stroke-width:2px
+    linkStyle 9 stroke:#8a2be2,stroke-width:6px
+    linkStyle 10 stroke:#4590ff,stroke-width:2px
+    linkStyle 11 stroke:#4590ff,stroke-width:2px
+    linkStyle 12 stroke:#4590ff,stroke-width:4px
+    linkStyle 13 stroke:#4590ff,stroke-width:4px
+    linkStyle 14 stroke:#4590ff,stroke-width:4px
+```
+
+**Legend:**
+- **Purple edges**: `Cmd` (Commands - side effects like API calls)
+- **Blue edges**: `Msg` (Messages - pure state transitions)
+- **Animated edges**: API calls to and from the OpenCode server
+
 ### Building from Source
 
 ```bash

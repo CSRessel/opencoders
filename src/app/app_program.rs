@@ -1,7 +1,8 @@
 use crate::{
     app::{
+        event_async_tasks::AsyncTaskManager,
         event_msg::{Cmd, Msg},
-        event_subscriptions::poll_subscriptions,
+        event_sync_subscriptions::poll_subscriptions,
         tea_model::{AppState, Model, ModelInit},
         tea_update::update,
         tea_view::{view, view_clear, view_manual},
@@ -17,7 +18,7 @@ pub struct Program {
     model: Model,
     terminal: Option<Terminal<CrosstermBackend<io::Stdout>>>,
     guard: Option<TerminalGuard>,
-    runtime: tokio::runtime::Runtime,
+    task_manager: AsyncTaskManager,
 }
 
 impl Program {
@@ -29,58 +30,84 @@ impl Program {
         print!("{}\n\n", welcome_text);
 
         let (guard, terminal) = TerminalGuard::new(&model.init)?;
-        
-        // Create tokio runtime for async operations
-        let runtime = tokio::runtime::Runtime::new()?;
+
+        // Create async task manager
+        let task_manager = AsyncTaskManager::new();
 
         Ok(Program {
             model,
             terminal: Some(terminal),
             guard: Some(guard),
-            runtime,
+            task_manager,
         })
     }
 
-    pub fn run(mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(self) -> Result<(), Box<dyn std::error::Error>> {
+        // Create a Tokio runtime for this blocking function
+        let runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(self.run_async())
+    }
+
+    async fn run_async(mut self) -> Result<(), Box<dyn std::error::Error>> {
         loop {
             // Check for quit state
             if matches!(self.model.state, AppState::Quit) {
                 break;
             }
 
-            // View: Manual rendering outside the TUI viewport
-            if self.model.needs_manual_output() {
-                if let Some(terminal) = self.terminal.as_mut() {
-                    // Clear the TUI
-                    terminal.draw(|f| view_clear(&self.model, f))?;
-                }
-                // Manually execute with crossterm
-                view_manual(&self.model)?;
-            }
-
-            // View: Pure rendering, within the TUI
-            if let Some(terminal) = self.terminal.as_mut() {
-                terminal.draw(|f| view(&self.model, f))?;
-            }
-
-            // Update the model for all consumed state
-            // TODO: move to Msg::ChangeState()
-            self.model.consume_viewed_state();
-
-            // Subscriptions: Convert external events to messages
-            if let Some(msg) = poll_subscriptions(&self.model)? {
-                // Update: Pure state transition
+            // Handle async task completions (non-blocking)
+            let async_messages = self.task_manager.poll_messages();
+            for msg in async_messages {
                 let (new_model, cmd) = update(self.model, msg);
                 self.model = new_model;
-
-                // Commands: Execute side effects
-                self.execute_command(cmd)?;
+                self.spawn_command(cmd).await?;
             }
+
+            // Cleanup completed tasks periodically
+            self.task_manager.cleanup_completed_tasks();
+
+            // View rendering
+            // (Could be made async with a separate render thread,
+            //  but currently renders are very fast so best to just block for
+            //  less overhead and responsiveness faster than the tick rate)
+            self.render_view()?;
+
+            // Update the model for all consumed state
+            self.model.consume_viewed_state();
+
+            // Handle synchronous subscriptions
+            if let Some(msg) = poll_subscriptions(&self.model)? {
+                let (new_model, cmd) = update(self.model, msg);
+                self.model = new_model;
+                self.spawn_command(cmd).await?;
+            }
+
+            // Small yield to prevent busy-waiting
+            tokio::task::yield_now().await;
         }
         Ok(())
     }
 
-    fn execute_command(&mut self, cmd: Cmd) -> Result<(), Box<dyn std::error::Error>> {
+    fn render_view(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // View: Manual rendering outside the TUI viewport
+        if self.model.needs_manual_output() {
+            if let Some(terminal) = self.terminal.as_mut() {
+                // Clear the TUI
+                terminal.draw(|f| view_clear(&self.model, f))?;
+            }
+            // Manually execute with crossterm
+            view_manual(&self.model)?;
+        }
+
+        // View: Pure rendering, within the TUI
+        if let Some(terminal) = self.terminal.as_mut() {
+            terminal.draw(|f| view(&self.model, f))?;
+        }
+
+        Ok(())
+    }
+
+    async fn spawn_command(&mut self, cmd: Cmd) -> Result<(), Box<dyn std::error::Error>> {
         match cmd {
             Cmd::RebootTerminalWithInline(inline_mode) => {
                 // Deconstruct the old terminal by taking ownership from the Option
@@ -96,55 +123,75 @@ impl Program {
                 self.guard = Some(guard);
                 self.terminal = Some(terminal);
                 self.model.init = new_init;
-                Ok(())
             }
-            Cmd::None => Ok(()),
-            
-            Cmd::DiscoverAndConnectClient => {
-                // Execute async client discovery in the runtime
-                let result = self.runtime.block_on(async {
-                    OpenCodeClient::discover().await
-                });
-                
-                match result {
-                    Ok(client) => {
-                        // Send success message back to the model
-                        let (new_model, new_cmd) = update(self.model.clone(), Msg::ClientConnected(client));
-                        self.model = new_model;
-                        self.execute_command(new_cmd)?;
+
+            Cmd::AsyncSpawnClientDiscovery => {
+                // Spawn async client discovery task
+                self.task_manager.spawn_task(async move {
+                    match OpenCodeClient::discover().await {
+                        Ok(client) => Msg::ClientConnected(client),
+                        Err(error) => Msg::ClientConnectionFailed(error),
                     }
-                    Err(error) => {
-                        // Send error message back to the model
-                        let (new_model, new_cmd) = update(self.model.clone(), Msg::ClientConnectionFailed(error));
-                        self.model = new_model;
-                        self.execute_command(new_cmd)?;
+                });
+            }
+
+            Cmd::AsyncSpawnSessionInit(client) => {
+                // Spawn async session initialization task
+                self.task_manager.spawn_task(async move {
+                    match client.get_or_create_session().await {
+                        Ok(session) => Msg::SessionReady(session),
+                        Err(error) => Msg::SessionInitializationFailed(error),
+                    }
+                });
+            }
+
+            Cmd::AsyncCancelTask(task_id) => {
+                self.task_manager.cancel_task(task_id);
+            }
+
+            Cmd::Batch(commands) => {
+                // Handle batch commands by processing them in the main loop
+                // rather than recursively to avoid infinite future size
+                for cmd in commands {
+                    match cmd {
+                        Cmd::AsyncSpawnClientDiscovery => {
+                            self.task_manager.spawn_task(async move {
+                                match OpenCodeClient::discover().await {
+                                    Ok(client) => Msg::ClientConnected(client),
+                                    Err(error) => Msg::ClientConnectionFailed(error),
+                                }
+                            });
+                        }
+                        Cmd::AsyncSpawnSessionInit(client) => {
+                            self.task_manager.spawn_task(async move {
+                                match client.get_or_create_session().await {
+                                    Ok(session) => Msg::SessionReady(session),
+                                    Err(error) => Msg::SessionInitializationFailed(error),
+                                }
+                            });
+                        }
+                        Cmd::AsyncCancelTask(task_id) => {
+                            self.task_manager.cancel_task(task_id);
+                        }
+                        Cmd::RebootTerminalWithInline(inline_mode) => {
+                            let old_guard = self.guard.take();
+                            let old_terminal = self.terminal.take();
+                            drop(old_guard);
+                            drop(old_terminal);
+                            let new_init = ModelInit::new(self.model.init.height(), inline_mode);
+                            let (guard, terminal) = TerminalGuard::new(&new_init)?;
+                            self.guard = Some(guard);
+                            self.terminal = Some(terminal);
+                            self.model.init = new_init;
+                        }
+                        Cmd::None => {}
+                        Cmd::Batch(_) => {} // Ignore nested batches to prevent complexity
                     }
                 }
-                Ok(())
             }
-            
-            Cmd::InitializeSessionForClient(client) => {
-                // Execute async session initialization in the runtime
-                let result = self.runtime.block_on(async {
-                    client.get_or_create_session().await
-                });
-                
-                match result {
-                    Ok(session) => {
-                        // Send success message back to the model
-                        let (new_model, new_cmd) = update(self.model.clone(), Msg::SessionReady(session));
-                        self.model = new_model;
-                        self.execute_command(new_cmd)?;
-                    }
-                    Err(error) => {
-                        // Send error message back to the model
-                        let (new_model, new_cmd) = update(self.model.clone(), Msg::SessionInitializationFailed(error));
-                        self.model = new_model;
-                        self.execute_command(new_cmd)?;
-                    }
-                }
-                Ok(())
-            }
+
+            Cmd::None => {}
         }
+        Ok(())
     }
 }

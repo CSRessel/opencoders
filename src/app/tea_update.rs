@@ -157,5 +157,11 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             // Could update a progress bar in UI
             (model, Cmd::None)
         }
+
+        Msg::MarkMessagesViewed => {
+            let count = model.messages_needing_stdout_print().len();
+            model.mark_messages_printed_to_stdout(count);
+            (model, Cmd::None)
+        }
     }
 }

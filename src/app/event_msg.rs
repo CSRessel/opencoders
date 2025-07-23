@@ -34,6 +34,9 @@ pub enum Msg {
     // Progress reporting messages
     ConnectionProgress(f32),
     SessionProgress(f32),
+
+    // View state management
+    MarkMessagesViewed,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -102,7 +102,9 @@ impl Program {
                     // Only render if needed
                     if self.needs_render {
                         self.render_view()?;
-                        self.model.consume_viewed_state();
+                        let (new_model, cmd) = update(self.model, Msg::MarkMessagesViewed);
+                        self.model = new_model;
+                        self.spawn_command(cmd).await?;
                         self.needs_render = false;
                     }
                 },

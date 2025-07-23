@@ -108,9 +108,7 @@ impl Model {
         self.printed_to_stdout_count += count;
     }
 
-    pub fn consume_viewed_state(&mut self) {
-        self.mark_messages_printed_to_stdout(self.messages_needing_stdout_print().len());
-    }
+
 
     pub fn is_client_ready(&self) -> bool {
         self.client.is_some()

@@ -36,13 +36,14 @@ pub struct Config {
     /// Model to use in the format of provider/model, eg anthropic/claude-2
     #[serde(rename = "model", skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    /// Small model to use for tasks like summarization and title generation in the format of provider/model
+    #[serde(rename = "small_model", skip_serializing_if = "Option::is_none")]
+    pub small_model: Option<String>,
     /// Custom username to display in conversations instead of system username
     #[serde(rename = "username", skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
     #[serde(rename = "mode", skip_serializing_if = "Option::is_none")]
     pub mode: Option<models::ConfigMode>,
-    #[serde(rename = "log_level", skip_serializing_if = "Option::is_none")]
-    pub log_level: Option<models::LogLevel>,
     /// Custom provider configurations and model overrides
     #[serde(rename = "provider", skip_serializing_if = "Option::is_none")]
     pub provider: Option<std::collections::HashMap<String, models::ConfigProviderValue>>,
@@ -69,9 +70,9 @@ impl Config {
             autoupdate: None,
             disabled_providers: None,
             model: None,
+            small_model: None,
             username: None,
             mode: None,
-            log_level: None,
             provider: None,
             mcp: None,
             instructions: None,

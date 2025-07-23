@@ -12,13 +12,9 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct FilePart {
-    #[serde(rename = "id")]
-    pub id: String,
-    #[serde(rename = "sessionID")]
-    pub session_id: String,
-    #[serde(rename = "messageID")]
-    pub message_id: String,
+pub struct FilePartInput {
+    #[serde(rename = "id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
     #[serde(rename = "type")]
     pub r#type: String,
     #[serde(rename = "mime")]
@@ -31,12 +27,10 @@ pub struct FilePart {
     pub source: Option<Box<models::FilePartSource>>,
 }
 
-impl FilePart {
-    pub fn new(id: String, session_id: String, message_id: String, r#type: String, mime: String, url: String) -> FilePart {
-        FilePart {
-            id,
-            session_id,
-            message_id,
+impl FilePartInput {
+    pub fn new(r#type: String, mime: String, url: String) -> FilePartInput {
+        FilePartInput {
+            id: None,
             r#type,
             mime,
             filename: None,

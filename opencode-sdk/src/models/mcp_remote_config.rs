@@ -22,6 +22,9 @@ pub struct McpRemoteConfig {
     /// Enable or disable the MCP server on startup
     #[serde(rename = "enabled", skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
+    /// Headers to send with the request
+    #[serde(rename = "headers", skip_serializing_if = "Option::is_none")]
+    pub headers: Option<std::collections::HashMap<String, String>>,
 }
 
 impl McpRemoteConfig {
@@ -30,6 +33,7 @@ impl McpRemoteConfig {
             r#type,
             url,
             enabled: None,
+            headers: None,
         }
     }
 }

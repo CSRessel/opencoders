@@ -13,25 +13,28 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PostSessionByIdMessageRequest {
-    #[serde(rename = "messageID")]
-    pub message_id: String,
+    #[serde(rename = "messageID", skip_serializing_if = "Option::is_none")]
+    pub message_id: Option<String>,
     #[serde(rename = "providerID")]
     pub provider_id: String,
     #[serde(rename = "modelID")]
     pub model_id: String,
-    #[serde(rename = "mode")]
-    pub mode: String,
+    #[serde(rename = "mode", skip_serializing_if = "Option::is_none")]
+    pub mode: Option<String>,
+    #[serde(rename = "tools", skip_serializing_if = "Option::is_none")]
+    pub tools: Option<std::collections::HashMap<String, bool>>,
     #[serde(rename = "parts")]
     pub parts: Vec<models::PostSessionByIdMessageRequestPartsInner>,
 }
 
 impl PostSessionByIdMessageRequest {
-    pub fn new(message_id: String, provider_id: String, model_id: String, mode: String, parts: Vec<models::PostSessionByIdMessageRequestPartsInner>) -> PostSessionByIdMessageRequest {
+    pub fn new(provider_id: String, model_id: String, parts: Vec<models::PostSessionByIdMessageRequestPartsInner>) -> PostSessionByIdMessageRequest {
         PostSessionByIdMessageRequest {
-            message_id,
+            message_id: None,
             provider_id,
             model_id,
-            mode,
+            mode: None,
+            tools: None,
             parts,
         }
     }

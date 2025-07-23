@@ -14,9 +14,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Match {
     #[serde(rename = "path")]
-    pub path: Box<models::MatchPath>,
+    pub path: Box<models::PostTuiAppendPromptRequest>,
     #[serde(rename = "lines")]
-    pub lines: Box<models::MatchPath>,
+    pub lines: Box<models::PostTuiAppendPromptRequest>,
     #[serde(rename = "line_number")]
     pub line_number: f64,
     #[serde(rename = "absolute_offset")]
@@ -26,7 +26,7 @@ pub struct Match {
 }
 
 impl Match {
-    pub fn new(path: models::MatchPath, lines: models::MatchPath, line_number: f64, absolute_offset: f64, submatches: Vec<models::MatchSubmatchesInner>) -> Match {
+    pub fn new(path: models::PostTuiAppendPromptRequest, lines: models::PostTuiAppendPromptRequest, line_number: f64, absolute_offset: f64, submatches: Vec<models::MatchSubmatchesInner>) -> Match {
         Match {
             path: Box::new(path),
             lines: Box::new(lines),

@@ -26,7 +26,7 @@ pub struct ConfigProviderValue {
     #[serde(rename = "models")]
     pub models: std::collections::HashMap<String, models::ConfigProviderValueModelsValue>,
     #[serde(rename = "options", skip_serializing_if = "Option::is_none")]
-    pub options: Option<std::collections::HashMap<String, serde_json::Value>>,
+    pub options: Option<models::ConfigProviderValueOptions>,
 }
 
 impl ConfigProviderValue {

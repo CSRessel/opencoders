@@ -13,16 +13,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-pub enum PostSessionByIdMessageRequestPartsInner {
-    #[serde(rename="text")]
-    Text(Box<models::TextPartInput>),
+pub enum FilePartSource {
     #[serde(rename="file")]
-    File(Box<models::FilePartInput>),
+    File(Box<models::FileSource>),
+    #[serde(rename="symbol")]
+    Symbol(Box<models::SymbolSource>),
 }
 
-impl Default for PostSessionByIdMessageRequestPartsInner {
+impl Default for FilePartSource {
     fn default() -> Self {
-        Self::Text(Default::default())
+        Self::File(Default::default())
     }
 }
 

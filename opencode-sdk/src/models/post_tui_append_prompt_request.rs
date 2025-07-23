@@ -12,14 +12,14 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct MatchPath {
+pub struct PostTuiAppendPromptRequest {
     #[serde(rename = "text")]
     pub text: String,
 }
 
-impl MatchPath {
-    pub fn new(text: String) -> MatchPath {
-        MatchPath {
+impl PostTuiAppendPromptRequest {
+    pub fn new(text: String) -> PostTuiAppendPromptRequest {
+        PostTuiAppendPromptRequest {
             text,
         }
     }

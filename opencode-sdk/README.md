@@ -48,6 +48,8 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**post_session_by_id_message**](docs/DefaultApi.md#post_session_by_id_message) | **POST** /session/{id}/message | 
 *DefaultApi* | [**post_session_by_id_share**](docs/DefaultApi.md#post_session_by_id_share) | **POST** /session/{id}/share | 
 *DefaultApi* | [**post_session_by_id_summarize**](docs/DefaultApi.md#post_session_by_id_summarize) | **POST** /session/{id}/summarize | 
+*DefaultApi* | [**post_tui_append_prompt**](docs/DefaultApi.md#post_tui_append_prompt) | **POST** /tui/append-prompt | 
+*DefaultApi* | [**post_tui_open_help**](docs/DefaultApi.md#post_tui_open_help) | **POST** /tui/open-help | 
 
 
 ## Documentation For Models
@@ -71,11 +73,13 @@ Class | Method | HTTP request | Description
  - [ConfigProviderValueModelsValue](docs/ConfigProviderValueModelsValue.md)
  - [ConfigProviderValueModelsValueCost](docs/ConfigProviderValueModelsValueCost.md)
  - [ConfigProviderValueModelsValueLimit](docs/ConfigProviderValueModelsValueLimit.md)
+ - [ConfigProviderValueOptions](docs/ConfigProviderValueOptions.md)
  - [Error](docs/Error.md)
  - [Event](docs/Event.md)
  - [EventFileEditedProperties](docs/EventFileEditedProperties.md)
  - [EventFileWatcherUpdatedProperties](docs/EventFileWatcherUpdatedProperties.md)
  - [EventFileWatcherUpdatedPropertiesEvent](docs/EventFileWatcherUpdatedPropertiesEvent.md)
+ - [EventIdeInstalledProperties](docs/EventIdeInstalledProperties.md)
  - [EventInstallationUpdatedProperties](docs/EventInstallationUpdatedProperties.md)
  - [EventLspClientDiagnosticsProperties](docs/EventLspClientDiagnosticsProperties.md)
  - [EventMessagePartUpdatedProperties](docs/EventMessagePartUpdatedProperties.md)
@@ -83,6 +87,7 @@ Class | Method | HTTP request | Description
  - [EventMessageUpdatedProperties](docs/EventMessageUpdatedProperties.md)
  - [EventPeriodFilePeriodEdited](docs/EventPeriodFilePeriodEdited.md)
  - [EventPeriodFilePeriodWatcherPeriodUpdated](docs/EventPeriodFilePeriodWatcherPeriodUpdated.md)
+ - [EventPeriodIdePeriodInstalled](docs/EventPeriodIdePeriodInstalled.md)
  - [EventPeriodInstallationPeriodUpdated](docs/EventPeriodInstallationPeriodUpdated.md)
  - [EventPeriodLspPeriodClientPeriodDiagnostics](docs/EventPeriodLspPeriodClientPeriodDiagnostics.md)
  - [EventPeriodMessagePeriodPartPeriodUpdated](docs/EventPeriodMessagePeriodPartPeriodUpdated.md)
@@ -100,14 +105,16 @@ Class | Method | HTTP request | Description
  - [EventStorageWriteProperties](docs/EventStorageWriteProperties.md)
  - [File](docs/File.md)
  - [FilePart](docs/FilePart.md)
+ - [FilePartInput](docs/FilePartInput.md)
+ - [FilePartSource](docs/FilePartSource.md)
+ - [FilePartSourceText](docs/FilePartSourceText.md)
+ - [FileSource](docs/FileSource.md)
  - [GetConfigProviders200Response](docs/GetConfigProviders200Response.md)
  - [GetFile200Response](docs/GetFile200Response.md)
  - [GetSessionByIdMessage200ResponseInner](docs/GetSessionByIdMessage200ResponseInner.md)
  - [KeybindsConfig](docs/KeybindsConfig.md)
  - [LayoutConfig](docs/LayoutConfig.md)
- - [LogLevel](docs/LogLevel.md)
  - [Match](docs/Match.md)
- - [MatchPath](docs/MatchPath.md)
  - [MatchSubmatchesInner](docs/MatchSubmatchesInner.md)
  - [McpLocalConfig](docs/McpLocalConfig.md)
  - [McpRemoteConfig](docs/McpRemoteConfig.md)
@@ -126,6 +133,7 @@ Class | Method | HTTP request | Description
  - [PostSessionByIdMessageRequest](docs/PostSessionByIdMessageRequest.md)
  - [PostSessionByIdMessageRequestPartsInner](docs/PostSessionByIdMessageRequestPartsInner.md)
  - [PostSessionByIdSummarizeRequest](docs/PostSessionByIdSummarizeRequest.md)
+ - [PostTuiAppendPromptRequest](docs/PostTuiAppendPromptRequest.md)
  - [Provider](docs/Provider.md)
  - [ProviderAuthError](docs/ProviderAuthError.md)
  - [ProviderAuthErrorData](docs/ProviderAuthErrorData.md)
@@ -140,7 +148,9 @@ Class | Method | HTTP request | Description
  - [StepStartPart](docs/StepStartPart.md)
  - [Symbol](docs/Symbol.md)
  - [SymbolLocation](docs/SymbolLocation.md)
+ - [SymbolSource](docs/SymbolSource.md)
  - [TextPart](docs/TextPart.md)
+ - [TextPartInput](docs/TextPartInput.md)
  - [TextPartTime](docs/TextPartTime.md)
  - [ToolPart](docs/ToolPart.md)
  - [ToolState](docs/ToolState.md)

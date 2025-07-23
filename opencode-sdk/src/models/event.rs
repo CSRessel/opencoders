@@ -40,6 +40,8 @@ pub enum Event {
     SessionPeriodError(Box<models::EventPeriodSessionPeriodError>),
     #[serde(rename="file.watcher.updated")]
     FilePeriodWatcherPeriodUpdated(Box<models::EventPeriodFilePeriodWatcherPeriodUpdated>),
+    #[serde(rename="ide.installed")]
+    IdePeriodInstalled(Box<models::EventPeriodIdePeriodInstalled>),
 }
 
 impl Default for Event {

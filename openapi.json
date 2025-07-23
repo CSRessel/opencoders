@@ -424,7 +424,8 @@
                 "type": "object",
                 "properties": {
                   "messageID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^msg"
                   },
                   "providerID": {
                     "type": "string"
@@ -435,25 +436,36 @@
                   "mode": {
                     "type": "string"
                   },
+                  "tools": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
+                  },
                   "parts": {
                     "type": "array",
                     "items": {
-                      "anyOf": [
+                      "oneOf": [
                         {
-                          "$ref": "#/components/schemas/FilePart"
+                          "$ref": "#/components/schemas/TextPartInput"
                         },
                         {
-                          "$ref": "#/components/schemas/TextPart"
+                          "$ref": "#/components/schemas/FilePartInput"
                         }
-                      ]
+                      ],
+                      "discriminator": {
+                        "propertyName": "type",
+                        "mapping": {
+                          "text": "#/components/schemas/TextPartInput",
+                          "file": "#/components/schemas/FilePartInput"
+                        }
+                      }
                     }
                   }
                 },
                 "required": [
-                  "messageID",
                   "providerID",
                   "modelID",
-                  "mode",
                   "parts"
                 ]
               }
@@ -737,6 +749,61 @@
         "parameters": [],
         "description": "List all modes"
       }
+    },
+    "/tui/append-prompt": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Prompt processed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postTuiAppend-prompt",
+        "parameters": [],
+        "description": "Append prompt to the TUI",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tui/open-help": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Help dialog opened successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postTuiOpen-help",
+        "parameters": [],
+        "description": "Open the help dialog"
+      }
     }
   },
   "components": {
@@ -781,6 +848,9 @@
           },
           {
             "$ref": "#/components/schemas/Event.file.watcher.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.ide.installed"
           }
         ],
         "discriminator": {
@@ -798,7 +868,8 @@
             "session.deleted": "#/components/schemas/Event.session.deleted",
             "session.idle": "#/components/schemas/Event.session.idle",
             "session.error": "#/components/schemas/Event.session.error",
-            "file.watcher.updated": "#/components/schemas/Event.file.watcher.updated"
+            "file.watcher.updated": "#/components/schemas/Event.file.watcher.updated",
+            "ide.installed": "#/components/schemas/Event.ide.installed"
           }
         }
       },
@@ -1375,6 +1446,9 @@
           },
           "url": {
             "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FilePartSource"
           }
         },
         "required": [
@@ -1384,6 +1458,133 @@
           "type",
           "mime",
           "url"
+        ]
+      },
+      "FilePartSource": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/FileSource"
+          },
+          {
+            "$ref": "#/components/schemas/SymbolSource"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "file": "#/components/schemas/FileSource",
+            "symbol": "#/components/schemas/SymbolSource"
+          }
+        }
+      },
+      "FileSource": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "$ref": "#/components/schemas/FilePartSourceText"
+          },
+          "type": {
+            "type": "string",
+            "const": "file"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "type",
+          "path"
+        ]
+      },
+      "FilePartSourceText": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "start": {
+            "type": "integer"
+          },
+          "end": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value",
+          "start",
+          "end"
+        ]
+      },
+      "SymbolSource": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "$ref": "#/components/schemas/FilePartSourceText"
+          },
+          "type": {
+            "type": "string",
+            "const": "symbol"
+          },
+          "path": {
+            "type": "string"
+          },
+          "range": {
+            "$ref": "#/components/schemas/Range"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "text",
+          "type",
+          "path",
+          "range",
+          "name",
+          "kind"
+        ]
+      },
+      "Range": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "object",
+            "properties": {
+              "line": {
+                "type": "number"
+              },
+              "character": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "line",
+              "character"
+            ]
+          },
+          "end": {
+            "type": "object",
+            "properties": {
+              "line": {
+                "type": "number"
+              },
+              "character": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "line",
+              "character"
+            ]
+          }
+        },
+        "required": [
+          "start",
+          "end"
         ]
       },
       "ToolPart": {
@@ -1939,6 +2140,30 @@
           "properties"
         ]
       },
+      "Event.ide.installed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "ide.installed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "ide": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ide"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
       "App": {
         "type": "object",
         "properties": {
@@ -2034,6 +2259,10 @@
             "type": "string",
             "description": "Model to use in the format of provider/model, eg anthropic/claude-2"
           },
+          "small_model": {
+            "type": "string",
+            "description": "Small model to use for tasks like summarization and title generation in the format of provider/model"
+          },
           "username": {
             "type": "string",
             "description": "Custom username to display in conversations instead of system username"
@@ -2052,10 +2281,6 @@
               "$ref": "#/components/schemas/ModeConfig"
             },
             "description": "Modes configuration, see https://opencode.ai/docs/modes"
-          },
-          "log_level": {
-            "$ref": "#/components/schemas/LogLevel",
-            "description": "Minimum log level to write to log files"
           },
           "provider": {
             "type": "object",
@@ -2151,12 +2376,21 @@
                 },
                 "options": {
                   "type": "object",
+                  "properties": {
+                    "apiKey": {
+                      "type": "string"
+                    },
+                    "baseURL": {
+                      "type": "string"
+                    }
+                  },
                   "additionalProperties": {}
                 }
               },
               "required": [
                 "models"
-              ]
+              ],
+              "additionalProperties": false
             },
             "description": "Custom provider configurations and model overrides"
           },
@@ -2190,7 +2424,7 @@
           },
           "layout": {
             "$ref": "#/components/schemas/LayoutConfig",
-            "description": "Layout to use for the TUI"
+            "description": "@deprecated Always uses stretch layout."
           },
           "experimental": {
             "type": "object",
@@ -2495,16 +2729,6 @@
           }
         }
       },
-      "LogLevel": {
-        "type": "string",
-        "enum": [
-          "DEBUG",
-          "INFO",
-          "WARN",
-          "ERROR"
-        ],
-        "description": "Log level"
-      },
       "Provider": {
         "type": "object",
         "properties": {
@@ -2666,6 +2890,13 @@
           "enabled": {
             "type": "boolean",
             "description": "Enable or disable the MCP server on startup"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Headers to send with the request"
           }
         },
         "required": [
@@ -2691,6 +2922,71 @@
         },
         "required": [
           "data"
+        ]
+      },
+      "TextPartInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "const": "text"
+          },
+          "text": {
+            "type": "string"
+          },
+          "synthetic": {
+            "type": "boolean"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "start"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ]
+      },
+      "FilePartInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "const": "file"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FilePartSource"
+          }
+        },
+        "required": [
+          "type",
+          "mime",
+          "url"
         ]
       },
       "Match": {
@@ -2792,45 +3088,6 @@
           "name",
           "kind",
           "location"
-        ]
-      },
-      "Range": {
-        "type": "object",
-        "properties": {
-          "start": {
-            "type": "object",
-            "properties": {
-              "line": {
-                "type": "number"
-              },
-              "character": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "line",
-              "character"
-            ]
-          },
-          "end": {
-            "type": "object",
-            "properties": {
-              "line": {
-                "type": "number"
-              },
-              "character": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "line",
-              "character"
-            ]
-          }
-        },
-        "required": [
-          "start",
-          "end"
         ]
       },
       "File": {

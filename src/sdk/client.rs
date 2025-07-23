@@ -4,6 +4,7 @@ use crate::sdk::{
     discovery::{discover_opencode_server, DiscoveryConfig},
     error::{OpenCodeError, Result},
     extensions::events::{EventStream, EventStreamHandle},
+    LogLevel,
 };
 use opencode_sdk::{
     apis::{configuration::Configuration, default_api},
@@ -394,36 +395,29 @@ impl MessageBuilder {
 
     /// Add a text part to the message
     pub fn add_text_part(mut self, text: &str) -> Self {
-        let part = PostSessionByIdMessageRequestPartsInner {
-            id: uuid::Uuid::new_v4().to_string(),
-            session_id: self.session_id.clone(),
-            message_id: self.message_id.clone().unwrap_or_default(),
+        let text_part = TextPartInput {
+            id: Some(uuid::Uuid::new_v4().to_string()),
             r#type: "text".to_string(),
-            mime: "text/plain".to_string(),
-            filename: None,
-            url: "".to_string(),
             text: text.to_string(),
             synthetic: None,
             time: None,
         };
+        let part = PostSessionByIdMessageRequestPartsInner::Text(Box::new(text_part));
         self.parts.push(part);
         self
     }
 
     /// Add a file part to the message
     pub fn add_file_part(mut self, filename: &str, mime: &str, url: &str) -> Self {
-        let part = PostSessionByIdMessageRequestPartsInner {
-            id: uuid::Uuid::new_v4().to_string(),
-            session_id: self.session_id.clone(),
-            message_id: self.message_id.clone().unwrap_or_default(),
+        let file_part = FilePartInput {
+            id: Some(uuid::Uuid::new_v4().to_string()),
             r#type: "file".to_string(),
             mime: mime.to_string(),
             filename: Some(filename.to_string()),
             url: url.to_string(),
-            text: "".to_string(),
-            synthetic: None,
-            time: None,
+            source: None,
         };
+        let part = PostSessionByIdMessageRequestPartsInner::File(Box::new(file_part));
         self.parts.push(part);
         self
     }
@@ -431,18 +425,19 @@ impl MessageBuilder {
     /// Send the message
     pub async fn send(self, config: &Configuration) -> Result<AssistantMessage> {
         let request = PostSessionByIdMessageRequest {
-            message_id: self
+            message_id: Some(self
                 .message_id
-                .ok_or_else(|| OpenCodeError::invalid_request("message_id is required"))?,
+                .ok_or_else(|| OpenCodeError::invalid_request("message_id is required"))?),
             provider_id: self
                 .provider_id
                 .ok_or_else(|| OpenCodeError::invalid_request("provider_id is required"))?,
             model_id: self
                 .model_id
                 .ok_or_else(|| OpenCodeError::invalid_request("model_id is required"))?,
-            mode: self
+            mode: Some(self
                 .mode
-                .ok_or_else(|| OpenCodeError::invalid_request("mode is required"))?,
+                .ok_or_else(|| OpenCodeError::invalid_request("mode is required"))?),
+            tools: None,
             parts: self.parts,
         };
 

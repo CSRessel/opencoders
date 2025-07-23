@@ -30,3 +30,12 @@ pub type ModelId = String;
 
 // Re-export event stream functionality
 pub use extensions::events::{EventStream, EventStreamHandle};
+
+// Log level enum for the write_log function
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogLevel {
+    Debug,
+    Info,
+    Warn,
+    Error,
+}

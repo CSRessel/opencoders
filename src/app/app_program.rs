@@ -11,14 +11,18 @@ use crate::{
     },
     sdk::OpenCodeClient,
 };
+use crossterm::event::{self, Event};
 use ratatui::{backend::CrosstermBackend, style::Color, text::Text, Terminal};
 use std::io::{self, Write};
+use std::time::Duration;
+use tokio::time::{interval, Interval};
 
 pub struct Program {
     model: Model,
     terminal: Option<Terminal<CrosstermBackend<io::Stdout>>>,
     guard: Option<TerminalGuard>,
     task_manager: AsyncTaskManager,
+    needs_render: bool,
 }
 
 impl Program {
@@ -39,6 +43,7 @@ impl Program {
             terminal: Some(terminal),
             guard: Some(guard),
             task_manager,
+            needs_render: true, // Initial render needed
         })
     }
 
@@ -49,41 +54,59 @@ impl Program {
     }
 
     async fn run_async(mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // Create tick interval for periodic updates (60 FPS) - must be inside tokio runtime
+        let mut tick_interval = interval(Duration::from_millis(16));
+
         loop {
             // Check for quit state
             if matches!(self.model.state, AppState::Quit) {
                 break;
             }
 
-            // Handle async task completions (non-blocking)
+            // Process all available events and messages first
+            let mut had_events = false;
+
+            // Check for async task completions (non-blocking)
             let async_messages = self.task_manager.poll_messages();
-            for msg in async_messages {
+            if !async_messages.is_empty() {
+                had_events = true;
+                for msg in async_messages {
+                    let (new_model, cmd) = update(self.model, msg);
+                    self.model = new_model;
+                    self.needs_render = true;
+                    self.spawn_command(cmd).await?;
+                }
+            }
+
+            // Check for input events (non-blocking)
+            if let Some(msg) = self.poll_input_events().await? {
+                had_events = true;
                 let (new_model, cmd) = update(self.model, msg);
                 self.model = new_model;
+                self.needs_render = true;
                 self.spawn_command(cmd).await?;
             }
 
-            // Cleanup completed tasks periodically
-            self.task_manager.cleanup_completed_tasks();
-
-            // View rendering
-            // (Could be made async with a separate render thread,
-            //  but currently renders are very fast so best to just block for
-            //  less overhead and responsiveness faster than the tick rate)
-            self.render_view()?;
-
-            // Update the model for all consumed state
-            self.model.consume_viewed_state();
-
-            // Handle synchronous subscriptions
-            if let Some(msg) = poll_subscriptions(&self.model)? {
-                let (new_model, cmd) = update(self.model, msg);
-                self.model = new_model;
-                self.spawn_command(cmd).await?;
+            // If we had events, continue loop immediately to process more
+            if had_events {
+                continue;
             }
 
-            // Small yield to prevent busy-waiting
-            tokio::task::yield_now().await;
+            // No events - wait for either a tick or go back to polling
+            tokio::select! {
+                // Periodic tick for cleanup and rendering
+                _ = tick_interval.tick() => {
+                    // Cleanup completed tasks periodically
+                    self.task_manager.cleanup_completed_tasks();
+
+                    // Only render if needed
+                    if self.needs_render {
+                        self.render_view()?;
+                        self.model.consume_viewed_state();
+                        self.needs_render = false;
+                    }
+                },
+            }
         }
         Ok(())
     }
@@ -105,6 +128,26 @@ impl Program {
         }
 
         Ok(())
+    }
+
+    async fn poll_input_events(&self) -> Result<Option<Msg>, Box<dyn std::error::Error>> {
+        // Check if we should listen for input events
+        let subs = crate::app::event_sync_subscriptions::subscriptions(&self.model);
+
+        if !subs.contains(&crate::app::event_msg::Sub::KeyboardInput) {
+            return Ok(None);
+        }
+
+        // Use async crossterm event polling
+        if event::poll(Duration::from_millis(0))? {
+            let event = event::read()?;
+            return Ok(crate::app::event_sync_subscriptions::crossterm_to_msg(
+                event,
+                &self.model,
+            ));
+        }
+
+        Ok(None)
     }
 
     async fn spawn_command(&mut self, cmd: Cmd) -> Result<(), Box<dyn std::error::Error>> {

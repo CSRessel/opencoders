@@ -27,7 +27,7 @@ pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::err
     Ok(None)
 }
 
-fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
+pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
     match event {
         Event::Key(key) => {
             match (&model.state, key.code, key.modifiers) {

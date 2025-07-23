@@ -1,5 +1,6 @@
 //! High-level client wrapper for the OpenCode API
 
+use crate::{log_debug, log_error, log_info};
 use crate::sdk::{
     discovery::{discover_opencode_server, DiscoveryConfig},
     error::{OpenCodeError, Result},
@@ -52,7 +53,9 @@ impl OpenCodeClient {
 
     /// Discover and connect to a running OpenCode server
     pub async fn discover() -> Result<Self> {
+        log_info!("Discovering OpenCode server");
         let server_url = discover_opencode_server().await?;
+        log_info!("Connected to OpenCode server at: {}", server_url);
         Ok(Self::new(&server_url))
     }
 
@@ -70,7 +73,17 @@ impl OpenCodeClient {
 
     /// Test connection to the server
     pub async fn test_connection(&self) -> Result<()> {
-        self.get_app_info().await.map(|_| ())
+        log_debug!("Testing connection to: {}", self.base_url());
+        match self.get_app_info().await {
+            Ok(_) => {
+                log_info!("Connection test successful");
+                Ok(())
+            }
+            Err(e) => {
+                log_error!("Connection test failed: {}", e);
+                Err(e)
+            }
+        }
     }
 
     /// Create a clone of this client (without event stream)
@@ -85,9 +98,17 @@ impl OpenCodeClient {
 
     /// Get application information
     pub async fn get_app_info(&self) -> Result<App> {
-        default_api::get_app(&self.config)
-            .await
-            .map_err(OpenCodeError::from)
+        log_debug!("Fetching app info");
+        match default_api::get_app(&self.config).await {
+            Ok(app) => {
+                log_debug!("App info retrieved successfully");
+                Ok(app)
+            }
+            Err(e) => {
+                log_error!("Failed to get app info: {}", e);
+                Err(OpenCodeError::from(e))
+            }
+        }
     }
 
     /// Initialize the application

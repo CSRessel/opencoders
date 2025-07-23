@@ -79,11 +79,11 @@ fn render_welcome_screen(model: &Model, frame: &mut Frame) {
     if model.init.inline_mode() {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(1)])
+            .constraints([Constraint::Length(1), Constraint::Min(0)])
             .split(frame.area());
-        frame.render_widget(paragraph, vertical_chunks[1]);
+        frame.render_widget(paragraph, vertical_chunks[0]);
     } else {
-        let constraints = vec![Constraint::Length(4), Constraint::Length(2)];
+        let constraints = vec![Constraint::Length(5), Constraint::Length(2)];
 
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)

@@ -27,7 +27,7 @@ impl Program {
 
         // Print welcome message to stdout before entering TUI
         let welcome_text = create_welcome_text();
-        print!("{}\n\n", welcome_text);
+        print!("{}\n\n\n", welcome_text);
 
         let (guard, terminal) = TerminalGuard::new(&model.init)?;
 
@@ -178,6 +178,7 @@ impl Program {
                             let old_terminal = self.terminal.take();
                             drop(old_guard);
                             drop(old_terminal);
+
                             let new_init = ModelInit::new(self.model.init.height(), inline_mode);
                             let (guard, terminal) = TerminalGuard::new(&new_init)?;
                             self.guard = Some(guard);

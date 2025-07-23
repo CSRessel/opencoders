@@ -122,6 +122,7 @@ impl Model {
     }
 
     pub fn transition_to_session_ready(&mut self, session: Session) {
+        self.text_input.set_session_id(Some(session.id.clone()));
         self.session = Some(session);
         self.connection_status = ConnectionStatus::SessionReady;
         self.state = AppState::TextEntry;

@@ -1,5 +1,5 @@
 use crate::app::{
-    tea_model::{AppState, ConnectionStatus, Model},
+    tea_model::{AppState, Model},
     ui_components::create_welcome_text,
 };
 use core::error;
@@ -163,7 +163,7 @@ fn render_connecting_screen(model: &Model, frame: &mut Frame) {
 }
 
 fn render_initializing_session_screen(model: &Model, frame: &mut Frame) {
-    let client_url = model.client().map(|c| c.base_url()).unwrap_or("unknown");
+    let client_url = model.client_base_url();
 
     let text = Text::from(vec![
         Line::from("Initializing session..."),

@@ -1,6 +1,6 @@
 use crate::app::{
     event_msg::{Cmd, Msg},
-    tea_model::{AppState, ConnectionStatus, Model},
+    tea_model::{AppState, Model},
     ui_components::text_input::TextInputEvent,
 };
 use opencode_sdk::models::{
@@ -34,28 +34,21 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::ClearInput => {
-            model.text_input.clear();
-            model.last_input = None;
-            model.input_history.clear();
-            model.printed_to_stdout_count = 0;
+            model.clear_input_state();
             (model, Cmd::None)
         }
 
         Msg::ChangeState(new_state) => {
             model.state = new_state.clone();
             if matches!(model.state, AppState::Welcome) {
-                model.text_input.clear();
-                model.last_input = None;
-                model.input_history.clear();
-                model.printed_to_stdout_count = 0;
+                model.clear_input_state();
             } else if matches!(model.state, AppState::TextEntry) {
                 // Auto-scroll to bottom when entering text entry mode
                 model.message_log.scroll_to_bottom();
 
                 // If entering text entry mode, ensure we have a client and session
                 if !model.is_session_ready() {
-                    model.state = AppState::ConnectingToServer;
-                    model.connection_status = ConnectionStatus::Connecting;
+                    model.transition_to_connecting();
                     return (model, Cmd::AsyncSpawnClientDiscovery);
                 }
             }
@@ -64,52 +57,42 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         // Client initialization messages
         Msg::InitializeClient => {
-            model.state = AppState::ConnectingToServer;
-            model.connection_status = ConnectionStatus::Connecting;
+            model.transition_to_connecting();
             (model, Cmd::AsyncSpawnClientDiscovery)
         }
 
         Msg::ClientConnected(client) => {
             model.client = Some(client.clone());
-            model.connection_status = ConnectionStatus::Connected;
-            model.state = AppState::InitializingSession;
+            model.transition_to_connected();
             (model, Cmd::AsyncSpawnSessionInit(client))
         }
 
         Msg::ClientConnectionFailed(error) => {
             let error_msg = format!("Failed to connect to OpenCode server: {}", error);
-            model.connection_status = ConnectionStatus::Error(error_msg.clone());
-            model.state = AppState::ConnectionError(error_msg);
+            model.transition_to_error(error_msg);
             (model, Cmd::None)
         }
 
         // Session management messages
         Msg::InitializeSession => {
             if let Some(client) = model.client.clone() {
-                model.connection_status = ConnectionStatus::InitializingSession;
-                model.state = AppState::InitializingSession;
+                model.transition_to_connected();
                 (model, Cmd::AsyncSpawnSessionInit(client))
             } else {
                 // No client available, need to connect first
-                model.state = AppState::ConnectingToServer;
-                model.connection_status = ConnectionStatus::Connecting;
+                model.transition_to_connecting();
                 (model, Cmd::AsyncSpawnClientDiscovery)
             }
         }
 
         Msg::SessionReady(session) => {
-            model.session = Some(session);
-            model.connection_status = ConnectionStatus::SessionReady;
-            model.state = AppState::TextEntry;
-            // Auto-scroll to bottom when session is ready
-            model.message_log.scroll_to_bottom();
+            model.transition_to_session_ready(session);
             (model, Cmd::None)
         }
 
         Msg::SessionInitializationFailed(error) => {
             let error_msg = format!("Failed to initialize session: {}", error);
-            model.connection_status = ConnectionStatus::Error(error_msg.clone());
-            model.state = AppState::ConnectionError(error_msg);
+            model.transition_to_error(error_msg);
             (model, Cmd::None)
         }
 

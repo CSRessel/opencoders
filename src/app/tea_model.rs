@@ -90,6 +90,7 @@ impl Model {
         }
     }
 
+    // Message outputs
     pub fn needs_manual_output(&self) -> bool {
         return self.init.inline_mode() & (self.messages_needing_stdout_print().len() > 0);
     }
@@ -104,11 +105,45 @@ impl Model {
         }
     }
 
+    // State transition helpers
+    pub fn transition_to_connecting(&mut self) {
+        self.state = AppState::ConnectingToServer;
+        self.connection_status = ConnectionStatus::Connecting;
+    }
+
+    pub fn transition_to_connected(&mut self) {
+        self.connection_status = ConnectionStatus::InitializingSession;
+        self.state = AppState::InitializingSession;
+    }
+
+    pub fn transition_to_error(&mut self, error_msg: String) {
+        self.connection_status = ConnectionStatus::Error(error_msg.clone());
+        self.state = AppState::ConnectionError(error_msg);
+    }
+
+    pub fn transition_to_session_ready(&mut self, session: Session) {
+        self.session = Some(session);
+        self.connection_status = ConnectionStatus::SessionReady;
+        self.state = AppState::TextEntry;
+        self.message_log.scroll_to_bottom();
+    }
+
     pub fn mark_messages_printed_to_stdout(&mut self, count: usize) {
         self.printed_to_stdout_count += count;
     }
 
+    // Input management
+    pub fn clear_input_state(&mut self) {
+        self.text_input.clear();
+        self.last_input = None;
+        self.input_history.clear();
+        self.printed_to_stdout_count = 0;
+    }
 
+    // Convenience accessors
+    pub fn client_base_url(&self) -> &str {
+        self.client().map(|c| c.base_url()).unwrap_or("unknown")
+    }
 
     pub fn is_client_ready(&self) -> bool {
         self.client.is_some()

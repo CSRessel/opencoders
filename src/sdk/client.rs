@@ -17,7 +17,7 @@ use tokio::sync::RwLock;
 ///
 /// This client provides an ergonomic interface to the OpenCode API,
 /// wrapping the generated client with additional functionality.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct OpenCodeClient {
     config: Configuration,
     #[allow(dead_code)]
@@ -337,14 +337,7 @@ impl OpenCodeClient {
     }
 }
 
-impl std::fmt::Debug for OpenCodeClient {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("OpenCodeClient")
-            .field("base_url", &self.config.base_path)
-            .field("has_event_stream", &self.event_stream.is_some())
-            .finish()
-    }
-}
+
 
 impl PartialEq for OpenCodeClient {
     fn eq(&self, other: &Self) -> bool {
@@ -353,6 +346,7 @@ impl PartialEq for OpenCodeClient {
 }
 
 /// Builder for constructing complex message requests
+#[derive(Debug, Clone)]
 pub struct MessageBuilder {
     session_id: String,
     message_id: Option<String>,

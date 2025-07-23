@@ -10,6 +10,7 @@ use std::env;
 use tokio::fs;
 
 /// Session manager for handling session persistence and lifecycle
+#[derive(Debug, Clone)]
 pub struct SessionManager {
     client: OpenCodeClient,
     state_dir: PathBuf,

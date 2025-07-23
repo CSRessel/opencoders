@@ -7,6 +7,7 @@ use tokio::sync::broadcast;
 use tokio::time::interval;
 
 /// Event stream for receiving real-time updates from the OpenCode server
+#[derive(Debug)]
 pub struct EventStream {
     sender: broadcast::Sender<Event>,
     _handle: tokio::task::JoinHandle<()>,
@@ -77,6 +78,7 @@ impl EventStream {
 }
 
 /// Handle for receiving events from an event stream
+#[derive(Debug)]
 pub struct EventStreamHandle {
     receiver: broadcast::Receiver<Event>,
 }

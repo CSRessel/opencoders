@@ -82,12 +82,17 @@ pub enum OpenCodeError {
 impl Clone for OpenCodeError {
     fn clone(&self) -> Self {
         match self {
-            Self::Http(_) => Self::Unexpected("HTTP error (cannot clone)".to_string()),
-            Self::Serialization(_) => Self::Unexpected("Serialization error (cannot clone)".to_string()),
+            // Convert non-cloneable errors to Unexpected with preserved error message
+            Self::Http(e) => Self::Unexpected(format!("HTTP error: {}", e)),
+            Self::Serialization(e) => Self::Unexpected(format!("Serialization error: {}", e)),
+            // All other variants can be cloned normally
             Self::Api { status, message } => Self::Api { status: *status, message: message.clone() },
             Self::Auth(msg) => Self::Auth(msg.clone()),
             Self::SessionNotFound { session_id } => Self::SessionNotFound { session_id: session_id.clone() },
-            Self::MessageNotFound { session_id, message_id } => Self::MessageNotFound { session_id: session_id.clone(), message_id: message_id.clone() },
+            Self::MessageNotFound { session_id, message_id } => Self::MessageNotFound { 
+                session_id: session_id.clone(), 
+                message_id: message_id.clone() 
+            },
             Self::EventStream(msg) => Self::EventStream(msg.clone()),
             Self::Configuration(msg) => Self::Configuration(msg.clone()),
             Self::InvalidRequest(msg) => Self::InvalidRequest(msg.clone()),
@@ -105,8 +110,10 @@ impl Clone for OpenCodeError {
 impl PartialEq for OpenCodeError {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Http(_), Self::Http(_)) => false, // Cannot compare HTTP errors
-            (Self::Serialization(_), Self::Serialization(_)) => false, // Cannot compare serialization errors
+            // Non-comparable errors - compare by error message string representation
+            (Self::Http(a), Self::Http(b)) => a.to_string() == b.to_string(),
+            (Self::Serialization(a), Self::Serialization(b)) => a.to_string() == b.to_string(),
+            // Comparable variants
             (Self::Api { status: s1, message: m1 }, Self::Api { status: s2, message: m2 }) => s1 == s2 && m1 == m2,
             (Self::Auth(a), Self::Auth(b)) => a == b,
             (Self::SessionNotFound { session_id: a }, Self::SessionNotFound { session_id: b }) => a == b,
@@ -125,7 +132,6 @@ impl PartialEq for OpenCodeError {
         }
     }
 }
-
 
 impl OpenCodeError {
     /// Create an API error from status code and message

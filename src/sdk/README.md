@@ -467,3 +467,61 @@ tokio::spawn(async move {
     println!("App: {}", app_info.name);
 });
 ```
+
+## Type Derive Conventions
+
+The SDK follows Rust conventions for trait derivations to provide ergonomic APIs:
+
+### Standard Derives
+
+All public types implement these standard traits where possible:
+
+- **`Debug`**: All public types implement `Debug` for debugging and logging
+- **`Clone`**: Most types implement `Clone` for easy duplication and sharing
+- **`PartialEq`**: Value types implement `PartialEq` for comparison
+
+### Error Type Handling
+
+The `OpenCodeError` type uses a hybrid approach for derives:
+
+```rust
+#[derive(Error, Debug)]
+pub enum OpenCodeError {
+    // HTTP and serialization errors use custom Clone/PartialEq implementations
+    // because the underlying error types don't support these traits
+    Http(#[from] reqwest::Error),
+    Serialization(#[from] serde_json::Error),
+    
+    // All other variants can be compared and cloned normally
+    Api { status: u16, message: String },
+    // ... other variants
+}
+```
+
+**Custom implementations preserve error information:**
+- `Clone`: Converts non-cloneable errors to `Unexpected` with preserved error messages
+- `PartialEq`: Compares errors by their string representation when direct comparison isn't possible
+
+### Builder Pattern Types
+
+Builder types like `MessageBuilder` implement:
+- `#[derive(Debug, Clone)]` for debugging and method chaining
+- Methods consume `self` and return `Self` for fluent interfaces
+
+### Event Stream Types
+
+Event streaming types have specialized derive implementations:
+- `EventStream`: `#[derive(Debug)]` only (contains non-cloneable async handles)
+- `EventStreamHandle`: `#[derive(Debug)]` + custom `Clone` using `resubscribe()`
+
+### Configuration Types
+
+Configuration structs use comprehensive derives:
+```rust
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiscoveryConfig {
+    // ... fields
+}
+```
+
+This provides maximum ergonomics for configuration management and testing.

@@ -1,12 +1,12 @@
 //! High-level client wrapper for the OpenCode API
 
-use crate::{log_debug, log_error, log_info};
 use crate::sdk::{
     discovery::{discover_opencode_server, DiscoveryConfig},
     error::{OpenCodeError, Result},
     extensions::events::{EventStream, EventStreamHandle},
     LogLevel,
 };
+use crate::{log_debug, log_error, log_info};
 use opencode_sdk::{
     apis::{configuration::Configuration, default_api},
     models::{post_log_request, *},
@@ -250,12 +250,53 @@ impl OpenCodeClient {
         &self,
         session_id: &str,
     ) -> Result<Vec<GetSessionByIdMessage200ResponseInner>> {
-        let params = default_api::GetSessionByIdMessageParams {
-            id: session_id.to_string(),
-        };
-        default_api::get_session_by_id_message(&self.config, params)
+        log_debug!("Fetching messages for session: {}", session_id);
+
+        // Make the raw HTTP request to get the response before deserialization
+        let uri_str = format!("{}/session/{}/message", self.config.base_path, session_id);
+        log_debug!("Making request to: {}", uri_str);
+
+        let mut req_builder = self.config.client.request(reqwest::Method::GET, &uri_str);
+        if let Some(ref user_agent) = self.config.user_agent {
+            req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+        }
+
+        let req = req_builder.build().map_err(OpenCodeError::Http)?;
+        let resp = self
+            .config
+            .client
+            .execute(req)
             .await
-            .map_err(OpenCodeError::from)
+            .map_err(OpenCodeError::Http)?;
+
+        let status = resp.status();
+        log_debug!("Response status: {}", status);
+
+        let content = resp.text().await.map_err(OpenCodeError::Http)?;
+        log_debug!("Raw API response content: {}", content);
+
+        // TODO pretty-print the raw JSON response to debugmessage.json!
+
+        if !status.is_client_error() && !status.is_server_error() {
+            // Try to deserialize the response
+            match serde_json::from_str::<Vec<GetSessionByIdMessage200ResponseInner>>(&content) {
+                Ok(messages) => {
+                    log_debug!("Successfully deserialized {} messages", messages.len());
+                    Ok(messages)
+                }
+                Err(e) => {
+                    log_debug!("Deserialization error: {}", e);
+                    log_debug!("Failed content was: {}", content);
+                    Err(OpenCodeError::Serialization(e))
+                }
+            }
+        } else {
+            log_debug!("HTTP error response: {}", content);
+            Err(OpenCodeError::api_error(
+                status.as_u16(),
+                format!("HTTP {} - {}", status, content),
+            ))
+        }
     }
 
     /// Create a message builder for complex message construction
@@ -359,8 +400,6 @@ impl OpenCodeClient {
     }
 }
 
-
-
 impl PartialEq for OpenCodeClient {
     fn eq(&self, other: &Self) -> bool {
         self.config.base_path == other.config.base_path
@@ -446,18 +485,20 @@ impl MessageBuilder {
     /// Send the message
     pub async fn send(self, config: &Configuration) -> Result<AssistantMessage> {
         let request = PostSessionByIdMessageRequest {
-            message_id: Some(self
-                .message_id
-                .ok_or_else(|| OpenCodeError::invalid_request("message_id is required"))?),
+            message_id: Some(
+                self.message_id
+                    .ok_or_else(|| OpenCodeError::invalid_request("message_id is required"))?,
+            ),
             provider_id: self
                 .provider_id
                 .ok_or_else(|| OpenCodeError::invalid_request("provider_id is required"))?,
             model_id: self
                 .model_id
                 .ok_or_else(|| OpenCodeError::invalid_request("model_id is required"))?,
-            mode: Some(self
-                .mode
-                .ok_or_else(|| OpenCodeError::invalid_request("mode is required"))?),
+            mode: Some(
+                self.mode
+                    .ok_or_else(|| OpenCodeError::invalid_request("mode is required"))?,
+            ),
             tools: None,
             parts: self.parts,
         };

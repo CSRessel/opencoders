@@ -88,7 +88,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         Msg::SessionReady(session) => {
             let session_id = session.id.clone();
             model.transition_to_session_ready(session);
-            
+
             // Fetch session messages once session is ready
             if let Some(client) = model.client.clone() {
                 (model, Cmd::AsyncLoadSessionMessages(client, session_id))

@@ -9,6 +9,7 @@ use crate::{
         terminal::TerminalGuard,
         ui_components::banner::create_welcome_text,
     },
+    log_error,
     sdk::OpenCodeClient,
 };
 use crossterm::event::{self, Event};
@@ -181,8 +182,19 @@ impl Program {
             }
 
             Cmd::AsyncSpawnSessionInit(client) => {
+                // Check if there's a selected session from the session selector
+                let selected_session_id = self.model.selected_session_id();
+
                 // Spawn async session initialization task
                 self.task_manager.spawn_task(async move {
+                    // If we have a selected session ID, save it as the last session first
+                    if let Some(session_id) = selected_session_id {
+                        if let Err(e) = client.switch_to_session(&session_id).await {
+                            log_error!("save session ID {} failed: {}", session_id, e);
+                        }
+                    }
+
+                    // Get or create session (will use saved session if available)
                     match client.get_or_create_session().await {
                         Ok(session) => Msg::SessionReady(session),
                         Err(error) => Msg::SessionInitializationFailed(error),

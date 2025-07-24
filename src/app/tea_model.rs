@@ -173,4 +173,12 @@ impl Model {
     pub fn session(&self) -> Option<&Session> {
         self.session.as_ref()
     }
+
+    pub fn selected_session_id(&self) -> Option<String> {
+        match &self.session_selector.current_session_index() {
+            None => None,
+            Some(0) => None,
+            Some(n) => self.sessions.get(n - 1).map(|session| session.id.clone()),
+        }
+    }
 }

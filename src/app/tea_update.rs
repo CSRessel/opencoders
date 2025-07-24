@@ -162,6 +162,23 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 .session_selector
                 .cache_render_height_for_terminal(model.init.height());
 
+            // Set current session index if we have an active session
+            let current_index = if let Some(current_session) = &model.session {
+                // Find the current session in the sessions list
+                // Add 1 because "Create New Session" is at index 0
+                model
+                    .sessions
+                    .iter()
+                    .position(|s| s.id == current_session.id)
+                    .map(|pos| pos + 1)
+            } else {
+                None
+            };
+
+            model
+                .session_selector
+                .set_current_session_index(current_index);
+
             if let Some(client) = model.client.clone() {
                 (model, Cmd::AsyncLoadSessions(client))
             } else {
@@ -211,15 +228,29 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             model.sessions = sessions.clone();
             let mut items = vec!["Create New Session".to_string()];
             items.extend(sessions.iter().map(|s| s.title.clone()));
-
             model
                 .session_selector
                 .handle_event(PopoverSelectorEvent::SetItems(items));
-
+            //
             // Re-cache the render height since popup size may have changed with new items
             model
                 .session_selector
                 .cache_render_height_for_terminal(model.init.height());
+
+            // Re-calculate and set current session index after items are loaded
+            let current_index = if let Some(current_session) = &model.session {
+                model
+                    .sessions
+                    .iter()
+                    .position(|s| s.id == current_session.id)
+                    .map(|pos| pos + 1)
+            } else {
+                None
+            };
+
+            model
+                .session_selector
+                .set_current_session_index(current_index);
 
             (model, Cmd::None)
         }

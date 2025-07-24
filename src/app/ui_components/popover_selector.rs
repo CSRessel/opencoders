@@ -15,6 +15,7 @@ pub struct PopoverSelector {
     selected_index: usize,
     scroll_offset: usize,
     last_render_height: Option<usize>,
+    current_session_index: Option<usize>,
     is_visible: bool,
     loading: bool,
     error: Option<String>,
@@ -43,6 +44,7 @@ impl PopoverSelector {
             selected_index: 0,
             scroll_offset: 0,
             last_render_height: None,
+            current_session_index: None,
             is_visible: false,
             loading: false,
             error: None,
@@ -58,6 +60,7 @@ impl PopoverSelector {
             selected_index: 0,
             scroll_offset: 0,
             last_render_height: None,
+            current_session_index: None,
             is_visible: false,
             loading: false,
             error: None,
@@ -101,6 +104,7 @@ impl PopoverSelector {
                 self.items = items;
                 self.selected_index = 0;
                 self.scroll_offset = 0;
+                self.current_session_index = None; // Reset when items change
                 self.loading = false;
                 self.error = None;
                 None
@@ -160,6 +164,14 @@ impl PopoverSelector {
             .min(terminal_height);
         let content_height = popup_height.saturating_sub(2) as usize;
         self.last_render_height = Some(content_height);
+    }
+
+    pub fn set_current_session_index(&mut self, index: Option<usize>) {
+        self.current_session_index = index;
+    }
+
+    pub fn current_session_index(&self) -> Option<usize> {
+        self.current_session_index
     }
 
     pub fn set_max_dimensions(&mut self, max_width: Option<u16>, max_height: Option<u16>) {
@@ -263,13 +275,25 @@ impl PopoverSelector {
             .skip(start_index)
             .take(end_index - start_index)
             .map(|(i, item)| {
-                let style = if i == self.selected_index {
-                    Style::default().fg(Color::Black).bg(Color::White)
+                let (style, prefix) = if i == self.selected_index {
+                    // Currently selected item (navigation cursor)
+                    let style = Style::default().fg(Color::Black).bg(Color::White);
+                    let prefix = if Some(i) == self.current_session_index {
+                        ">*" // Selected AND current session
+                    } else {
+                        "> " // Just selected
+                    };
+                    (style, prefix)
+                } else if Some(i) == self.current_session_index {
+                    // Current active session (not selected)
+                    let style = Style::default().fg(Color::Black).bg(Color::Green);
+                    (style, " *")
                 } else {
-                    Style::default().fg(Color::White)
+                    // Regular item
+                    let style = Style::default().fg(Color::White);
+                    (style, "  ")
                 };
 
-                let prefix = if i == self.selected_index { "> " } else { "  " };
                 ListItem::new(Line::from(Span::styled(
                     format!("{}{}", prefix, item),
                     style,

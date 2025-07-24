@@ -86,8 +86,15 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::SessionReady(session) => {
+            let session_id = session.id.clone();
             model.transition_to_session_ready(session);
-            (model, Cmd::None)
+            
+            // Fetch session messages once session is ready
+            if let Some(client) = model.client.clone() {
+                (model, Cmd::AsyncLoadSessionMessages(client, session_id))
+            } else {
+                (model, Cmd::None)
+            }
         }
 
         Msg::SessionInitializationFailed(error) => {
@@ -262,6 +269,20 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                     "Failed to load sessions: {}",
                     error
                 ))));
+            (model, Cmd::None)
+        }
+
+        Msg::SessionMessagesLoaded(messages) => {
+            // Log debug output for fetched messages
+            crate::log_debug!("Fetched {} session messages", messages.len());
+            for (index, message) in messages.iter().enumerate() {
+                crate::log_debug!("Message {}: {:?}", index + 1, message);
+            }
+            (model, Cmd::None)
+        }
+
+        Msg::SessionMessagesLoadFailed(error) => {
+            crate::log_debug!("Failed to load session messages: {}", error);
             (model, Cmd::None)
         }
     }

@@ -200,6 +200,16 @@ impl Program {
                 });
             }
 
+            Cmd::AsyncLoadSessionMessages(client, session_id) => {
+                // Spawn async session messages loading task
+                self.task_manager.spawn_task(async move {
+                    match client.get_messages(&session_id).await {
+                        Ok(messages) => Msg::SessionMessagesLoaded(messages),
+                        Err(error) => Msg::SessionMessagesLoadFailed(error),
+                    }
+                });
+            }
+
             Cmd::AsyncCancelTask(task_id) => {
                 self.task_manager.cancel_task(task_id);
             }
@@ -212,6 +222,7 @@ impl Program {
                         Cmd::AsyncSpawnClientDiscovery
                         | Cmd::AsyncSpawnSessionInit(_)
                         | Cmd::AsyncLoadSessions(_)
+                        | Cmd::AsyncLoadSessionMessages(_, _)
                         | Cmd::AsyncCancelTask(_)
                         | Cmd::RebootTerminalWithInline(_) => {
                             Box::pin(self.spawn_command(cmd)).await?;

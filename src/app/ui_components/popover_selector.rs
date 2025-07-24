@@ -6,11 +6,15 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Widget},
 };
 
+use crate::log_info;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct PopoverSelector {
     title: String,
     items: Vec<String>,
     selected_index: usize,
+    scroll_offset: usize,
+    last_render_height: Option<usize>,
     is_visible: bool,
     loading: bool,
     error: Option<String>,
@@ -37,6 +41,8 @@ impl PopoverSelector {
             title: title.to_string(),
             items: Vec::new(),
             selected_index: 0,
+            scroll_offset: 0,
+            last_render_height: None,
             is_visible: false,
             loading: false,
             error: None,
@@ -50,6 +56,8 @@ impl PopoverSelector {
             title: title.to_string(),
             items,
             selected_index: 0,
+            scroll_offset: 0,
+            last_render_height: None,
             is_visible: false,
             loading: false,
             error: None,
@@ -67,12 +75,14 @@ impl PopoverSelector {
                     } else {
                         self.selected_index - 1
                     };
+                    self.update_scroll_position();
                 }
                 None
             }
             PopoverSelectorEvent::Down => {
                 if !self.items.is_empty() {
                     self.selected_index = (self.selected_index + 1) % self.items.len();
+                    self.update_scroll_position();
                 }
                 None
             }
@@ -90,6 +100,7 @@ impl PopoverSelector {
             PopoverSelectorEvent::SetItems(items) => {
                 self.items = items;
                 self.selected_index = 0;
+                self.scroll_offset = 0;
                 self.loading = false;
                 self.error = None;
                 None
@@ -137,9 +148,43 @@ impl PopoverSelector {
         self.error.as_ref()
     }
 
+    pub fn scroll_offset(&self) -> usize {
+        self.scroll_offset
+    }
+
+    pub fn cache_render_height_for_terminal(&mut self, terminal_height: u16) {
+        // Calculate what the popup height would be
+        let popup_height = self
+            .max_height
+            .unwrap_or(self.items.len() as u16 + 4)
+            .min(terminal_height);
+        let content_height = popup_height.saturating_sub(2) as usize;
+        self.last_render_height = Some(content_height);
+    }
+
     pub fn set_max_dimensions(&mut self, max_width: Option<u16>, max_height: Option<u16>) {
         self.max_width = max_width;
         self.max_height = max_height;
+    }
+
+    pub fn update_scroll_position(&mut self) {
+        let visible_height = self.last_render_height.unwrap_or_else(|| 3);
+        if self.items.is_empty() || visible_height == 0 {
+            return;
+        }
+
+        // Ensure selected item is visible within the scroll window
+        if self.selected_index < self.scroll_offset {
+            // Selected item is above the visible area, scroll up
+            self.scroll_offset = self.selected_index;
+        } else if self.selected_index >= self.scroll_offset + visible_height {
+            // Selected item is below the visible area, scroll down
+            self.scroll_offset = self.selected_index.saturating_sub(visible_height - 1);
+        }
+
+        // Ensure scroll offset doesn't exceed bounds
+        let max_scroll = self.items.len().saturating_sub(visible_height);
+        self.scroll_offset = self.scroll_offset.min(max_scroll);
     }
 
     fn render_loading(&self, area: Rect, buf: &mut Buffer) {
@@ -175,15 +220,48 @@ impl PopoverSelector {
     }
 
     fn render_items(&self, area: Rect, buf: &mut Buffer) {
+        let content_height = area.height.saturating_sub(2) as usize;
+
+        // Create title with scroll indicators
+        let has_items_above = self.scroll_offset > 0;
+        let visible_height = content_height.min(self.items.len());
+        let has_items_below = self.scroll_offset + visible_height < self.items.len();
+
+        let title = if has_items_above && has_items_below {
+            format!("{} ↑↓", self.title)
+        } else if has_items_above {
+            format!("{} ↑", self.title)
+        } else if has_items_below {
+            format!("{} ↓", self.title)
+        } else {
+            self.title.clone()
+        };
+
         let block = Block::default()
             .borders(Borders::ALL)
-            .title(self.title.clone())
+            .title(title)
             .border_style(Style::default().fg(Color::Blue));
+
+        // Calculate visible range based on current scroll offset
+        let start_index = self
+            .scroll_offset
+            .min(self.items.len().saturating_sub(visible_height));
+        let end_index = start_index + visible_height;
+        log_info!(
+            "{} items, crammed into {} rows, offset {} lines, showing [{}, {})",
+            self.items.len(),
+            visible_height,
+            self.scroll_offset,
+            start_index,
+            end_index
+        );
 
         let items: Vec<ListItem> = self
             .items
             .iter()
             .enumerate()
+            .skip(start_index)
+            .take(end_index - start_index)
             .map(|(i, item)| {
                 let style = if i == self.selected_index {
                     Style::default().fg(Color::Black).bg(Color::White)
@@ -256,4 +334,3 @@ impl Default for PopoverSelector {
         Self::new("Select")
     }
 }
-

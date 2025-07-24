@@ -150,15 +150,26 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         // Session selector messages
         Msg::ShowSessionSelector => {
             model.state = AppState::SelectSession;
-            model.session_selector.handle_event(PopoverSelectorEvent::Show);
-            model.session_selector.handle_event(PopoverSelectorEvent::SetLoading(true));
-            
+            model
+                .session_selector
+                .handle_event(PopoverSelectorEvent::Show);
+            model
+                .session_selector
+                .handle_event(PopoverSelectorEvent::SetLoading(true));
+
+            // Cache the render height for accurate scroll calculations
+            model
+                .session_selector
+                .cache_render_height_for_terminal(model.init.height());
+
             if let Some(client) = model.client.clone() {
                 (model, Cmd::AsyncLoadSessions(client))
             } else {
-                model.session_selector.handle_event(PopoverSelectorEvent::SetError(
-                    Some("No client connection".to_string())
-                ));
+                model
+                    .session_selector
+                    .handle_event(PopoverSelectorEvent::SetError(Some(
+                        "No client connection".to_string(),
+                    )));
                 (model, Cmd::None)
             }
         }
@@ -170,7 +181,9 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                     // Create new session
                     if let Some(client) = model.client.clone() {
                         model.state = AppState::InitializingSession;
-                        model.session_selector.handle_event(PopoverSelectorEvent::Hide);
+                        model
+                            .session_selector
+                            .handle_event(PopoverSelectorEvent::Hide);
                         return (model, Cmd::AsyncSpawnSessionInit(client));
                     }
                 } else {
@@ -179,16 +192,18 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                     if session_index < model.sessions.len() {
                         let session = model.sessions[session_index].clone();
                         model.transition_to_session_ready(session);
-                        model.session_selector.handle_event(PopoverSelectorEvent::Hide);
+                        model
+                            .session_selector
+                            .handle_event(PopoverSelectorEvent::Hide);
                     }
                 }
             }
-            
+
             // Handle cancel
             if matches!(event, PopoverSelectorEvent::Cancel) {
                 model.state = AppState::Welcome;
             }
-            
+
             (model, Cmd::None)
         }
 
@@ -196,15 +211,26 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             model.sessions = sessions.clone();
             let mut items = vec!["Create New Session".to_string()];
             items.extend(sessions.iter().map(|s| s.title.clone()));
-            
-            model.session_selector.handle_event(PopoverSelectorEvent::SetItems(items));
+
+            model
+                .session_selector
+                .handle_event(PopoverSelectorEvent::SetItems(items));
+
+            // Re-cache the render height since popup size may have changed with new items
+            model
+                .session_selector
+                .cache_render_height_for_terminal(model.init.height());
+
             (model, Cmd::None)
         }
 
         Msg::SessionsLoadFailed(error) => {
-            model.session_selector.handle_event(PopoverSelectorEvent::SetError(
-                Some(format!("Failed to load sessions: {}", error))
-            ));
+            model
+                .session_selector
+                .handle_event(PopoverSelectorEvent::SetError(Some(format!(
+                    "Failed to load sessions: {}",
+                    error
+                ))));
             (model, Cmd::None)
         }
     }

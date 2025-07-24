@@ -1,5 +1,5 @@
 use crate::{
-    app::ui_components::{MessageLog, TextInput},
+    app::ui_components::{MessageLog, PopoverSelector, TextInput},
     sdk::{OpenCodeClient, OpenCodeError},
 };
 use opencode_sdk::models::Session;
@@ -15,9 +15,11 @@ pub struct Model {
     // Stateful components:
     pub message_log: MessageLog,
     pub text_input: TextInput,
+    pub session_selector: PopoverSelector,
     // Client and session state
     pub client: Option<OpenCodeClient>,
     pub session: Option<Session>,
+    pub sessions: Vec<Session>,
     pub connection_status: ConnectionStatus,
 }
 
@@ -55,6 +57,7 @@ pub enum AppState {
     ConnectingToServer,
     InitializingSession,
     TextEntry,
+    SelectSession,
     ConnectionError(String),
     Quit,
 }
@@ -75,6 +78,7 @@ impl Model {
         text_input.set_focus(true);
 
         let message_log = MessageLog::new();
+        let session_selector = PopoverSelector::new("Select Session");
 
         Model {
             init: ModelInit::new(5, false),
@@ -84,8 +88,10 @@ impl Model {
             printed_to_stdout_count: 0,
             message_log,
             text_input,
+            session_selector,
             client: None,
             session: None,
+            sessions: Vec::new(),
             connection_status: ConnectionStatus::Disconnected,
         }
     }

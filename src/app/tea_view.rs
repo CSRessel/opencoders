@@ -60,6 +60,12 @@ pub fn view(model: &Model, frame: &mut Frame) {
         AppState::ConnectingToServer => render_connecting_screen(model, frame),
         AppState::InitializingSession => render_initializing_session_screen(model, frame),
         AppState::TextEntry => render_text_entry_screen(model, frame),
+        AppState::SelectSession => {
+            // Render the underlying state first (Welcome screen)
+            render_welcome_screen(model, frame);
+            // Then render the popover selector on top
+            frame.render_widget(&model.session_selector, frame.area());
+        }
         AppState::ConnectionError(error) => render_error_screen(model, frame, error),
         AppState::Quit => {} // No rendering needed for quit state
     };
@@ -72,7 +78,7 @@ pub fn view_clear(_model: &Model, frame: &mut Frame) {
 
 fn render_welcome_screen(model: &Model, frame: &mut Frame) {
     let text = Text::from(
-        "Press Enter to start text input, Tab to toggle inline, 'q' or 'Esc' to exit...",
+        "Press Enter to start text input, 's' for session selector, Tab to toggle inline, 'q' or 'Esc' to exit...",
     );
     let paragraph = Paragraph::new(text);
 

@@ -190,6 +190,16 @@ impl Program {
                 });
             }
 
+            Cmd::AsyncLoadSessions(client) => {
+                // Spawn async session loading task
+                self.task_manager.spawn_task(async move {
+                    match client.list_sessions().await {
+                        Ok(sessions) => Msg::SessionsLoaded(sessions),
+                        Err(error) => Msg::SessionsLoadFailed(error),
+                    }
+                });
+            }
+
             Cmd::AsyncCancelTask(task_id) => {
                 self.task_manager.cancel_task(task_id);
             }
@@ -201,6 +211,7 @@ impl Program {
                     match cmd {
                         Cmd::AsyncSpawnClientDiscovery
                         | Cmd::AsyncSpawnSessionInit(_)
+                        | Cmd::AsyncLoadSessions(_)
                         | Cmd::AsyncCancelTask(_)
                         | Cmd::RebootTerminalWithInline(_) => {
                             Box::pin(self.spawn_command(cmd)).await?;

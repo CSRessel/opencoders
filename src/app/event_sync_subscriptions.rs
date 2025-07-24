@@ -1,6 +1,7 @@
 use crate::app::{
     event_msg::{Msg, Sub},
     tea_model::{AppState, Model},
+    ui_components::PopoverSelectorEvent,
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
@@ -10,6 +11,7 @@ pub fn subscriptions(model: &Model) -> Vec<Sub> {
         | AppState::TextEntry
         | AppState::ConnectingToServer
         | AppState::InitializingSession
+        | AppState::SelectSession
         | AppState::ConnectionError(_) => vec![Sub::KeyboardInput],
         AppState::Quit => vec![],
     }
@@ -46,6 +48,9 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppState::Welcome, KeyCode::Enter, _) => {
                     Some(Msg::ChangeState(AppState::TextEntry))
                 }
+                (AppState::Welcome, KeyCode::Char('s'), _) => {
+                    Some(Msg::ShowSessionSelector)
+                }
                 (AppState::TextEntry, KeyCode::Esc, _) => Some(Msg::ChangeState(AppState::Welcome)),
 
                 // Settings toggle
@@ -66,6 +71,29 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 }
                 (AppState::TextEntry, KeyCode::Right, _) => {
                     Some(Msg::ScrollMessageLogHorizontal(10))
+                }
+
+                // Session selector events
+                (AppState::SelectSession, KeyCode::Up, _) => {
+                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
+                }
+                (AppState::SelectSession, KeyCode::Down, _) => {
+                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
+                }
+                (AppState::SelectSession, KeyCode::Char('k'), _) => {
+                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
+                }
+                (AppState::SelectSession, KeyCode::Char('j'), _) => {
+                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
+                }
+                (AppState::SelectSession, KeyCode::Enter, _) => {
+                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Select))
+                }
+                (AppState::SelectSession, KeyCode::Esc, _) => {
+                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Cancel))
+                }
+                (AppState::SelectSession, KeyCode::Char('q'), _) => {
+                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Cancel))
                 }
 
                 // Retry connection

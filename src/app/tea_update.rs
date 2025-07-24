@@ -1,7 +1,7 @@
 use crate::app::{
     event_msg::{Cmd, Msg},
     tea_model::{AppState, Model},
-    ui_components::text_input::TextInputEvent,
+    ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
 };
 use opencode_sdk::models::{
     GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
@@ -144,6 +144,67 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         Msg::MarkMessagesViewed => {
             let count = model.messages_needing_stdout_print().len();
             model.mark_messages_printed_to_stdout(count);
+            (model, Cmd::None)
+        }
+
+        // Session selector messages
+        Msg::ShowSessionSelector => {
+            model.state = AppState::SelectSession;
+            model.session_selector.handle_event(PopoverSelectorEvent::Show);
+            model.session_selector.handle_event(PopoverSelectorEvent::SetLoading(true));
+            
+            if let Some(client) = model.client.clone() {
+                (model, Cmd::AsyncLoadSessions(client))
+            } else {
+                model.session_selector.handle_event(PopoverSelectorEvent::SetError(
+                    Some("No client connection".to_string())
+                ));
+                (model, Cmd::None)
+            }
+        }
+
+        Msg::SessionSelectorEvent(event) => {
+            if let Some(selected_index) = model.session_selector.handle_event(event.clone()) {
+                // Handle selection
+                if selected_index == 0 {
+                    // Create new session
+                    if let Some(client) = model.client.clone() {
+                        model.state = AppState::InitializingSession;
+                        model.session_selector.handle_event(PopoverSelectorEvent::Hide);
+                        return (model, Cmd::AsyncSpawnSessionInit(client));
+                    }
+                } else {
+                    // Use existing session (selected_index - 1 in sessions list)
+                    let session_index = selected_index - 1;
+                    if session_index < model.sessions.len() {
+                        let session = model.sessions[session_index].clone();
+                        model.transition_to_session_ready(session);
+                        model.session_selector.handle_event(PopoverSelectorEvent::Hide);
+                    }
+                }
+            }
+            
+            // Handle cancel
+            if matches!(event, PopoverSelectorEvent::Cancel) {
+                model.state = AppState::Welcome;
+            }
+            
+            (model, Cmd::None)
+        }
+
+        Msg::SessionsLoaded(sessions) => {
+            model.sessions = sessions.clone();
+            let mut items = vec!["Create New Session".to_string()];
+            items.extend(sessions.iter().map(|s| s.title.clone()));
+            
+            model.session_selector.handle_event(PopoverSelectorEvent::SetItems(items));
+            (model, Cmd::None)
+        }
+
+        Msg::SessionsLoadFailed(error) => {
+            model.session_selector.handle_event(PopoverSelectorEvent::SetError(
+                Some(format!("Failed to load sessions: {}", error))
+            ));
             (model, Cmd::None)
         }
     }

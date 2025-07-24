@@ -1,5 +1,5 @@
 use crate::{
-    app::{event_async_task_manager::TaskId, tea_model::AppState},
+    app::{event_async_task_manager::TaskId, tea_model::AppState, ui_components::PopoverSelectorEvent},
     sdk::{OpenCodeClient, OpenCodeError},
 };
 use opencode_sdk::models::Session;
@@ -26,6 +26,12 @@ pub enum Msg {
     SessionReady(Session),
     SessionInitializationFailed(OpenCodeError),
 
+    // Session selector messages
+    ShowSessionSelector,
+    SessionSelectorEvent(PopoverSelectorEvent),
+    SessionsLoaded(Vec<Session>),
+    SessionsLoadFailed(OpenCodeError),
+
     // Task lifecycle messages
     TaskStarted(TaskId, String),
     TaskCompleted(TaskId),
@@ -47,6 +53,7 @@ pub enum Cmd {
     // Async commands that don't block
     AsyncSpawnClientDiscovery,
     AsyncSpawnSessionInit(OpenCodeClient),
+    AsyncLoadSessions(OpenCodeClient),
     AsyncCancelTask(TaskId),
 
     // Batched commands for efficiency

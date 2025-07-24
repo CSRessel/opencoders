@@ -118,25 +118,37 @@ impl TextInput {
         self.session_id = session_id;
     }
 
-    fn display_text(&self) -> String {
+    fn display_text(&self) -> Vec<Span> {
         if self.content.is_empty() && !self.is_focused {
-            self.placeholder.clone()
+            vec![Span::styled(
+                self.placeholder.clone(),
+                Style::default().fg(Color::Gray),
+            )]
         } else {
-            let mut display = self.content.clone();
+            let mut displayed = vec![];
+            let text = self.content.clone();
             if self.is_focused {
                 let char_indices: Vec<_> = self.content.char_indices().collect();
                 let cursor_char_index = self.cursor_position.min(char_indices.len());
+                let cursor_style = Style::default().fg(Color::Black).bg(Color::White);
+                let text_style = Style::default().fg(Color::White);
 
                 if cursor_char_index == char_indices.len() {
                     // Cursor at end
-                    display.push('|');
+                    displayed.push(Span::styled(text, text_style));
+                    displayed.push(Span::styled(" ", cursor_style));
                 } else {
                     // Cursor in middle
-                    let (byte_index, _) = char_indices[cursor_char_index];
-                    display.insert(byte_index, '|');
+                    let (byte_index, byte_char) = char_indices[cursor_char_index];
+                    displayed.push(Span::styled(text[0..byte_index].to_string(), text_style));
+                    displayed.push(Span::styled(byte_char.to_string(), cursor_style));
+                    displayed.push(Span::styled(
+                        text[byte_index..char_indices.len()].to_string(),
+                        text_style,
+                    ))
                 }
             }
-            display
+            displayed
         }
     }
 }
@@ -144,13 +156,6 @@ impl TextInput {
 impl Widget for &TextInput {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let display_text = self.display_text();
-        let is_placeholder = self.content.is_empty() && !self.is_focused;
-
-        let style = if is_placeholder {
-            Style::default().fg(Color::DarkGray)
-        } else {
-            Style::default().fg(Color::White)
-        };
 
         // Split the area to accommodate status line if session ID exists
         let (input_area, status_area) = if self.session_id.is_some() {
@@ -174,7 +179,7 @@ impl Widget for &TextInput {
                 Style::default().fg(Color::Gray)
             });
 
-        let paragraph = Paragraph::new(Line::from(Span::styled(display_text, style))).block(block);
+        let paragraph = Paragraph::new(Line::from(display_text)).block(block);
 
         paragraph.render(input_area, buf);
 
@@ -195,4 +200,3 @@ impl Default for TextInput {
         Self::new()
     }
 }
-

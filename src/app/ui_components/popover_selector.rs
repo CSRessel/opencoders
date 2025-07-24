@@ -6,8 +6,6 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Widget},
 };
 
-use crate::log_info;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct PopoverSelector {
     title: String,
@@ -259,14 +257,6 @@ impl PopoverSelector {
             .scroll_offset
             .min(self.items.len().saturating_sub(visible_height));
         let end_index = start_index + visible_height;
-        log_info!(
-            "{} items, crammed into {} rows, offset {} lines, showing [{}, {})",
-            self.items.len(),
-            visible_height,
-            self.scroll_offset,
-            start_index,
-            end_index
-        );
 
         let items: Vec<ListItem> = self
             .items

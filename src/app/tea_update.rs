@@ -199,11 +199,14 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::SessionSelectorEvent(event) => {
-            if let Some(selected_index) = model.session_selector.handle_event(event.clone()) {
+            if let Some(requested_session_index) =
+                model.session_selector.handle_event(event.clone())
+            {
                 // Handle selection
-                if selected_index == 0 {
+                if requested_session_index == 0 {
                     // Create new session
                     if let Some(client) = model.client.clone() {
+                        model.session_selector.set_current_session_index(None);
                         model.state = AppState::InitializingSession;
                         model
                             .session_selector
@@ -211,9 +214,12 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                         return (model, Cmd::AsyncSpawnSessionInit(client));
                     }
                 } else {
-                    // Use existing session (selected_index - 1 in sessions list)
-                    let session_index = selected_index - 1;
+                    // Use existing session (requested_session_index - 1 in sessions list)
+                    let session_index = requested_session_index - 1;
                     if session_index < model.sessions.len() {
+                        model
+                            .session_selector
+                            .set_current_session_index(Some(requested_session_index));
                         let session = model.sessions[session_index].clone();
                         model.transition_to_session_ready(session);
                         model
@@ -275,9 +281,10 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         Msg::SessionMessagesLoaded(messages) => {
             // Log debug output for fetched messages
             crate::log_debug!("Fetched {} session messages", messages.len());
-            for (index, message) in messages.iter().enumerate() {
-                crate::log_debug!("Message {}: {:?}", index + 1, message);
-            }
+            model.message_log.set_messages(messages);
+            // for (index, message) in messages.iter().enumerate() {
+            //     crate::log_debug!("Message {}: {:?}", index + 1, message);
+            // }
             (model, Cmd::None)
         }
 

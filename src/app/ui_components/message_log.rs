@@ -1,3 +1,4 @@
+use crate::app::ui_components::MessagePart;
 use opencode_sdk::models::{
     GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
 };
@@ -6,6 +7,7 @@ use ratatui::{
     layout::{Margin, Rect},
     style::{Color, Style, Stylize},
     symbols::scrollbar,
+    text::{Line, Span, Text},
     widgets::{
         Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget,
         Widget,
@@ -20,7 +22,6 @@ pub struct MessageLog {
     pub horizontal_scroll_state: ScrollbarState,
     vertical_scroll: usize,
     horizontal_scroll: usize,
-    longest_line_length: usize,
 }
 
 // pub fn render_message_log(frame: &mut Frame, rect: Rect, model: &Model) {
@@ -34,7 +35,6 @@ impl MessageLog {
             horizontal_scroll_state: ScrollbarState::default(),
             vertical_scroll: 0,
             horizontal_scroll: 0,
-            longest_line_length: 0,
         }
     }
 
@@ -43,7 +43,7 @@ impl MessageLog {
     }
 
     pub fn move_message_log_scroll(&mut self, direction: &i16) {
-        let content_lines = self.messages.len();
+        let content_lines = self.get_total_line_count();
         // Conservative estimate: assume minimum viewport of 10 lines
         let min_viewport_height = 10;
 
@@ -65,9 +65,10 @@ impl MessageLog {
     pub fn scroll_horizontal(&mut self, direction: i16) {
         // Conservative estimate: assume minimum viewport of 50 characters
         let min_viewport_width = 50;
+        let longest_line_length = self.calculate_longest_line_length();
 
-        let max_scroll = if self.longest_line_length > min_viewport_width {
-            self.longest_line_length - min_viewport_width
+        let max_scroll = if longest_line_length > min_viewport_width {
+            longest_line_length - min_viewport_width
         } else {
             0
         };
@@ -82,7 +83,7 @@ impl MessageLog {
     }
 
     pub fn scroll_vertical_with_viewport(&mut self, direction: i16, viewport_height: u16) {
-        let content_lines = self.messages.len();
+        let content_lines = self.get_total_line_count();
         let available_height = viewport_height.saturating_sub(2) as usize; // Account for borders
 
         let max_scroll = if content_lines > available_height {
@@ -102,9 +103,10 @@ impl MessageLog {
 
     pub fn scroll_horizontal_with_viewport(&mut self, direction: i16, viewport_width: u16) {
         let available_width = viewport_width.saturating_sub(2) as usize; // Account for borders
+        let longest_line_length = self.calculate_longest_line_length();
 
-        let max_scroll = if self.longest_line_length > available_width {
-            self.longest_line_length - available_width
+        let max_scroll = if longest_line_length > available_width {
+            longest_line_length - available_width
         } else {
             0
         };
@@ -119,7 +121,7 @@ impl MessageLog {
     }
 
     pub fn scroll_to_bottom(&mut self) {
-        let content_lines = self.messages.len();
+        let content_lines = self.get_total_line_count();
         // Set scroll to a large value - it will be constrained during render
         // This ensures we always attempt to scroll to the maximum possible position
         self.vertical_scroll = content_lines.saturating_sub(1).max(0);
@@ -127,7 +129,7 @@ impl MessageLog {
     }
 
     pub fn scroll_to_bottom_with_viewport(&mut self, viewport_height: u16) {
-        let content_lines = self.messages.len();
+        let content_lines = self.get_total_line_count();
         let available_height = viewport_height.saturating_sub(2) as usize; // Account for borders
 
         let max_scroll = if content_lines > available_height {
@@ -165,48 +167,100 @@ impl MessageLog {
 
         self.messages.push(message_container);
 
-        // Update longest line length with the new message
-        let formatted_message = format!("You: {}", submitted_text);
-        self.longest_line_length = self.longest_line_length.max(formatted_message.len());
+        // Auto-scroll to bottom when new message is added
+        self.scroll_to_bottom();
+    }
+
+    pub fn set_messages(&mut self, messages: Vec<GetSessionByIdMessage200ResponseInner>) {
+        self.messages = messages;
 
         // Auto-scroll to bottom when new message is added
         self.scroll_to_bottom();
     }
 
-    fn display_message_list(&self) -> Vec<String> {
-        self.messages
-            .iter()
-            .map(|msg_container| {
-                let role = match *msg_container.info {
-                    Message::User(_) => "You",
-                    Message::Assistant(_) => "Assistant",
-                };
+    pub fn add_message(&mut self, message: GetSessionByIdMessage200ResponseInner) {
+        self.messages.push(message);
 
-                let text_parts: Vec<String> = msg_container
-                    .parts
-                    .iter()
-                    .filter_map(|part| {
-                        if let Part::Text(text_part) = part {
-                            Some(text_part.text.clone())
-                        } else {
-                            None
-                        }
+        // Auto-scroll to bottom when new message is added
+        self.scroll_to_bottom();
+    }
+
+    fn render_message_content(&self) -> Text<'static> {
+        let mut lines = Vec::new();
+
+        for msg_container in &self.messages {
+            let role = match *msg_container.info {
+                Message::User(_) => "You",
+                Message::Assistant(_) => "Assistant",
+            };
+
+            // Add role header
+            lines.push(Line::from(vec![Span::styled(
+                format!("{}: ", role),
+                Style::default()
+                    .fg(if role == "You" {
+                        Color::Cyan
+                    } else {
+                        Color::Green
                     })
-                    .collect();
+                    .bold(),
+            )]));
 
-                format!("{}: {}", role, text_parts.join(" "))
+            // Render each part using MessagePart component
+            for part in &msg_container.parts {
+                let message_part = MessagePart::new(part);
+                let part_text = message_part.to_text();
+
+                // Add each line from the part with proper indentation
+                for line in part_text.lines {
+                    let mut indented_spans = vec![Span::raw("  ")]; // 2-space indent
+                    indented_spans.extend(line.spans);
+                    lines.push(Line::from(indented_spans));
+                }
+            }
+
+            // Add empty line between messages
+            lines.push(Line::from(""));
+        }
+
+        Text::from(lines)
+    }
+
+    fn calculate_content_dimensions(&self) -> (usize, usize) {
+        let content = self.render_message_content();
+        let line_count = content.lines.len();
+        let longest_line_length = content
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| span.content.len())
+                    .sum::<usize>()
             })
-            .collect()
+            .max()
+            .unwrap_or(0);
+        
+        (line_count, longest_line_length)
+    }
+
+    fn get_total_line_count(&self) -> usize {
+        let (line_count, _) = self.calculate_content_dimensions();
+        line_count
+    }
+
+    fn calculate_longest_line_length(&self) -> usize {
+        let (_, longest_line_length) = self.calculate_content_dimensions();
+        longest_line_length
     }
 }
 
 impl Widget for &MessageLog {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let messages = self.display_message_list();
-        let content = messages.join("\n");
+        let content = self.render_message_content();
 
-        // Get content dimensions (longest line is pre-calculated)
-        let content_lines = messages.len();
+        // Calculate content dimensions
+        let (content_lines, longest_line_length) = self.calculate_content_dimensions();
 
         // Create a mutable clone for scrollbar state updates
         let mut message_log = self.clone();
@@ -237,8 +291,8 @@ impl Widget for &MessageLog {
             0
         };
 
-        let max_horizontal_scroll = if self.longest_line_length > available_width {
-            self.longest_line_length - available_width
+        let max_horizontal_scroll = if longest_line_length > available_width {
+            longest_line_length - available_width
         } else {
             0
         };
@@ -247,35 +301,16 @@ impl Widget for &MessageLog {
         message_log.vertical_scroll = message_log.vertical_scroll.min(max_vertical_scroll);
         message_log.horizontal_scroll = message_log.horizontal_scroll.min(max_horizontal_scroll);
 
-        // Set content length and position based on actual scrollbar area dimensions
-        // For vertical scrollbar: translate scroll offset to visual position within scrollbar area
-        let visual_vertical_position = if max_vertical_scroll > 0 {
-            let scroll_percentage = message_log.vertical_scroll as f32 / max_vertical_scroll as f32;
-            let scrollbar_height = vertical_scrollbar_area.height as f32;
-            (scroll_percentage * (scrollbar_height - 1.0)) as usize
-        } else {
-            0
-        };
-
+        // Set scrollbar states with proper content lengths and positions
         message_log.vertical_scroll_state = message_log
             .vertical_scroll_state
-            .content_length(vertical_scrollbar_area.height as usize)
-            .position(visual_vertical_position);
-
-        // For horizontal scrollbar: translate scroll offset to visual position within scrollbar area
-        let visual_horizontal_position = if max_horizontal_scroll > 0 {
-            let scroll_percentage =
-                message_log.horizontal_scroll as f32 / max_horizontal_scroll as f32;
-            let scrollbar_width = horizontal_scrollbar_area.width as f32;
-            (scroll_percentage * (scrollbar_width - 1.0)) as usize
-        } else {
-            0
-        };
+            .content_length(content_lines)
+            .position(message_log.vertical_scroll);
 
         message_log.horizontal_scroll_state = message_log
             .horizontal_scroll_state
-            .content_length(horizontal_scrollbar_area.width as usize)
-            .position(visual_horizontal_position);
+            .content_length(longest_line_length)
+            .position(message_log.horizontal_scroll);
 
         let paragraph = Paragraph::new(content)
             .block(
@@ -306,7 +341,7 @@ impl Widget for &MessageLog {
         }
 
         // Only render horizontal scrollbar if content is wider than the available area
-        if self.longest_line_length > (area.width.saturating_sub(2)) as usize {
+        if longest_line_length > (area.width.saturating_sub(2)) as usize {
             let horizontal_scrollbar = Scrollbar::new(ScrollbarOrientation::HorizontalBottom)
                 .symbols(scrollbar::HORIZONTAL)
                 .thumb_symbol("🬋")

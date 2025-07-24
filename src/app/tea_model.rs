@@ -174,7 +174,7 @@ impl Model {
         self.session.as_ref()
     }
 
-    pub fn selected_session_id(&self) -> Option<String> {
+    pub fn current_selected_session_id(&self) -> Option<String> {
         match &self.session_selector.current_session_index() {
             None => None,
             Some(0) => None,

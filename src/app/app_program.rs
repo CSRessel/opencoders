@@ -183,7 +183,7 @@ impl Program {
 
             Cmd::AsyncSpawnSessionInit(client) => {
                 // Check if there's a selected session from the session selector
-                let selected_session_id = self.model.selected_session_id();
+                let selected_session_id = self.model.current_selected_session_id();
 
                 // Spawn async session initialization task
                 self.task_manager.spawn_task(async move {

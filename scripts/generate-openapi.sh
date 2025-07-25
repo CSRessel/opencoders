@@ -31,6 +31,7 @@ if [ "$NEEDS_REGEN" = true ] || [ "$1" = "--force" ]; then
     # Run the existing generate command
     echo "Running: bun run ./packages/opencode/src/index.ts generate"
     bun run ./packages/opencode/src/index.ts generate
+    # TODO: upstream changed to print with stdout, so uptake that
 
     # Copy the generated spec to opencoders package
     echo "Copying generated spec to opencoders package..."

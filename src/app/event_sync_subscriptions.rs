@@ -21,7 +21,7 @@ pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::err
     let subs = subscriptions(model);
 
     if subs.contains(&Sub::KeyboardInput) {
-        if event::poll(std::time::Duration::from_millis(16))? {
+        if event::poll(std::time::Duration::from_millis(8))? {
             return Ok(crossterm_to_msg(event::read()?, &model));
         }
     }
@@ -48,9 +48,7 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppState::Welcome, KeyCode::Enter, _) => {
                     Some(Msg::ChangeState(AppState::TextEntry))
                 }
-                (AppState::Welcome, KeyCode::Char('s'), _) => {
-                    Some(Msg::ShowSessionSelector)
-                }
+                (AppState::Welcome, KeyCode::Char('s'), _) => Some(Msg::ShowSessionSelector),
                 (AppState::TextEntry, KeyCode::Esc, _) => Some(Msg::ChangeState(AppState::Welcome)),
 
                 // Settings toggle

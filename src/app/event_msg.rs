@@ -1,8 +1,10 @@
 use crate::{
-    app::{event_async_task_manager::TaskId, tea_model::AppState, ui_components::PopoverSelectorEvent},
+    app::{
+        event_async_task_manager::TaskId, tea_model::AppState, ui_components::PopoverSelectorEvent,
+    },
     sdk::{OpenCodeClient, OpenCodeError},
 };
-use opencode_sdk::models::{Session, GetSessionByIdMessage200ResponseInner};
+use opencode_sdk::models::{GetSessionByIdMessage200ResponseInner, Session};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Msg {
@@ -22,7 +24,6 @@ pub enum Msg {
     ClientConnectionFailed(OpenCodeError),
 
     // Session management messages
-    InitializeSession,
     SessionReady(Session),
     SessionInitializationFailed(OpenCodeError),
 

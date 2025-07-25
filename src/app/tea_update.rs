@@ -74,17 +74,6 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         // Session management messages
-        Msg::InitializeSession => {
-            if let Some(client) = model.client.clone() {
-                model.transition_to_connected();
-                (model, Cmd::AsyncSpawnSessionInit(client))
-            } else {
-                // No client available, need to connect first
-                model.transition_to_connecting();
-                (model, Cmd::AsyncSpawnClientDiscovery)
-            }
-        }
-
         Msg::SessionReady(session) => {
             let session_id = session.id.clone();
             model.transition_to_session_ready(session);
@@ -113,7 +102,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             (model, Cmd::None)
         }
         Msg::ScrollMessageLog(direction) => {
-            model.message_log.move_message_log_scroll(&direction);
+            model.message_log.scroll_vertical(&direction);
             (model, Cmd::None)
         }
         Msg::ScrollMessageLogHorizontal(direction) => {
@@ -199,13 +188,11 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::SessionSelectorEvent(event) => {
-            if let Some(requested_session_index) =
-                model.session_selector.handle_event(event.clone())
-            {
-                // Handle selection
-                if requested_session_index == 0 {
-                    // Create new session
-                    if let Some(client) = model.client.clone() {
+            if let Some(client) = model.client.clone() {
+                match model.session_selector.handle_event(event.clone()) {
+                    // Handle selection
+                    Some(0) => {
+                        // Create new session
                         model.session_selector.set_current_session_index(None);
                         model.state = AppState::InitializingSession;
                         model
@@ -213,19 +200,20 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                             .handle_event(PopoverSelectorEvent::Hide);
                         return (model, Cmd::AsyncSpawnSessionInit(client));
                     }
-                } else {
-                    // Use existing session (requested_session_index - 1 in sessions list)
-                    let session_index = requested_session_index - 1;
-                    if session_index < model.sessions.len() {
-                        model
-                            .session_selector
-                            .set_current_session_index(Some(requested_session_index));
-                        let session = model.sessions[session_index].clone();
-                        model.transition_to_session_ready(session);
-                        model
-                            .session_selector
-                            .handle_event(PopoverSelectorEvent::Hide);
+                    Some(requested_session_index) => {
+                        // Use existing session (requested_session_index - 1 in sessions list)
+                        let session_index = requested_session_index - 1;
+                        if session_index < model.sessions.len() {
+                            model
+                                .session_selector
+                                .set_current_session_index(Some(requested_session_index));
+                            model
+                                .session_selector
+                                .handle_event(PopoverSelectorEvent::Hide);
+                            return (model, Cmd::AsyncSpawnSessionInit(client));
+                        }
                     }
+                    None => {}
                 }
             }
 

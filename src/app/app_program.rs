@@ -214,6 +214,9 @@ impl Program {
 
             Cmd::AsyncLoadSessionMessages(client, session_id) => {
                 // Spawn async session messages loading task
+                // if !matches!(self.model.current_selected_session_id(), Some(session_id)) {
+                //     // TODO
+                // }
                 self.task_manager.spawn_task(async move {
                     match client.get_messages(&session_id).await {
                         Ok(messages) => Msg::SessionMessagesLoaded(messages),

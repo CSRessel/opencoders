@@ -42,7 +42,7 @@ impl MessageLog {
         self.messages.is_empty()
     }
 
-    pub fn move_message_log_scroll(&mut self, direction: &i16) {
+    pub fn scroll_vertical(&mut self, direction: &i16) {
         let content_lines = self.get_total_line_count();
         // Conservative estimate: assume minimum viewport of 10 lines
         let min_viewport_height = 10;
@@ -64,49 +64,11 @@ impl MessageLog {
 
     pub fn scroll_horizontal(&mut self, direction: i16) {
         // Conservative estimate: assume minimum viewport of 50 characters
-        let min_viewport_width = 50;
+        let min_viewport_width = 50; // Account for borders
         let longest_line_length = self.calculate_longest_line_length();
 
         let max_scroll = if longest_line_length > min_viewport_width {
             longest_line_length - min_viewport_width
-        } else {
-            0
-        };
-
-        let new_scroll = (self.horizontal_scroll as i16 + direction)
-            .max(0)
-            .min(max_scroll as i16);
-        self.horizontal_scroll = new_scroll as usize;
-        self.horizontal_scroll_state = self
-            .horizontal_scroll_state
-            .position(self.horizontal_scroll);
-    }
-
-    pub fn scroll_vertical_with_viewport(&mut self, direction: i16, viewport_height: u16) {
-        let content_lines = self.get_total_line_count();
-        let available_height = viewport_height.saturating_sub(2) as usize; // Account for borders
-
-        let max_scroll = if content_lines > available_height {
-            content_lines - available_height
-        } else {
-            0
-        };
-
-        let new_scroll = (self.vertical_scroll as i16 + direction)
-            .max(0)
-            .min(max_scroll as i16);
-        self.vertical_scroll = new_scroll as usize;
-
-        // Update vertical scroll state
-        self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
-    }
-
-    pub fn scroll_horizontal_with_viewport(&mut self, direction: i16, viewport_width: u16) {
-        let available_width = viewport_width.saturating_sub(2) as usize; // Account for borders
-        let longest_line_length = self.calculate_longest_line_length();
-
-        let max_scroll = if longest_line_length > available_width {
-            longest_line_length - available_width
         } else {
             0
         };
@@ -240,7 +202,7 @@ impl MessageLog {
             })
             .max()
             .unwrap_or(0);
-        
+
         (line_count, longest_line_length)
     }
 
@@ -265,13 +227,6 @@ impl Widget for &MessageLog {
         // Create a mutable clone for scrollbar state updates
         let mut message_log = self.clone();
 
-        // Calculate scrollbar areas to match content length properly
-        // let vertical_scrollbar_area = Rect {
-        //     x: area.x + area.width - 1,
-        //     y: area.y + 1,
-        //     width: 1,
-        //     height: if has_horizontal_scrollbar { area.height - 1 } else { area.height - 1 },
-        // };
         let vertical_scrollbar_area = area.inner(Margin {
             vertical: 1,
             horizontal: 0,

@@ -1,5 +1,5 @@
 use crate::app::{
-    tea_model::{AppState, Model},
+    tea_model::{AppState, ConnectionStatus, Model},
     ui_components::create_welcome_text,
 };
 use core::error;
@@ -77,9 +77,31 @@ pub fn view_clear(_model: &Model, frame: &mut Frame) {
 }
 
 fn render_welcome_screen(model: &Model, frame: &mut Frame) {
-    let text = Text::from(
-        "Press Enter to start text input, 's' for session selector, Tab to toggle inline, 'q' or 'Esc' to exit...",
-    );
+    let status_text = match model.connection_status {
+        ConnectionStatus::SessionReady => {
+            "✓ Session ready! Press Enter to start text input, 's' for session selector, Tab to toggle inline, 'q' or 'Esc' to exit..."
+        }
+        ConnectionStatus::ClientReady => {
+            "✓ Connected! Press Enter to start coding, 's' for session selector, Tab to toggle inline, 'q' or 'Esc' to exit..."
+        }
+        ConnectionStatus::Connected => {
+            "Connected to server..."
+        }
+        ConnectionStatus::Connecting => {
+            "Connecting to OpenCode server..."
+        }
+        ConnectionStatus::Disconnected => {
+            "Press Enter to connect and start text input, 's' for session selector, Tab to toggle inline, 'q' or 'Esc' to exit..."
+        }
+        ConnectionStatus::InitializingSession => {
+            "Initializing session..."
+        }
+        ConnectionStatus::Error(ref _error) => {
+            "Connection failed. Press 'r' to retry, 'q' to quit."
+        }
+    };
+    
+    let text = Text::from(status_text);
     let paragraph = Paragraph::new(text);
 
     if model.init.inline_mode() {

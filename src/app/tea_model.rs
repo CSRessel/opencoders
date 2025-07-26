@@ -67,6 +67,7 @@ pub enum ConnectionStatus {
     Disconnected,
     Connecting,
     Connected,
+    ClientReady,
     InitializingSession,
     SessionReady,
     Error(String),
@@ -82,7 +83,7 @@ impl Model {
 
         Model {
             init: ModelInit::new(5, false),
-            state: AppState::Welcome,
+            state: AppState::ConnectingToServer,
             input_history: Vec::new(),
             last_input: None,
             printed_to_stdout_count: 0,
@@ -92,7 +93,7 @@ impl Model {
             client: None,
             session: None,
             sessions: Vec::new(),
-            connection_status: ConnectionStatus::Disconnected,
+            connection_status: ConnectionStatus::Connecting,
         }
     }
 
@@ -118,21 +119,13 @@ impl Model {
     }
 
     pub fn transition_to_connected(&mut self) {
-        self.connection_status = ConnectionStatus::InitializingSession;
-        self.state = AppState::InitializingSession;
+        self.connection_status = ConnectionStatus::ClientReady;
+        self.state = AppState::Welcome;
     }
 
     pub fn transition_to_error(&mut self, error_msg: String) {
         self.connection_status = ConnectionStatus::Error(error_msg.clone());
         self.state = AppState::ConnectionError(error_msg);
-    }
-
-    pub fn transition_to_session_ready(&mut self, session: Session) {
-        self.text_input.set_session_id(Some(session.id.clone()));
-        self.session = Some(session);
-        self.connection_status = ConnectionStatus::SessionReady;
-        self.state = AppState::TextEntry;
-        self.message_log.scroll_to_bottom();
     }
 
     pub fn mark_messages_printed_to_stdout(&mut self, count: usize) {
@@ -156,7 +149,9 @@ impl Model {
         self.client.is_some()
             && matches!(
                 self.connection_status,
-                ConnectionStatus::Connected | ConnectionStatus::SessionReady
+                ConnectionStatus::Connected
+                    | ConnectionStatus::ClientReady
+                    | ConnectionStatus::SessionReady
             )
     }
 
@@ -174,7 +169,7 @@ impl Model {
         self.session.as_ref()
     }
 
-    pub fn current_selected_session_id(&self) -> Option<String> {
+    pub fn current_session_id(&self) -> Option<String> {
         match &self.session_selector.current_session_index() {
             None => None,
             Some(0) => None,

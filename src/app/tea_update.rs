@@ -1,6 +1,6 @@
 use crate::app::{
-    event_msg::{Cmd, Msg},
-    tea_model::{AppState, Model},
+    event_msg::*,
+    tea_model::*,
     ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
 };
 use opencode_sdk::models::{
@@ -39,18 +39,24 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::ChangeState(new_state) => {
+            // If trying to enter TextEntry but session isn't ready, trigger session init
+            if matches!(new_state, AppState::TextEntry) && !model.is_session_ready() {
+                if let Some(client) = model.client.clone() {
+                    model.state = AppState::InitializingSession;
+                    model.connection_status = ConnectionStatus::InitializingSession;
+                    return (model, Cmd::AsyncSpawnSessionInit(client));
+                } else {
+                    // No client available, stay in current state
+                    return (model, Cmd::None);
+                }
+            }
+
             model.state = new_state.clone();
             if matches!(model.state, AppState::Welcome) {
                 model.clear_input_state();
             } else if matches!(model.state, AppState::TextEntry) {
                 // Auto-scroll to bottom when entering text entry mode
                 model.message_log.scroll_to_bottom();
-
-                // If entering text entry mode, ensure we have a client and session
-                if !model.is_session_ready() {
-                    model.transition_to_connecting();
-                    return (model, Cmd::AsyncSpawnClientDiscovery);
-                }
             }
             (model, Cmd::None)
         }
@@ -64,7 +70,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         Msg::ClientConnected(client) => {
             model.client = Some(client.clone());
             model.transition_to_connected();
-            (model, Cmd::AsyncSpawnSessionInit(client))
+            (model, Cmd::None)
         }
 
         Msg::ClientConnectionFailed(error) => {
@@ -76,7 +82,13 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         // Session management messages
         Msg::SessionReady(session) => {
             let session_id = session.id.clone();
-            model.transition_to_session_ready(session);
+            model.state = AppState::TextEntry;
+
+            // Set session data
+            model.text_input.set_session_id(Some(session.id.clone()));
+            model.session = Some(session);
+            model.connection_status = ConnectionStatus::SessionReady;
+            model.message_log.scroll_to_bottom();
 
             // Fetch session messages once session is ready
             if let Some(client) = model.client.clone() {
@@ -195,6 +207,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                         // Create new session
                         model.session_selector.set_current_session_index(None);
                         model.state = AppState::InitializingSession;
+                        model.connection_status = ConnectionStatus::InitializingSession;
                         model
                             .session_selector
                             .handle_event(PopoverSelectorEvent::Hide);
@@ -207,6 +220,8 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                             model
                                 .session_selector
                                 .set_current_session_index(Some(requested_session_index));
+                            model.state = AppState::InitializingSession;
+                            model.connection_status = ConnectionStatus::InitializingSession;
                             model
                                 .session_selector
                                 .handle_event(PopoverSelectorEvent::Hide);

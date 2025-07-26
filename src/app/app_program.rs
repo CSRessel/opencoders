@@ -58,6 +58,9 @@ impl Program {
         // Create tick interval for periodic updates (60 FPS) - must be inside tokio runtime
         let mut tick_interval = interval(Duration::from_millis(16));
 
+        // Auto-trigger client discovery at startup
+        self.spawn_command(Cmd::AsyncSpawnClientDiscovery).await?;
+
         loop {
             // Check for quit state
             if matches!(self.model.state, AppState::Quit) {
@@ -183,7 +186,7 @@ impl Program {
 
             Cmd::AsyncSpawnSessionInit(client) => {
                 // Check if there's a selected session from the session selector
-                let selected_session_id = self.model.current_selected_session_id();
+                let selected_session_id = self.model.current_session_id();
 
                 // Spawn async session initialization task
                 self.task_manager.spawn_task(async move {
@@ -191,6 +194,10 @@ impl Program {
                     if let Some(session_id) = selected_session_id {
                         if let Err(e) = client.switch_to_session(&session_id).await {
                             log_error!("save session ID {} failed: {}", session_id, e);
+                        }
+                    } else {
+                        if let Err(e) = client.clear_current_session().await {
+                            log_error!("clear session failed: {}", e);
                         }
                     }
 

@@ -17,6 +17,7 @@ pub enum Msg {
     Quit,
     ScrollMessageLog(i16),
     ScrollMessageLogHorizontal(i16),
+    ValidateScrollPosition(u16, u16), // viewport_height, viewport_width
 
     // Client initialization messages
     InitializeClient,

@@ -41,7 +41,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
                 model
                     .message_log
-                    .create_and_push_user_message(&submitted_text)
+                    .create_and_push_user_message(&submitted_text);
             }
             (model, Cmd::None)
         }
@@ -69,7 +69,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 model.clear_input_state();
             } else if matches!(model.state, AppState::TextEntry) {
                 // Auto-scroll to bottom when entering text entry mode
-                model.message_log.scroll_to_bottom();
+                model.message_log.touch_scroll();
             }
             (model, Cmd::None)
         }
@@ -101,7 +101,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             model.text_input.set_session_id(Some(session.id.clone()));
             model.session_state = SessionState::Ready(session);
             model.connection_status = ConnectionStatus::SessionReady;
-            model.message_log.scroll_to_bottom();
+            model.message_log.touch_scroll();
 
             // Fetch session messages once session is ready
             if let Some(client) = model.client.clone() {
@@ -119,7 +119,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             model.text_input.set_session_id(Some(session.id.clone()));
             model.session_state = SessionState::Ready(session);
             model.connection_status = ConnectionStatus::SessionReady;
-            model.message_log.scroll_to_bottom();
+            model.message_log.touch_scroll();
 
             // Add the first message to message log
             model
@@ -166,6 +166,12 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
         Msg::ScrollMessageLogHorizontal(direction) => {
             model.message_log.scroll_horizontal(direction);
+            (model, Cmd::None)
+        }
+        Msg::ValidateScrollPosition(viewport_height, viewport_width) => {
+            model
+                .message_log
+                .validate_scroll_position(viewport_height, viewport_width);
             (model, Cmd::None)
         }
 

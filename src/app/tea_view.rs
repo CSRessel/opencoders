@@ -154,6 +154,8 @@ fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
             ])
             .split(content_area);
 
+        // Note: We can't send messages from the view layer in TEA architecture
+        // Scroll validation will happen during scroll events and when content changes
         frame.render_widget(&model.message_log, vertical_chunks[0]);
         frame.render_widget(&model.text_input, vertical_chunks[1]);
     }

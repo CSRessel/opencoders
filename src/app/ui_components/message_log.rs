@@ -22,6 +22,10 @@ pub struct MessageLog {
     pub horizontal_scroll_state: ScrollbarState,
     vertical_scroll: usize,
     horizontal_scroll: usize,
+    // Content caching to avoid recalculation
+    cached_content_lines: Option<usize>,
+    cached_longest_line: Option<usize>,
+    content_dirty: bool,
 }
 
 // pub fn render_message_log(frame: &mut Frame, rect: Rect, model: &Model) {
@@ -35,6 +39,9 @@ impl MessageLog {
             horizontal_scroll_state: ScrollbarState::default(),
             vertical_scroll: 0,
             horizontal_scroll: 0,
+            cached_content_lines: None,
+            cached_longest_line: None,
+            content_dirty: true,
         }
     }
 
@@ -58,8 +65,62 @@ impl MessageLog {
             .min(max_scroll as i16);
         self.vertical_scroll = new_scroll as usize;
 
-        // Update vertical scroll state
-        self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
+        // Update vertical scroll state with content length
+        self.vertical_scroll_state = self
+            .vertical_scroll_state
+            .content_length(content_lines)
+            .position(self.vertical_scroll);
+    }
+
+    pub fn validate_scroll_position(&mut self, viewport_height: u16, viewport_width: u16) {
+        let content_lines = self.get_total_line_count();
+        let longest_line_length = self.calculate_longest_line_length();
+
+        let available_height = viewport_height.saturating_sub(2) as usize; // Account for borders
+        let available_width = viewport_width.saturating_sub(2) as usize; // Account for borders
+
+        let max_vertical_scroll = if content_lines > available_height {
+            content_lines - available_height
+        } else {
+            0
+        };
+
+        let max_horizontal_scroll = if longest_line_length > available_width {
+            longest_line_length - available_width
+        } else {
+            0
+        };
+
+        // Constrain current scroll positions to viewport limits
+        self.vertical_scroll = self.vertical_scroll.min(max_vertical_scroll);
+        self.horizontal_scroll = self.horizontal_scroll.min(max_horizontal_scroll);
+
+        // Update scrollbar states with proper content lengths and positions
+        self.vertical_scroll_state = self
+            .vertical_scroll_state
+            .content_length(content_lines)
+            .position(self.vertical_scroll);
+
+        self.horizontal_scroll_state = self
+            .horizontal_scroll_state
+            .content_length(longest_line_length)
+            .position(self.horizontal_scroll);
+    }
+
+    pub fn refresh_scrollbar_states(&mut self) {
+        let content_lines = self.get_total_line_count();
+        let longest_line_length = self.calculate_longest_line_length();
+
+        // Update scrollbar states with current content dimensions
+        self.vertical_scroll_state = self
+            .vertical_scroll_state
+            .content_length(content_lines)
+            .position(self.vertical_scroll);
+
+        self.horizontal_scroll_state = self
+            .horizontal_scroll_state
+            .content_length(longest_line_length)
+            .position(self.horizontal_scroll);
     }
 
     pub fn scroll_horizontal(&mut self, direction: i16) {
@@ -77,31 +138,22 @@ impl MessageLog {
             .max(0)
             .min(max_scroll as i16);
         self.horizontal_scroll = new_scroll as usize;
+
+        // Update horizontal scroll state with content length
         self.horizontal_scroll_state = self
             .horizontal_scroll_state
+            .content_length(longest_line_length)
             .position(self.horizontal_scroll);
     }
 
-    pub fn scroll_to_bottom(&mut self) {
+    pub fn touch_scroll(&mut self) {
+        // Sync to bottom, then update the scroll state
         let content_lines = self.get_total_line_count();
-        // Set scroll to a large value - it will be constrained during render
-        // This ensures we always attempt to scroll to the maximum possible position
         self.vertical_scroll = content_lines.saturating_sub(1).max(0);
-        self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
-    }
+        self.horizontal_scroll = 0;
 
-    pub fn scroll_to_bottom_with_viewport(&mut self, viewport_height: u16) {
-        let content_lines = self.get_total_line_count();
-        let available_height = viewport_height.saturating_sub(2) as usize; // Account for borders
-
-        let max_scroll = if content_lines > available_height {
-            content_lines - available_height
-        } else {
-            0
-        };
-
-        self.vertical_scroll = max_scroll;
-        self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
+        // Refresh scrollbar states after changing position
+        self.refresh_scrollbar_states();
     }
 
     pub fn create_and_push_user_message(&mut self, submitted_text: &String) {
@@ -128,23 +180,26 @@ impl MessageLog {
         };
 
         self.messages.push(message_container);
+        self.mark_content_dirty();
 
         // Auto-scroll to bottom when new message is added
-        self.scroll_to_bottom();
+        self.touch_scroll();
     }
 
     pub fn set_messages(&mut self, messages: Vec<GetSessionByIdMessage200ResponseInner>) {
         self.messages = messages;
+        self.mark_content_dirty();
 
         // Auto-scroll to bottom when new message is added
-        self.scroll_to_bottom();
+        self.touch_scroll();
     }
 
     pub fn add_message(&mut self, message: GetSessionByIdMessage200ResponseInner) {
         self.messages.push(message);
+        self.mark_content_dirty();
 
         // Auto-scroll to bottom when new message is added
-        self.scroll_to_bottom();
+        self.touch_scroll();
     }
 
     fn render_message_content(&self) -> Text<'static> {
@@ -188,7 +243,23 @@ impl MessageLog {
         Text::from(lines)
     }
 
-    fn calculate_content_dimensions(&self) -> (usize, usize) {
+    fn mark_content_dirty(&mut self) {
+        self.content_dirty = true;
+        self.cached_content_lines = None;
+        self.cached_longest_line = None;
+    }
+
+    fn calculate_content_dimensions(&mut self) -> (usize, usize) {
+        if !self.content_dirty
+            && self.cached_content_lines.is_some()
+            && self.cached_longest_line.is_some()
+        {
+            return (
+                self.cached_content_lines.unwrap(),
+                self.cached_longest_line.unwrap(),
+            );
+        }
+
         let content = self.render_message_content();
         let line_count = content.lines.len();
         let longest_line_length = content
@@ -203,15 +274,20 @@ impl MessageLog {
             .max()
             .unwrap_or(0);
 
+        // Cache the results
+        self.cached_content_lines = Some(line_count);
+        self.cached_longest_line = Some(longest_line_length);
+        self.content_dirty = false;
+
         (line_count, longest_line_length)
     }
 
-    fn get_total_line_count(&self) -> usize {
+    fn get_total_line_count(&mut self) -> usize {
         let (line_count, _) = self.calculate_content_dimensions();
         line_count
     }
 
-    fn calculate_longest_line_length(&self) -> usize {
+    fn calculate_longest_line_length(&mut self) -> usize {
         let (_, longest_line_length) = self.calculate_content_dimensions();
         longest_line_length
     }
@@ -221,11 +297,31 @@ impl Widget for &MessageLog {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let content = self.render_message_content();
 
-        // Calculate content dimensions
-        let (content_lines, longest_line_length) = self.calculate_content_dimensions();
-
-        // Create a mutable clone for scrollbar state updates
-        let mut message_log = self.clone();
+        // Use cached dimensions if available, otherwise calculate them
+        let (content_lines, longest_line_length) = if !self.content_dirty
+            && self.cached_content_lines.is_some()
+            && self.cached_longest_line.is_some()
+        {
+            (
+                self.cached_content_lines.unwrap(),
+                self.cached_longest_line.unwrap(),
+            )
+        } else {
+            // Fallback to calculating dimensions (this should be rare)
+            let line_count = content.lines.len();
+            let longest_line = content
+                .lines
+                .iter()
+                .map(|line| {
+                    line.spans
+                        .iter()
+                        .map(|span| span.content.len())
+                        .sum::<usize>()
+                })
+                .max()
+                .unwrap_or(0);
+            (line_count, longest_line)
+        };
 
         let vertical_scrollbar_area = area.inner(Margin {
             vertical: 1,
@@ -236,36 +332,37 @@ impl Widget for &MessageLog {
             horizontal: 1,
         });
 
-        // Constrain scroll position based on actual viewport dimensions
-        let available_height = area.height.saturating_sub(2) as usize; // Account for borders
-        let available_width = area.width.saturating_sub(2) as usize; // Account for borders
-
-        let max_vertical_scroll = if content_lines > available_height {
-            content_lines - available_height
-        } else {
-            0
+        // Use current scroll positions directly from the model (no mutation)
+        let constrained_vertical_scroll = {
+            let available_height = area.height.saturating_sub(2) as usize;
+            let max_vertical_scroll = if content_lines > available_height {
+                content_lines - available_height
+            } else {
+                0
+            };
+            self.vertical_scroll.min(max_vertical_scroll)
         };
 
-        let max_horizontal_scroll = if longest_line_length > available_width {
-            longest_line_length - available_width
-        } else {
-            0
+        let constrained_horizontal_scroll = {
+            let available_width = area.width.saturating_sub(2) as usize;
+            let max_horizontal_scroll = if longest_line_length > available_width {
+                longest_line_length - available_width
+            } else {
+                0
+            };
+            self.horizontal_scroll.min(max_horizontal_scroll)
         };
 
-        // Constrain current scroll positions to viewport limits
-        message_log.vertical_scroll = message_log.vertical_scroll.min(max_vertical_scroll);
-        message_log.horizontal_scroll = message_log.horizontal_scroll.min(max_horizontal_scroll);
-
-        // Set scrollbar states with proper content lengths and positions
-        message_log.vertical_scroll_state = message_log
+        // Create scrollbar states for rendering (no mutation of self)
+        let mut vertical_scrollbar_state = self
             .vertical_scroll_state
             .content_length(content_lines)
-            .position(message_log.vertical_scroll);
+            .position(constrained_vertical_scroll);
 
-        message_log.horizontal_scroll_state = message_log
+        let mut horizontal_scrollbar_state = self
             .horizontal_scroll_state
             .content_length(longest_line_length)
-            .position(message_log.horizontal_scroll);
+            .position(constrained_horizontal_scroll);
 
         let paragraph = Paragraph::new(content)
             .block(
@@ -275,8 +372,8 @@ impl Widget for &MessageLog {
                     .gray(),
             )
             .scroll((
-                message_log.vertical_scroll as u16,
-                message_log.horizontal_scroll as u16,
+                constrained_vertical_scroll as u16,
+                constrained_horizontal_scroll as u16,
             ));
 
         paragraph.render(area, buf);
@@ -288,11 +385,7 @@ impl Widget for &MessageLog {
                 .begin_symbol(None)
                 .end_symbol(None);
 
-            vertical_scrollbar.render(
-                vertical_scrollbar_area,
-                buf,
-                &mut message_log.vertical_scroll_state,
-            );
+            vertical_scrollbar.render(vertical_scrollbar_area, buf, &mut vertical_scrollbar_state);
         }
 
         // Only render horizontal scrollbar if content is wider than the available area
@@ -306,7 +399,7 @@ impl Widget for &MessageLog {
             horizontal_scrollbar.render(
                 horizontal_scrollbar_area,
                 buf,
-                &mut message_log.horizontal_scroll_state,
+                &mut horizontal_scrollbar_state,
             );
         }
     }

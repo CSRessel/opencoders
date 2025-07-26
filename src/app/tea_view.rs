@@ -138,7 +138,7 @@ fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
 
     let mut content_area = horizontal_chunks[1];
 
-    let input_height = if model.session.is_some() { 4 } else { 3 };
+    let input_height = if model.session().is_some() { 4 } else { 3 };
 
     if model.init.inline_mode() {
         // Render only the text input for inline mode

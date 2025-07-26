@@ -26,6 +26,8 @@ pub enum Msg {
     // Session management messages
     SessionReady(Session),
     SessionInitializationFailed(OpenCodeError),
+    SessionCreatedWithMessage(Session, String),
+    SessionCreationFailed(OpenCodeError),
 
     // Session selector messages
     ShowSessionSelector,
@@ -58,6 +60,7 @@ pub enum Cmd {
     // Async commands that don't block
     AsyncSpawnClientDiscovery,
     AsyncSpawnSessionInit(OpenCodeClient),
+    AsyncCreateSessionWithMessage(OpenCodeClient, String),
     AsyncLoadSessions(OpenCodeClient),
     AsyncLoadSessionMessages(OpenCodeClient, String),
     AsyncCancelTask(TaskId),

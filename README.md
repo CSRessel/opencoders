@@ -34,7 +34,7 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 >     1. cargo deployment via git repo
 > 
 > **Nice-to-have:**
-> - multi-session
+> - ~~multi-session~~
 > - cmd permissions
 > - theming
 > - UI token usage

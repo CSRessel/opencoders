@@ -6,6 +6,7 @@ use crate::app::{
 use opencode_sdk::models::{
     GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
 };
+use std::time::SystemTime;
 
 pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
     match msg {
@@ -25,6 +26,18 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             if let Some(submitted_text) = model.text_input.handle_event(TextInputEvent::Submit) {
                 model.input_history.push(submitted_text.clone());
                 model.last_input = Some(submitted_text.clone());
+
+                // If we have a pending session, create it now with this message
+                if let SessionState::Pending(pending_info) = &model.session_state {
+                    if let Some(client) = model.client.clone() {
+                        model.session_state = SessionState::Creating(pending_info.clone());
+                        model.pending_first_message = Some(submitted_text.clone());
+                        return (
+                            model,
+                            Cmd::AsyncCreateSessionWithMessage(client, submitted_text),
+                        );
+                    }
+                }
 
                 model
                     .message_log
@@ -86,7 +99,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
             // Set session data
             model.text_input.set_session_id(Some(session.id.clone()));
-            model.session = Some(session);
+            model.session_state = SessionState::Ready(session);
             model.connection_status = ConnectionStatus::SessionReady;
             model.message_log.scroll_to_bottom();
 
@@ -96,6 +109,40 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             } else {
                 (model, Cmd::None)
             }
+        }
+
+        Msg::SessionCreatedWithMessage(session, first_message) => {
+            let session_id = session.id.clone();
+            model.state = AppState::TextEntry;
+
+            // Set session data
+            model.text_input.set_session_id(Some(session.id.clone()));
+            model.session_state = SessionState::Ready(session);
+            model.connection_status = ConnectionStatus::SessionReady;
+            model.message_log.scroll_to_bottom();
+
+            // Add the first message to message log
+            model
+                .message_log
+                .create_and_push_user_message(&first_message);
+
+            // Clear pending message
+            model.pending_first_message = None;
+
+            // Fetch session messages once session is ready
+            if let Some(client) = model.client.clone() {
+                (model, Cmd::AsyncLoadSessionMessages(client, session_id))
+            } else {
+                (model, Cmd::None)
+            }
+        }
+
+        Msg::SessionCreationFailed(error) => {
+            let error_msg = format!("Failed to create session: {}", error);
+            model.session_state = SessionState::None;
+            model.pending_first_message = None;
+            model.transition_to_error(error_msg);
+            (model, Cmd::None)
         }
 
         Msg::SessionInitializationFailed(error) => {
@@ -171,7 +218,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 .cache_render_height_for_terminal(model.init.height());
 
             // Set current session index if we have an active session
-            let current_index = if let Some(current_session) = &model.session {
+            let current_index = if let Some(current_session) = model.session() {
                 // Find the current session in the sessions list
                 // Add 1 because "Create New Session" is at index 0
                 model
@@ -201,34 +248,10 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         Msg::SessionSelectorEvent(event) => {
             if let Some(client) = model.client.clone() {
-                match model.session_selector.handle_event(event.clone()) {
-                    // Handle selection
-                    Some(0) => {
-                        // Create new session
-                        model.session_selector.set_current_session_index(None);
-                        model.state = AppState::InitializingSession;
-                        model.connection_status = ConnectionStatus::InitializingSession;
-                        model
-                            .session_selector
-                            .handle_event(PopoverSelectorEvent::Hide);
-                        return (model, Cmd::AsyncSpawnSessionInit(client));
-                    }
-                    Some(requested_session_index) => {
-                        // Use existing session (requested_session_index - 1 in sessions list)
-                        let session_index = requested_session_index - 1;
-                        if session_index < model.sessions.len() {
-                            model
-                                .session_selector
-                                .set_current_session_index(Some(requested_session_index));
-                            model.state = AppState::InitializingSession;
-                            model.connection_status = ConnectionStatus::InitializingSession;
-                            model
-                                .session_selector
-                                .handle_event(PopoverSelectorEvent::Hide);
-                            return (model, Cmd::AsyncSpawnSessionInit(client));
-                        }
-                    }
-                    None => {}
+                let changed_index = model.session_selector.handle_event(event.clone());
+
+                if model.change_session(changed_index) {
+                    return (model, Cmd::AsyncSpawnSessionInit(client));
                 }
             }
 
@@ -254,7 +277,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 .cache_render_height_for_terminal(model.init.height());
 
             // Re-calculate and set current session index after items are loaded
-            let current_index = if let Some(current_session) = &model.session {
+            let current_index = if let Some(current_session) = model.session() {
                 model
                     .sessions
                     .iter()

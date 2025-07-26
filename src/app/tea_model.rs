@@ -1,8 +1,23 @@
 use crate::{
-    app::ui_components::{MessageLog, PopoverSelector, TextInput},
+    app::ui_components::{MessageLog, PopoverSelector, PopoverSelectorEvent, TextInput},
     sdk::{OpenCodeClient, OpenCodeError},
 };
 use opencode_sdk::models::Session;
+use std::time::SystemTime;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PendingSessionInfo {
+    pub temp_id: String,
+    pub created_at: SystemTime,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SessionState {
+    None,
+    Pending(PendingSessionInfo),
+    Creating(PendingSessionInfo),
+    Ready(Session),
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
@@ -18,9 +33,10 @@ pub struct Model {
     pub session_selector: PopoverSelector,
     // Client and session state
     pub client: Option<OpenCodeClient>,
-    pub session: Option<Session>,
+    pub session_state: SessionState,
     pub sessions: Vec<Session>,
     pub connection_status: ConnectionStatus,
+    pub pending_first_message: Option<String>,
 }
 
 mod model_init {
@@ -93,9 +109,10 @@ impl Model {
             text_input,
             session_selector,
             client: None,
-            session: None,
+            session_state: SessionState::None,
             sessions: Vec::new(),
             connection_status: ConnectionStatus::Connecting,
+            pending_first_message: None,
         }
     }
 
@@ -159,7 +176,7 @@ impl Model {
 
     pub fn is_session_ready(&self) -> bool {
         self.client.is_some()
-            && self.session.is_some()
+            && matches!(self.session_state, SessionState::Ready(_))
             && matches!(self.connection_status, ConnectionStatus::SessionReady)
     }
 
@@ -168,7 +185,48 @@ impl Model {
     }
 
     pub fn session(&self) -> Option<&Session> {
-        self.session.as_ref()
+        match &self.session_state {
+            SessionState::Ready(session) => Some(session),
+            _ => None,
+        }
+    }
+
+    pub fn change_session_by_index(&mut self, index: Option<usize>) {
+        self.message_log.set_messages(vec![]);
+        self.text_input.set_session_id(None); // This will be handled in the Cmd callback
+        self.session_selector.set_current_session_index(index);
+        self.session_selector
+            .handle_event(PopoverSelectorEvent::Hide);
+    }
+
+    pub fn change_session(&mut self, index: Option<usize>) -> bool {
+        match index {
+            // Handle selection
+            Some(0) => {
+                self.change_session_by_index(None);
+                self.state = AppState::TextEntry;
+
+                // Create pending session info
+                let pending_info = PendingSessionInfo {
+                    temp_id: uuid::Uuid::new_v4().to_string(),
+                    created_at: SystemTime::now(),
+                };
+                self.session_state = SessionState::Pending(pending_info);
+            }
+            Some(requested_session_index) => {
+                // Use existing session (requested_session_index - 1 in sessions list)
+                let session_index = requested_session_index - 1;
+                if session_index < self.sessions.len() {
+                    self.change_session_by_index(Some(requested_session_index));
+                    self.state = AppState::InitializingSession;
+                    self.connection_status = ConnectionStatus::InitializingSession;
+
+                    return true;
+                }
+            }
+            None => {}
+        };
+        false
     }
 
     pub fn current_session_id(&self) -> Option<String> {
@@ -177,5 +235,19 @@ impl Model {
             Some(0) => None,
             Some(n) => self.sessions.get(n - 1).map(|session| session.id.clone()),
         }
+    }
+
+    pub fn has_pending_or_creating_session(&self) -> bool {
+        matches!(
+            self.session_state,
+            SessionState::Pending(_) | SessionState::Creating(_)
+        )
+    }
+
+    pub fn can_accept_input(&self) -> bool {
+        matches!(
+            self.session_state,
+            SessionState::Pending(_) | SessionState::Creating(_) | SessionState::Ready(_)
+        )
     }
 }

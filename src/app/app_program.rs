@@ -209,6 +209,26 @@ impl Program {
                 });
             }
 
+            Cmd::AsyncCreateSessionWithMessage(client, first_message) => {
+                // Spawn async session creation task with first message
+                self.task_manager.spawn_task(async move {
+                    // Clear any existing session first
+                    if let Err(error) = client.clear_current_session().await {
+                        log_error!("clear session failed: {}", error);
+                        Msg::SessionCreationFailed(error)
+                    } else {
+                        // Create new session
+                        match client.create_new_session().await {
+                            Ok(session) => Msg::SessionCreatedWithMessage(session, first_message),
+                            Err(error) => {
+                                log_error!("create session failed: {}", error);
+                                Msg::SessionCreationFailed(error)
+                            }
+                        }
+                    }
+                });
+            }
+
             Cmd::AsyncLoadSessions(client) => {
                 // Spawn async session loading task
                 self.task_manager.spawn_task(async move {
@@ -243,6 +263,7 @@ impl Program {
                     match cmd {
                         Cmd::AsyncSpawnClientDiscovery
                         | Cmd::AsyncSpawnSessionInit(_)
+                        | Cmd::AsyncCreateSessionWithMessage(_, _)
                         | Cmd::AsyncLoadSessions(_)
                         | Cmd::AsyncLoadSessionMessages(_, _)
                         | Cmd::AsyncCancelTask(_)

@@ -43,7 +43,7 @@ opencoders/
 ## Core Libraries
 
 - **ratatui** + **crossterm**: Terminal UI rendering and control
-- **tokio**: Async runtime for non-blocking I/O
+- **tokio**: Async runtime for non-blocking network calls and I/O
 - **reqwest** + **serde**: HTTP client with JSON serialization
 - **anyhow** + **thiserror**: Error handling
 
@@ -57,8 +57,8 @@ opencoders/
 - Always execute side effects as async `Cmd` data structures
 - Always use centralized event polling in `event_subscriptions.rs`
 - Always communicate with backend via strongly-typed structs from `opencode_sdk::models`
-- Explore API's to use based on the `openapi.json`
-- Handle terminal modes through `ModelInit.inline_mode()` configuration
+- Explore available API's using the file `openapi.json` and the documentation
+`opencode-sdk/README.md`
 
 **DON'Ts:**
 - Do NOT call `crossterm::event::read()` outside of `event_subscriptions.rs`

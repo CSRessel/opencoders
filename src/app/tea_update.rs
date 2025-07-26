@@ -54,14 +54,9 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         Msg::ChangeState(new_state) => {
             // If trying to enter TextEntry but session isn't ready, trigger session init
             if matches!(new_state, AppState::TextEntry) && !model.is_session_ready() {
-                if let Some(client) = model.client.clone() {
-                    model.state = AppState::InitializingSession;
-                    model.connection_status = ConnectionStatus::InitializingSession;
-                    return (model, Cmd::AsyncSpawnSessionInit(client));
-                } else {
-                    // No client available, stay in current state
-                    return (model, Cmd::None);
-                }
+                // Same as selecting the "Create New" option
+                model.change_session(Some(0));
+                return (model, Cmd::None);
             }
 
             model.state = new_state.clone();

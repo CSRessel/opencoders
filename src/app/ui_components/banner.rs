@@ -7,6 +7,10 @@ use ratatui::{
     Frame,
 };
 
+pub fn welcome_text_height() -> u16 {
+    4
+}
+
 pub fn create_welcome_text() -> Text<'static> {
     #[rustfmt::skip]
     let letters = vec![

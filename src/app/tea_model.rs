@@ -73,6 +73,8 @@ pub enum ConnectionStatus {
     Error(String),
 }
 
+const DEFAULT_HEIGHT: u16 = 12;
+
 impl Model {
     pub fn new() -> Self {
         let mut text_input = TextInput::new();
@@ -82,7 +84,7 @@ impl Model {
         let session_selector = PopoverSelector::new("Select Session");
 
         Model {
-            init: ModelInit::new(5, false),
+            init: ModelInit::new(DEFAULT_HEIGHT, false),
             state: AppState::ConnectingToServer,
             input_history: Vec::new(),
             last_input: None,

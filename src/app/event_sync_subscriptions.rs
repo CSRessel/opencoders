@@ -1,6 +1,6 @@
 use crate::app::{
     event_msg::{Msg, Sub},
-    tea_model::{AppState, Model},
+    tea_model::{AppState, ConnectionStatus, Model},
     ui_components::PopoverSelectorEvent,
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
@@ -35,13 +35,9 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
             match (&model.state, key.code, key.modifiers) {
                 // Global quit commands
                 (_, KeyCode::Char('q'), KeyModifiers::CONTROL) => Some(Msg::Quit),
-                (AppState::Welcome, KeyCode::Char('q'), _) => Some(Msg::Quit),
                 (AppState::Welcome, KeyCode::Esc, _) => Some(Msg::Quit),
-                (AppState::ConnectingToServer, KeyCode::Char('q'), _) => Some(Msg::Quit),
                 (AppState::ConnectingToServer, KeyCode::Esc, _) => Some(Msg::Quit),
-                (AppState::InitializingSession, KeyCode::Char('q'), _) => Some(Msg::Quit),
                 (AppState::InitializingSession, KeyCode::Esc, _) => Some(Msg::Quit),
-                (AppState::ConnectionError(_), KeyCode::Char('q'), _) => Some(Msg::Quit),
                 (AppState::ConnectionError(_), KeyCode::Esc, _) => Some(Msg::Quit),
 
                 // State transitions
@@ -90,13 +86,17 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppState::SelectSession, KeyCode::Esc, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Cancel))
                 }
-                (AppState::SelectSession, KeyCode::Char('q'), _) => {
-                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Cancel))
-                }
 
                 // Retry connection
                 (AppState::ConnectionError(_), KeyCode::Char('r'), _) => {
                     Some(Msg::InitializeClient)
+                }
+                (AppState::Welcome, KeyCode::Char('r'), _) => {
+                    if matches!(model.connection_status, ConnectionStatus::Disconnected) {
+                        Some(Msg::InitializeClient)
+                    } else {
+                        None
+                    }
                 }
 
                 _ => None,

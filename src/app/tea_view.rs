@@ -1,13 +1,13 @@
 use crate::app::{
     tea_model::{AppState, ConnectionStatus, Model},
-    ui_components::create_welcome_text,
+    ui_components::{banner::welcome_text_height, create_welcome_text},
 };
 use core::error;
 use ratatui::{
     crossterm,
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
-    text::{Line, Span, Text},
+    text::{Line, Span, Text, ToText},
     widgets::Paragraph,
     Frame,
 };
@@ -78,40 +78,37 @@ pub fn view_clear(_model: &Model, frame: &mut Frame) {
 
 fn render_welcome_screen(model: &Model, frame: &mut Frame) {
     let status_text = match model.connection_status {
-        ConnectionStatus::SessionReady => {
-            "✓ Session ready! Press Enter to start text input, 's' for session selector, Tab to toggle inline, 'q' or 'Esc' to exit..."
-        }
-        ConnectionStatus::ClientReady => {
-            "✓ Connected! Press Enter to start coding, 's' for session selector, Tab to toggle inline, 'q' or 'Esc' to exit..."
-        }
-        ConnectionStatus::Connected => {
-            "Connected to server..."
-        }
-        ConnectionStatus::Connecting => {
-            "Connecting to OpenCode server..."
-        }
-        ConnectionStatus::Disconnected => {
-            "Press Enter to connect and start text input, 's' for session selector, Tab to toggle inline, 'q' or 'Esc' to exit..."
-        }
-        ConnectionStatus::InitializingSession => {
-            "Initializing session..."
-        }
-        ConnectionStatus::Error(ref _error) => {
-            "Connection failed. Press 'r' to retry, 'q' to quit."
-        }
-    };
-    
-    let text = Text::from(status_text);
+        ConnectionStatus::SessionReady => "✓ Session ready!",
+        ConnectionStatus::ClientReady => "✓ Connected!",
+        ConnectionStatus::Connected => "Connected to server...",
+        ConnectionStatus::Connecting => "Connecting to OpenCode server...",
+        ConnectionStatus::InitializingSession => "Initializing session...",
+        ConnectionStatus::Disconnected => "Disconnected from server! Press 'r' to retry",
+        ConnectionStatus::Error(ref _error) => "Connection failed! Press 'r' to retry",
+    }
+    .to_string();
+    let help_text = "\n
+    Enter    start input
+        s    select session
+      Tab    toggle view
+      Esc    exit
+    ";
+
+    let text = Text::from(status_text + help_text);
+    let line_height = (text.to_text().lines.len() as u16).max(model.init.height());
     let paragraph = Paragraph::new(text);
 
     if model.init.inline_mode() {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Min(0)])
+            .constraints([Constraint::Min(line_height), Constraint::Min(0)])
             .split(frame.area());
         frame.render_widget(paragraph, vertical_chunks[0]);
     } else {
-        let constraints = vec![Constraint::Length(5), Constraint::Length(2)];
+        let constraints = vec![
+            Constraint::Length(welcome_text_height()),
+            Constraint::Length(line_height),
+        ];
 
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)

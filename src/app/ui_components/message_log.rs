@@ -297,31 +297,20 @@ impl Widget for &MessageLog {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let content = self.render_message_content();
 
-        // Use cached dimensions if available, otherwise calculate them
-        let (content_lines, longest_line_length) = if !self.content_dirty
-            && self.cached_content_lines.is_some()
-            && self.cached_longest_line.is_some()
-        {
-            (
-                self.cached_content_lines.unwrap(),
-                self.cached_longest_line.unwrap(),
-            )
-        } else {
-            // Fallback to calculating dimensions (this should be rare)
-            let line_count = content.lines.len();
-            let longest_line = content
-                .lines
-                .iter()
-                .map(|line| {
-                    line.spans
-                        .iter()
-                        .map(|span| span.content.len())
-                        .sum::<usize>()
-                })
-                .max()
-                .unwrap_or(0);
-            (line_count, longest_line)
-        };
+        // Always calculate dimensions from the actual content being rendered
+        // This ensures content and scroll state are perfectly synchronized
+        let content_lines = content.lines.len();
+        let longest_line_length = content
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| span.content.len())
+                    .sum::<usize>()
+            })
+            .max()
+            .unwrap_or(0);
 
         let vertical_scrollbar_area = area.inner(Margin {
             vertical: 1,
@@ -353,7 +342,8 @@ impl Widget for &MessageLog {
             self.horizontal_scroll.min(max_horizontal_scroll)
         };
 
-        // Create scrollbar states for rendering (no mutation of self)
+        // Create scrollbar states for rendering using fresh content dimensions
+        // This ensures scrollbar state matches the actual content being rendered
         let mut vertical_scrollbar_state = self
             .vertical_scroll_state
             .content_length(content_lines)

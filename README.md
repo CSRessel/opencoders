@@ -15,15 +15,24 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 
 > [!NOTE]
 >
-> **Required:**
+> **Minimum**:
 > - REPL loop
-> - pretty printing
->     1. diffs
->     1. markdown
+> - basic printing
+>     1. ~~files~~
 >     1. checklist
->     1. file tree
+>     1. shell commands
+>     1. other tools?
+> - TODO: fix the scroll flickering
+>
+> **First Release:**
+> - prettier printing
+>     1. diff pager
+>     1. markdown highlighting
+>     1. checklist shape
+>     1. shell highlighting
+>     1. prettier tool call boxes
 >     1. thinking tokens
->     1. tool calls
+>     1. file tree
 > - config handling (flags and rc)
 >     1. inline vs alt screen
 >     1. model selection

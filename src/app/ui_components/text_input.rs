@@ -1,3 +1,4 @@
+use crate::app::view_model_context::ViewModelContext;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},

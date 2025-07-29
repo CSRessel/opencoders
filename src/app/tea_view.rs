@@ -1,6 +1,7 @@
 use crate::app::{
     tea_model::{AppState, ConnectionStatus, Model},
     ui_components::{banner::welcome_text_height, create_welcome_text},
+    view_model_context::ViewModelContext,
 };
 use core::error;
 use ratatui::{
@@ -12,6 +13,61 @@ use ratatui::{
     Frame,
 };
 use std::io::{self, Write};
+
+// Top status in: opencode
+//   ┃  # Investigating recently modified files                                                ┃
+//   ┃  /share to create a shareable link                                            14.9K/7%  ┃
+
+// Bottom status in: claude, gemini, and opencode
+//
+// ✶ Philosophising… (2s · ↓ 71 tokens · esc to interrupt)
+//
+// ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ >                                                                                           │
+// ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
+//   -- INSERT --
+//
+// ⠧ Analyzing the Tools (esc to cancel, 10s)
+//
+//
+// ~/Documents/source     no sandbox (see /docs)        gemini-2.5-pro (99% context left)
+//
+//   ┃                                                                                         ┃
+//   ┃ >                                                                                       ┃
+//   ┃                                                                                         ┃
+//    working.    esc interrupt                                       Anthropic Claude Sonnet 4
+
+// Exit message in: gemini
+// ╭───────────╮
+// │  > /quit  │
+// ╰───────────╯
+//
+// ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
+// │                                                                                             │
+// │  Agent powering down. Goodbye!                                                              │
+// │                                                                                             │
+// │  Interaction Summary                                                                        │
+// │  Tool Calls:                 4 ( ✔ 4 ✖ 0 )                                                  │
+// │  Success Rate:               100.0%                                                         │
+// │  User Agreement:             100.0% (1 reviewed)                                            │
+// │                                                                                             │
+// │  Performance                                                                                │
+// │  Wall Time:                  1m 52s                                                         │
+// │  Agent Active:               1m 18s                                                         │
+// │    » API Time:               33.7s (43.1%)                                                  │
+// │    » Tool Time:              44.5s (56.9%)                                                  │
+// │                                                                                             │
+// │                                                                                             │
+// │  Model Usage                  Reqs   Input Tokens  Output Tokens                            │
+// │  ───────────────────────────────────────────────────────────────                            │
+// │  gemini-2.5-pro                  5         45,179            174                            │
+// │                                                                                             │
+// │  Savings Highlight: 21,724 (48.1%) of input tokens were served from the cache, reducing     │
+// │  costs.                                                                                     │
+// │                                                                                             │
+// │  » Tip: For a full token breakdown, run `/stats model`.                                     │
+// │                                                                                             │
+// ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
 
 fn calculate_content_width(terminal_width: u16) -> u16 {
     let min_width = 80;
@@ -32,10 +88,7 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Move cursor back down to TUI
-    crossterm::execute!(
-        io::stdout(),
-        crossterm::cursor::MoveDown(model.height)
-    )?;
+    crossterm::execute!(io::stdout(), crossterm::cursor::MoveDown(model.height))?;
     crossterm::terminal::enable_raw_mode()?;
     Ok(())
 }
@@ -55,20 +108,22 @@ fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>
 }
 
 pub fn view(model: &Model, frame: &mut Frame) {
-    match &model.state {
-        AppState::Welcome => render_welcome_screen(model, frame),
-        AppState::ConnectingToServer => render_connecting_screen(model, frame),
-        AppState::InitializingSession => render_initializing_session_screen(model, frame),
-        AppState::TextEntry => render_text_entry_screen(model, frame),
-        AppState::SelectSession => {
-            // Render the underlying state first (Welcome screen)
-            render_welcome_screen(model, frame);
-            // Then render the popover selector on top
-            frame.render_widget(&model.session_selector, frame.area());
-        }
-        AppState::ConnectionError(error) => render_error_screen(model, frame, error),
-        AppState::Quit => {} // No rendering needed for quit state
-    };
+    ViewModelContext::with_model(model, || {
+        match &model.state {
+            AppState::Welcome => render_welcome_screen(frame),
+            AppState::ConnectingToServer => render_connecting_screen(frame),
+            AppState::InitializingSession => render_initializing_session_screen(frame),
+            AppState::TextEntry => render_text_entry_screen(frame),
+            AppState::SelectSession => {
+                // Render the underlying state first (Welcome screen)
+                render_welcome_screen(frame);
+                // Then render the popover selector on top
+                frame.render_widget(&model.session_selector, frame.area());
+            }
+            AppState::ConnectionError(error) => render_error_screen(frame, error),
+            AppState::Quit => {} // No rendering needed for quit state
+        };
+    })
 }
 
 pub fn view_clear(_model: &Model, frame: &mut Frame) {
@@ -76,8 +131,9 @@ pub fn view_clear(_model: &Model, frame: &mut Frame) {
     frame.render_widget(Paragraph::new(""), frame.area());
 }
 
-fn render_welcome_screen(model: &Model, frame: &mut Frame) {
-    let status_text = match model.connection_status {
+fn render_welcome_screen(frame: &mut Frame) {
+    let model = ViewModelContext::current();
+    let status_text = match model.connection_status() {
         ConnectionStatus::SessionReady => "✓ Session ready!",
         ConnectionStatus::ClientReady => "✓ Connected!",
         ConnectionStatus::Connected => "Connected to server...",
@@ -95,10 +151,10 @@ fn render_welcome_screen(model: &Model, frame: &mut Frame) {
     ";
 
     let text = Text::from(status_text + help_text);
-    let line_height = (text.to_text().lines.len() as u16).max(model.height);
+    let line_height = (text.to_text().lines.len() as u16).max(model.get().height);
     let paragraph = Paragraph::new(text);
 
-    if model.init.inline_mode() {
+    if model.init().inline_mode() {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(line_height), Constraint::Min(0)])
@@ -120,7 +176,8 @@ fn render_welcome_screen(model: &Model, frame: &mut Frame) {
     };
 }
 
-fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
+fn render_text_entry_screen(frame: &mut Frame) {
+    let model = ViewModelContext::current();
     let terminal_width = frame.area().width;
     let content_width = calculate_content_width(terminal_width);
     let left_padding = (terminal_width.saturating_sub(content_width)) / 2;
@@ -140,10 +197,10 @@ fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
 
     let input_height = if model.session().is_some() { 4 } else { 3 };
 
-    if model.init.inline_mode() {
+    if model.init().inline_mode() {
         // Render only the text input for inline mode
         content_area.height = input_height;
-        frame.render_widget(&model.text_input, content_area);
+        frame.render_widget(&model.get().text_input, content_area);
     } else {
         // Create vertical layout for message log and input box
         let vertical_chunks = Layout::default()
@@ -156,12 +213,13 @@ fn render_text_entry_screen(model: &Model, frame: &mut Frame) {
 
         // Note: We can't send messages from the view layer in TEA architecture
         // Scroll validation will happen during scroll events and when content changes
-        frame.render_widget(&model.message_log, vertical_chunks[0]);
-        frame.render_widget(&model.text_input, vertical_chunks[1]);
+        frame.render_widget(&model.get().message_log, vertical_chunks[0]);
+        frame.render_widget(&model.get().text_input, vertical_chunks[1]);
     }
 }
 
-fn render_connecting_screen(model: &Model, frame: &mut Frame) {
+fn render_connecting_screen(frame: &mut Frame) {
+    let model = ViewModelContext::current();
     let text = Text::from(vec![
         Line::from("Connecting to OpenCode server..."),
         Line::from(""),
@@ -170,7 +228,7 @@ fn render_connecting_screen(model: &Model, frame: &mut Frame) {
     ]);
     let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Yellow));
 
-    if model.init.inline_mode() {
+    if model.init().inline_mode() {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(4)])
@@ -189,7 +247,8 @@ fn render_connecting_screen(model: &Model, frame: &mut Frame) {
     }
 }
 
-fn render_initializing_session_screen(model: &Model, frame: &mut Frame) {
+fn render_initializing_session_screen(frame: &mut Frame) {
+    let model = ViewModelContext::current();
     let client_url = model.client_base_url();
 
     let text = Text::from(vec![
@@ -201,7 +260,7 @@ fn render_initializing_session_screen(model: &Model, frame: &mut Frame) {
     ]);
     let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Blue));
 
-    if model.init.inline_mode() {
+    if model.init().inline_mode() {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(5)])
@@ -220,7 +279,8 @@ fn render_initializing_session_screen(model: &Model, frame: &mut Frame) {
     }
 }
 
-fn render_error_screen(model: &Model, frame: &mut Frame, error: &str) {
+fn render_error_screen(frame: &mut Frame, error: &str) {
+    let model = ViewModelContext::current();
     let text = Text::from(vec![
         Line::from("Connection Error"),
         Line::from(""),
@@ -235,7 +295,7 @@ fn render_error_screen(model: &Model, frame: &mut Frame, error: &str) {
     ]);
     let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Red));
 
-    if model.init.inline_mode() {
+    if model.init().inline_mode() {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(10)])

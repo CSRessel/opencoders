@@ -8,6 +8,7 @@ mod tea_update;
 mod tea_view;
 mod terminal;
 mod ui_components;
+mod view_model_context;
 
 pub use app_program::Program;
 

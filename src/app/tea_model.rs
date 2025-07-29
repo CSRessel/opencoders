@@ -22,7 +22,8 @@ pub enum SessionState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
     pub init: ModelInit,
-    pub height: u16, // Mutable viewport height
+    pub height: u16,
+    pub ui_is_rounded: bool,
     // App state
     pub state: AppState,
     pub input_history: Vec<String>,
@@ -52,7 +53,7 @@ mod model_init {
         pub fn inline_mode(&self) -> bool {
             self.init_inline_mode
         }
-        
+
         pub fn new(inline_mode: bool) -> ModelInit {
             ModelInit {
                 init_inline_mode: inline_mode,
@@ -86,6 +87,7 @@ pub enum ConnectionStatus {
 }
 
 const DEFAULT_HEIGHT: u16 = 12;
+const DEFAULT_UI_IS_ROUNDED: bool = true;
 
 impl Model {
     pub fn new() -> Self {
@@ -98,6 +100,7 @@ impl Model {
         Model {
             init: ModelInit::new(true),
             height: DEFAULT_HEIGHT,
+            ui_is_rounded: DEFAULT_UI_IS_ROUNDED,
             state: AppState::ConnectingToServer,
             input_history: Vec::new(),
             last_input: None,

@@ -1,4 +1,4 @@
-use crate::app::ui_components::MessagePart;
+use crate::app::{ui_components::MessagePart, view_model_context::ViewModelContext};
 use opencode_sdk::models::{
     GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
 };

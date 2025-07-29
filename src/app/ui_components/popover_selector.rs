@@ -1,10 +1,11 @@
 use crate::app::view_model_context::ViewModelContext;
+use crate::app::ui_components::{Block, Paragraph};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Widget},
+    widgets::{Borders, List, ListItem, Widget},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -292,7 +293,7 @@ impl PopoverSelector {
             })
             .collect();
 
-        let list = List::new(items).block(block);
+        let list = List::new(items).block(block.into_inner());
         list.render(area, buf);
     }
 }

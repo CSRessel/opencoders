@@ -1,10 +1,11 @@
+use crate::app::ui_components::Paragraph;
 use opencode_sdk::models::{Part, TextPart, ToolPart, FilePart, StepStartPart, StepFinishPart, SnapshotPart, ToolState};
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph, Widget},
+    widgets::{Widget},
 };
 
 #[derive(Debug, Clone)]

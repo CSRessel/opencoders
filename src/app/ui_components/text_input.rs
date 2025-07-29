@@ -1,10 +1,11 @@
 use crate::app::view_model_context::ViewModelContext;
+use crate::app::ui_components::{Block, Paragraph};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Widget},
+    widgets::{Borders, Widget},
 };
 
 #[derive(Debug, Clone, PartialEq)]

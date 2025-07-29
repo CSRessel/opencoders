@@ -1,5 +1,6 @@
-use crate::app::view_model_context::ViewModelContext;
 use crate::app::ui_components::{Block, Paragraph};
+use crate::app::view_model_context::ViewModelContext;
+use ratatui::text::Text;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
@@ -120,14 +121,18 @@ impl TextInput {
         self.session_id = session_id;
     }
 
+    fn prompt_start(&self) -> Span {
+        Span::styled(" > ", Style::default().fg(Color::Gray))
+    }
+
     fn display_text(&self) -> Vec<Span> {
         if self.content.is_empty() && !self.is_focused {
-            vec![Span::styled(
-                self.placeholder.clone(),
-                Style::default().fg(Color::Gray),
-            )]
+            vec![
+                self.prompt_start(),
+                Span::styled(self.placeholder.clone(), Style::default().fg(Color::Gray)),
+            ]
         } else {
-            let mut displayed = vec![];
+            let mut displayed = vec![self.prompt_start()];
             let text = self.content.clone();
             if self.is_focused {
                 let char_indices: Vec<_> = self.content.char_indices().collect();

@@ -34,7 +34,7 @@ impl Program {
         let welcome_text = create_welcome_text();
         print!("{}\n\n\n", welcome_text);
 
-        let (guard, terminal) = TerminalGuard::new(&model.init)?;
+        let (guard, terminal) = TerminalGuard::new(&model.init, model.height)?;
 
         // Create async task manager
         let task_manager = AsyncTaskManager::new();
@@ -167,11 +167,35 @@ impl Program {
                 drop(old_guard);
                 drop(old_terminal);
 
-                let new_init = ModelInit::new(self.model.init.height(), inline_mode);
-                let (guard, terminal) = TerminalGuard::new(&new_init)?;
+                let new_init = ModelInit::new(inline_mode);
+                let (guard, terminal) = TerminalGuard::new(&new_init, self.model.height)?;
                 self.guard = Some(guard);
                 self.terminal = Some(terminal);
                 self.model.init = new_init;
+            }
+
+            Cmd::ResizeInlineViewport(new_height) => {
+                if let Some(terminal) = self.terminal.as_mut() {
+                    if self.model.init.inline_mode() {
+                        // Update model state first
+                        self.model.height = new_height;
+                        
+                        // Use ratatui's resize method with new inline viewport
+                        let terminal_size = terminal.size()?;
+                        let new_viewport_area = ratatui::layout::Rect::new(0, 0, terminal_size.width, new_height);
+                        terminal.resize(new_viewport_area)?;
+                        
+                        // Force re-render
+                        self.needs_render = true;
+                    }
+                }
+            }
+
+            Cmd::AutoResizeTerminal => {
+                if let Some(terminal) = self.terminal.as_mut() {
+                    terminal.autoresize()?;
+                    self.needs_render = true;
+                }
             }
 
             Cmd::AsyncSpawnClientDiscovery => {
@@ -267,7 +291,9 @@ impl Program {
                         | Cmd::AsyncLoadSessions(_)
                         | Cmd::AsyncLoadSessionMessages(_, _)
                         | Cmd::AsyncCancelTask(_)
-                        | Cmd::RebootTerminalWithInline(_) => {
+                        | Cmd::RebootTerminalWithInline(_)
+                        | Cmd::ResizeInlineViewport(_)
+                        | Cmd::AutoResizeTerminal => {
                             Box::pin(self.spawn_command(cmd)).await?;
                         }
                         Cmd::None => {}

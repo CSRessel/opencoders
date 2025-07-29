@@ -15,6 +15,7 @@ pub struct TerminalGuard {
 impl TerminalGuard {
     pub fn new(
         init: &ModelInit,
+        height: u16,
     ) -> Result<(Self, Terminal<CrosstermBackend<io::Stdout>>), Box<dyn std::error::Error>> {
         log_info!("Initializing terminal - inline_mode: {}", init.inline_mode());
         
@@ -36,13 +37,13 @@ impl TerminalGuard {
                 return Err(e.into());
             }
         } else {
-            log_debug!("Using inline mode with height: {}", init.height());
+            log_debug!("Using inline mode with height: {}", height);
         }
 
         let backend = CrosstermBackend::new(stdout);
 
         let viewport = if init.inline_mode() {
-            Viewport::Inline(init.height())
+            Viewport::Inline(height)
         } else {
             Viewport::Fullscreen
         };

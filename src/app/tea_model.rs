@@ -22,6 +22,7 @@ pub enum SessionState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
     pub init: ModelInit,
+    pub height: u16, // Mutable viewport height
     // App state
     pub state: AppState,
     pub input_history: Vec<String>,
@@ -44,21 +45,16 @@ mod model_init {
     pub struct ModelInit {
         // Immutable initialization properties
         // that can't be changed without restarting the terminal
-        init_height: u16,
         init_inline_mode: bool,
     }
 
     impl ModelInit {
-        pub fn height(&self) -> u16 {
-            self.init_height
-        }
-
         pub fn inline_mode(&self) -> bool {
             self.init_inline_mode
         }
-        pub fn new(height: u16, inline_mode: bool) -> ModelInit {
+        
+        pub fn new(inline_mode: bool) -> ModelInit {
             ModelInit {
-                init_height: height,
                 init_inline_mode: inline_mode,
             }
         }
@@ -100,7 +96,8 @@ impl Model {
         let session_selector = PopoverSelector::new("Select Session");
 
         Model {
-            init: ModelInit::new(DEFAULT_HEIGHT, false),
+            init: ModelInit::new(true),
+            height: DEFAULT_HEIGHT,
             state: AppState::ConnectingToServer,
             input_history: Vec::new(),
             last_input: None,

@@ -54,11 +54,14 @@ pub enum Msg {
     
     // Terminal events
     TerminalResize(u16, u16), // width, height
+    ChangeInlineHeight(u16), // new height for inline mode
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {
     RebootTerminalWithInline(bool),
+    ResizeInlineViewport(u16), // new height for inline mode
+    AutoResizeTerminal,        // trigger autoresize for any viewport changes
     None,
 
     // Async commands that don't block

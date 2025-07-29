@@ -204,9 +204,16 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::TerminalResize(_width, _height) => {
-            // Terminal resize automatically triggers a re-render
-            // No model state changes needed - the view will query current terminal size
-            (model, Cmd::None)
+            // Enhanced to trigger autoresize for seamless viewport updates
+            (model, Cmd::AutoResizeTerminal)
+        }
+
+        Msg::ChangeInlineHeight(new_height) => {
+            if model.init.inline_mode() {
+                (model, Cmd::ResizeInlineViewport(new_height))
+            } else {
+                (model, Cmd::None) // No-op if not in inline mode
+            }
         }
 
         // Session selector messages
@@ -222,7 +229,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             // Cache the render height for accurate scroll calculations
             model
                 .session_selector
-                .cache_render_height_for_terminal(model.init.height());
+                .cache_render_height_for_terminal(model.height);
 
             // Set current session index if we have an active session
             let current_index = if let Some(current_session) = model.session() {
@@ -281,7 +288,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             // Re-cache the render height since popup size may have changed with new items
             model
                 .session_selector
-                .cache_render_height_for_terminal(model.init.height());
+                .cache_render_height_for_terminal(model.height);
 
             // Re-calculate and set current session index after items are loaded
             let current_index = if let Some(current_session) = model.session() {

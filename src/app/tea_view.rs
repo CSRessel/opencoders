@@ -24,7 +24,7 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
 
     crossterm::terminal::disable_raw_mode()?;
     // Move cursor up outside the TUI height
-    crossterm::execute!(io::stdout(), crossterm::cursor::MoveUp(model.init.height()),)?;
+    crossterm::execute!(io::stdout(), crossterm::cursor::MoveUp(model.height),)?;
 
     match model.state {
         AppState::TextEntry => render_manual_history(&model)?,
@@ -34,7 +34,7 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     // Move cursor back down to TUI
     crossterm::execute!(
         io::stdout(),
-        crossterm::cursor::MoveDown(model.init.height())
+        crossterm::cursor::MoveDown(model.height)
     )?;
     crossterm::terminal::enable_raw_mode()?;
     Ok(())
@@ -95,7 +95,7 @@ fn render_welcome_screen(model: &Model, frame: &mut Frame) {
     ";
 
     let text = Text::from(status_text + help_text);
-    let line_height = (text.to_text().lines.len() as u16).max(model.init.height());
+    let line_height = (text.to_text().lines.len() as u16).max(model.height);
     let paragraph = Paragraph::new(text);
 
     if model.init.inline_mode() {

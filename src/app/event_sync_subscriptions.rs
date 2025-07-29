@@ -12,7 +12,7 @@ pub fn subscriptions(model: &Model) -> Vec<Sub> {
         | AppState::ConnectingToServer
         | AppState::InitializingSession
         | AppState::SelectSession
-        | AppState::ConnectionError(_) => vec![Sub::KeyboardInput],
+        | AppState::ConnectionError(_) => vec![Sub::KeyboardInput, Sub::TerminalResize],
         AppState::Quit => vec![],
     }
 }
@@ -20,7 +20,7 @@ pub fn subscriptions(model: &Model) -> Vec<Sub> {
 pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::error::Error>> {
     let subs = subscriptions(model);
 
-    if subs.contains(&Sub::KeyboardInput) {
+    if subs.contains(&Sub::KeyboardInput) || subs.contains(&Sub::TerminalResize) {
         if event::poll(std::time::Duration::from_millis(8))? {
             return Ok(crossterm_to_msg(event::read()?, &model));
         }
@@ -107,6 +107,7 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
             (AppState::TextEntry, MouseEventKind::ScrollDown) => Some(Msg::ScrollMessageLog(1)),
             _ => None,
         },
+        Event::Resize(width, height) => Some(Msg::TerminalResize(width, height)),
         _ => None,
     }
 }

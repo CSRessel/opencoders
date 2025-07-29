@@ -51,6 +51,9 @@ pub enum Msg {
 
     // View state management
     MarkMessagesViewed,
+    
+    // Terminal events
+    TerminalResize(u16, u16), // width, height
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -73,4 +76,5 @@ pub enum Cmd {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Sub {
     KeyboardInput,
+    TerminalResize,
 }

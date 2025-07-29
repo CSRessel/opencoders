@@ -203,6 +203,12 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             (model, Cmd::None)
         }
 
+        Msg::TerminalResize(_width, _height) => {
+            // Terminal resize automatically triggers a re-render
+            // No model state changes needed - the view will query current terminal size
+            (model, Cmd::None)
+        }
+
         // Session selector messages
         Msg::ShowSessionSelector => {
             model.state = AppState::SelectSession;

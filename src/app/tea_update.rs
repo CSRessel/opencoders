@@ -332,5 +332,18 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             crate::log_debug!("Failed to load session messages: {}", error);
             (model, Cmd::None)
         }
+
+        // Unified repeat shortcut timeout messages
+        Msg::RepeatShortcutPressed(key) => {
+            model.set_repeat_shortcut_timeout(key);
+            (model, Cmd::None)
+        }
+
+        Msg::ClearTimeout => {
+            model.clear_repeat_shortcut_timeout();
+            (model, Cmd::None)
+        }
+
+        Msg::SessionAbort => (model, Cmd::AsyncSessionAbort),
     }
 }

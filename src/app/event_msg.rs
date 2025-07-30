@@ -1,6 +1,8 @@
 use crate::{
     app::{
-        event_async_task_manager::TaskId, tea_model::AppState, ui_components::PopoverSelectorEvent,
+        event_async_task_manager::TaskId,
+        tea_model::{AppState, RepeatShortcutKey},
+        ui_components::PopoverSelectorEvent,
     },
     sdk::{OpenCodeClient, OpenCodeError},
 };
@@ -40,6 +42,10 @@ pub enum Msg {
     SessionMessagesLoaded(Vec<GetSessionByIdMessage200ResponseInner>),
     SessionMessagesLoadFailed(OpenCodeError),
 
+    // TODO
+    // Session interactions
+    SessionAbort,
+
     // Task lifecycle messages
     TaskStarted(TaskId, String),
     TaskCompleted(TaskId),
@@ -51,10 +57,14 @@ pub enum Msg {
 
     // View state management
     MarkMessagesViewed,
-    
+
     // Terminal events
     TerminalResize(u16, u16), // width, height
-    ChangeInlineHeight(u16), // new height for inline mode
+    ChangeInlineHeight(u16),  // new height for inline mode
+
+    // Unified repeat shortcut timeout events
+    RepeatShortcutPressed(RepeatShortcutKey),
+    ClearTimeout,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,6 +81,7 @@ pub enum Cmd {
     AsyncLoadSessions(OpenCodeClient),
     AsyncLoadSessionMessages(OpenCodeClient, String),
     AsyncCancelTask(TaskId),
+    AsyncSessionAbort,
 
     // Batched commands for efficiency
     Batch(Vec<Cmd>),

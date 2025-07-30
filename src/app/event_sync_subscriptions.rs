@@ -1,6 +1,6 @@
 use crate::app::{
     event_msg::{Msg, Sub},
-    tea_model::{AppState, ConnectionStatus, Model},
+    tea_model::{AppState, ConnectionStatus, Model, RepeatShortcutKey},
     ui_components::PopoverSelectorEvent,
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
@@ -26,6 +26,17 @@ pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::err
         }
     }
 
+    // Check for expired timeout and clear it
+    if model.has_active_timeout() {
+        if let Some(timeout) = &model.repeat_shortcut_timeout {
+            if let Ok(elapsed) = timeout.started_at.elapsed() {
+                if elapsed.as_millis() >= model.keys_shortcut_timeout_ms as u128 {
+                    return Ok(Some(Msg::ClearTimeout));
+                }
+            }
+        }
+    }
+
     Ok(None)
 }
 
@@ -33,19 +44,34 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
     match event {
         Event::Key(key) => {
             match (&model.state, key.code, key.modifiers) {
-                // Global quit commands
-                (_, KeyCode::Char('q'), KeyModifiers::CONTROL) => Some(Msg::Quit),
-                (AppState::Welcome, KeyCode::Esc, _) => Some(Msg::Quit),
-                (AppState::ConnectingToServer, KeyCode::Esc, _) => Some(Msg::Quit),
-                (AppState::InitializingSession, KeyCode::Esc, _) => Some(Msg::Quit),
-                (AppState::ConnectionError(_), KeyCode::Esc, _) => Some(Msg::Quit),
+                // Unified repeat shortcut timeout system
+                (_, KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                    if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::CtrlC) {
+                        Some(Msg::Quit)
+                    } else {
+                        Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::CtrlC))
+                    }
+                }
+                (_, KeyCode::Char('d'), KeyModifiers::CONTROL) => {
+                    if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::CtrlD) {
+                        Some(Msg::Quit)
+                    } else {
+                        Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::CtrlD))
+                    }
+                }
+                (AppState::TextEntry, KeyCode::Esc, __) => {
+                    if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
+                        Some(Msg::SessionAbort)
+                    } else {
+                        Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Esc))
+                    }
+                }
 
                 // State transitions
                 (AppState::Welcome, KeyCode::Enter, _) => {
                     Some(Msg::ChangeState(AppState::TextEntry))
                 }
                 (AppState::Welcome, KeyCode::Char('s'), _) => Some(Msg::ShowSessionSelector),
-                (AppState::TextEntry, KeyCode::Esc, _) => Some(Msg::ChangeState(AppState::Welcome)),
 
                 // Settings toggle
                 (AppState::Welcome, KeyCode::Tab, _) => Some(Msg::ChangeInline),
@@ -99,7 +125,14 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                     }
                 }
 
-                _ => None,
+                _ => {
+                    // Clear timeout state when any other key is pressed
+                    if model.has_active_timeout() {
+                        Some(Msg::ClearTimeout)
+                    } else {
+                        None
+                    }
+                }
             }
         }
         Event::Mouse(mouse) => match (&model.state, mouse.kind) {

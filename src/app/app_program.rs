@@ -272,15 +272,18 @@ impl Program {
 
             Cmd::AsyncLoadSessionMessages(client, session_id) => {
                 // Spawn async session messages loading task
-                // if !matches!(self.model.current_selected_session_id(), Some(session_id)) {
-                //     // TODO
-                // }
                 self.task_manager.spawn_task(async move {
                     match client.get_messages(&session_id).await {
                         Ok(messages) => Msg::SessionMessagesLoaded(messages),
                         Err(error) => Msg::SessionMessagesLoadFailed(error),
                     }
                 });
+            }
+
+            Cmd::AsyncSessionAbort => {
+                self.task_manager
+                    // TODO eventually call proper API to cancel loop
+                    .spawn_task(async move { Msg::ChangeState(AppState::Welcome) });
             }
 
             Cmd::AsyncCancelTask(task_id) => {
@@ -300,6 +303,7 @@ impl Program {
                         | Cmd::AsyncCancelTask(_)
                         | Cmd::RebootTerminalWithInline(_)
                         | Cmd::ResizeInlineViewport(_)
+                        | Cmd::AsyncSessionAbort
                         | Cmd::AutoResizeTerminal => {
                             Box::pin(self.spawn_command(cmd)).await?;
                         }

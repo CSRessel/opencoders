@@ -14,60 +14,26 @@ use ratatui::{
 };
 use std::io::{self, Write};
 
-// Top status in: opencode
-//   ┃  # Investigating recently modified files                                                ┃
-//   ┃  /share to create a shareable link                                            14.9K/7%  ┃
-
-// Bottom status in: claude, gemini, and opencode
+// Config:
+// - inline_mode          := true
+// - ui_block_is_rounded  := true
+// - ui_block_is_bordered := true
+// - ui_block_padding     := 0
+// - ui_status_is_bottom  := true
+// - ui_status_use_labels := true
 //
-// ✶ Philosophising… (2s · ↓ 71 tokens · esc to interrupt)
+// Design:
 //
 // ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ >                                                                                           │
 // ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
-//   -- INSERT --
+// ⠧ Working                                    Anthropic Claude Opus (21.4k tokens / 9% context)
 //
-// ⠧ Analyzing the Tools (esc to cancel, 10s)
+// Messages:
 //
-//
-// ~/Documents/source     no sandbox (see /docs)        gemini-2.5-pro (99% context left)
-//
-//   ┃                                                                                         ┃
-//   ┃ >                                                                                       ┃
-//   ┃                                                                                         ┃
-//    working.    esc interrupt                                       Anthropic Claude Sonnet 4
-
-// Exit message in: gemini
-// ╭───────────╮
-// │  > /quit  │
-// ╰───────────╯
-//
-// ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
-// │                                                                                             │
-// │  Agent powering down. Goodbye!                                                              │
-// │                                                                                             │
-// │  Interaction Summary                                                                        │
-// │  Tool Calls:                 4 ( ✔ 4 ✖ 0 )                                                  │
-// │  Success Rate:               100.0%                                                         │
-// │  User Agreement:             100.0% (1 reviewed)                                            │
-// │                                                                                             │
-// │  Performance                                                                                │
-// │  Wall Time:                  1m 52s                                                         │
-// │  Agent Active:               1m 18s                                                         │
-// │    » API Time:               33.7s (43.1%)                                                  │
-// │    » Tool Time:              44.5s (56.9%)                                                  │
-// │                                                                                             │
-// │                                                                                             │
-// │  Model Usage                  Reqs   Input Tokens  Output Tokens                            │
-// │  ───────────────────────────────────────────────────────────────                            │
-// │  gemini-2.5-pro                  5         45,179            174                            │
-// │                                                                                             │
-// │  Savings Highlight: 21,724 (48.1%) of input tokens were served from the cache, reducing     │
-// │  costs.                                                                                     │
-// │                                                                                             │
-// │  » Tip: For a full token breakdown, run `/stats model`.                                     │
-// │                                                                                             │
-// ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
+// ╭──────────╮
+// │ > /quit  │
+// ╰──────────╯
 
 fn calculate_content_width(terminal_width: u16) -> u16 {
     let min_width = 80;

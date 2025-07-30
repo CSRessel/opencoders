@@ -6,6 +6,19 @@ use opencode_sdk::models::Session;
 use std::time::SystemTime;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum RepeatShortcutKey {
+    CtrlC,
+    CtrlD,
+    Esc,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RepeatShortcutTimeout {
+    pub key: RepeatShortcutKey,
+    pub started_at: SystemTime,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct PendingSessionInfo {
     pub temp_id: String,
     pub created_at: SystemTime,
@@ -24,6 +37,12 @@ pub struct Model {
     pub init: ModelInit,
     pub height: u16,
     pub ui_is_rounded: bool,
+    // pub ui_block_is_rounded  := true
+    // pub ui_block_is_bordered := true
+    // pub ui_block_padding     := 0
+    // pub ui_status_is_bottom  := true
+    // pub ui_status_use_labels := true
+    pub keys_shortcut_timeout_ms: u16,
     // App state
     pub state: AppState,
     pub input_history: Vec<String>,
@@ -39,6 +58,8 @@ pub struct Model {
     pub sessions: Vec<Session>,
     pub connection_status: ConnectionStatus,
     pub pending_first_message: Option<String>,
+    // Unified repeat shortcut timeout system
+    pub repeat_shortcut_timeout: Option<RepeatShortcutTimeout>,
 }
 
 mod model_init {
@@ -101,6 +122,7 @@ impl Model {
             init: ModelInit::new(true),
             height: DEFAULT_HEIGHT,
             ui_is_rounded: DEFAULT_UI_IS_ROUNDED,
+            keys_shortcut_timeout_ms: 1000,
             state: AppState::ConnectingToServer,
             input_history: Vec::new(),
             last_input: None,
@@ -113,6 +135,7 @@ impl Model {
             sessions: Vec::new(),
             connection_status: ConnectionStatus::Connecting,
             pending_first_message: None,
+            repeat_shortcut_timeout: None,
         }
     }
 
@@ -249,5 +272,49 @@ impl Model {
             self.session_state,
             SessionState::Pending(_) | SessionState::Creating(_) | SessionState::Ready(_)
         )
+    }
+
+    // Unified repeat shortcut timeout management
+    pub fn set_repeat_shortcut_timeout(&mut self, key: RepeatShortcutKey) {
+        self.repeat_shortcut_timeout = Some(RepeatShortcutTimeout {
+            key,
+            started_at: SystemTime::now(),
+        });
+    }
+
+    pub fn clear_repeat_shortcut_timeout(&mut self) {
+        self.repeat_shortcut_timeout = None;
+    }
+
+    pub fn is_repeat_shortcut_timeout_active(&self, key: RepeatShortcutKey) -> bool {
+        if let Some(timeout) = &self.repeat_shortcut_timeout {
+            if timeout.key == key {
+                if let Ok(elapsed) = timeout.started_at.elapsed() {
+                    return elapsed.as_secs() < 1;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn has_active_timeout(&self) -> bool {
+        if let Some(timeout) = &self.repeat_shortcut_timeout {
+            if let Ok(elapsed) = timeout.started_at.elapsed() {
+                return elapsed.as_secs() < 1;
+            }
+        }
+        false
+    }
+
+    pub fn expire_timeout_if_needed(&mut self) -> bool {
+        if let Some(timeout) = &self.repeat_shortcut_timeout {
+            if let Ok(elapsed) = timeout.started_at.elapsed() {
+                if elapsed.as_secs() >= 1 {
+                    self.repeat_shortcut_timeout = None;
+                    return true;
+                }
+            }
+        }
+        false
     }
 }

@@ -1,7 +1,10 @@
-use crate::app::{
-    event_msg::*,
-    tea_model::*,
-    ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
+use crate::{
+    app::{
+        event_msg::*,
+        tea_model::*,
+        ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
+    },
+    log_debug,
 };
 use opencode_sdk::models::{
     GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
@@ -218,6 +221,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         // Session selector messages
         Msg::ShowSessionSelector => {
+            log_debug!("handling session selector opening");
             model.state = AppState::SelectSession;
             model
                 .session_selector
@@ -240,9 +244,16 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 .session_selector
                 .set_current_session_index(current_index);
 
+            // Make the selector visible
+            model
+                .session_selector
+                .handle_event(PopoverSelectorEvent::Show);
+
             if let Some(client) = model.client.clone() {
+                log_debug!("waiting for session load......");
                 (model, Cmd::AsyncLoadSessions(client))
             } else {
+                log_debug!("nov client yet......");
                 model
                     .session_selector
                     .handle_event(PopoverSelectorEvent::SetError(Some(

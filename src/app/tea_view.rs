@@ -114,13 +114,14 @@ fn render_welcome_screen(frame: &mut Frame) {
     .to_string();
     let help_text = "\n
     Enter    start input
-        s    select session
-      Tab    toggle view
-      Esc    exit
+    ^x l     select session
+    ^x tab   toggle view
+    ^x q     quit
     ";
 
     let text = Text::from(status_text + help_text);
-    let line_height = (text.to_text().lines.len().saturating_add(2) as u16).max(model.get().config.height);
+    let line_height =
+        (text.to_text().lines.len().saturating_add(2) as u16).max(model.get().config.height);
     let paragraph = Paragraph::new(text);
 
     if model.init().inline_mode() {

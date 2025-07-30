@@ -1,7 +1,10 @@
-use crate::app::{
-    event_msg::{Msg, Sub},
-    tea_model::{AppState, ConnectionStatus, Model, RepeatShortcutKey},
-    ui_components::PopoverSelectorEvent,
+use crate::{
+    app::{
+        event_msg::{Msg, Sub},
+        tea_model::{AppState, ConnectionStatus, Model, RepeatShortcutKey},
+        ui_components::PopoverSelectorEvent,
+    },
+    log_debug,
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
@@ -43,81 +46,101 @@ pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::err
 pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
     match event {
         Event::Key(key) => {
-            match (&model.state, key.code, key.modifiers) {
+            match (
+                &model.state,
+                key.code,
+                key.modifiers,
+                model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Leader),
+            ) {
                 // Unified repeat shortcut timeout system
-                (_, KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                (_, KeyCode::Char('c'), KeyModifiers::CONTROL, _) => {
                     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::CtrlC) {
                         Some(Msg::Quit)
                     } else {
                         Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::CtrlC))
                     }
                 }
-                (_, KeyCode::Char('d'), KeyModifiers::CONTROL) => {
+                (_, KeyCode::Char('d'), KeyModifiers::CONTROL, _) => {
                     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::CtrlD) {
                         Some(Msg::Quit)
                     } else {
                         Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::CtrlD))
                     }
                 }
-                (AppState::TextEntry, KeyCode::Esc, __) => {
+                (AppState::TextEntry, KeyCode::Esc, __, _) => {
                     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
                         Some(Msg::SessionAbort)
                     } else {
                         Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Esc))
                     }
                 }
+                (_, KeyCode::Char('x'), KeyModifiers::CONTROL, _) => {
+                    Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Leader))
+                }
+                // Leader shortcuts:
+                // /new                      new session               ctrl+x n                ┃
+                // /help                     show help                 ctrl+x h                ┃
+                // /share                    share session             ctrl+x s                ┃
+                // /models                   list models               ctrl+x m                ┃
+                // /editor                   open editor               ctrl+x e                ┃
+                // /init                     create/update AGENTS.md   ctrl+x i                ┃
+                // /compact                  compact the session       ctrl+x c                ┃
+                // /export                   export conversation       ctrl+x x                ┃
+                // /sessions                 list sessions             ctrl+x l                ┃
+                // /unshare                  unshare session           ctrl+x u                ┃
+                // /themes                   list themes               ctrl+x t                ┃
+                // /details                  toggle tool details       ctrl+x d                ┃
+                // TODO the others, once those messages are supported
+                (_, KeyCode::Char('l'), _, true) => Some(Msg::ShowSessionSelector),
+                (_, KeyCode::Tab, _, true) => Some(Msg::ChangeInline),
+                (_, KeyCode::Char('q'), _, true) => Some(Msg::Quit),
 
-                // State transitions
-                (AppState::Welcome, KeyCode::Enter, _) => {
+                (AppState::Welcome, KeyCode::Enter, _, _) => {
                     Some(Msg::ChangeState(AppState::TextEntry))
                 }
-                (AppState::Welcome, KeyCode::Char('s'), _) => Some(Msg::ShowSessionSelector),
-
-                // Settings toggle
-                (AppState::Welcome, KeyCode::Tab, _) => Some(Msg::ChangeInline),
 
                 // Text input events
-                (AppState::TextEntry, KeyCode::Char(c), _) => Some(Msg::KeyPressed(c)),
-                (AppState::TextEntry, KeyCode::Backspace, _) => Some(Msg::Backspace),
-                (AppState::TextEntry, KeyCode::Enter, _) => Some(Msg::SubmitInput),
+                (AppState::TextEntry, KeyCode::Char(c), _, _) => Some(Msg::KeyPressed(c)),
+                (AppState::TextEntry, KeyCode::Backspace, _, _) => Some(Msg::Backspace),
+                (AppState::TextEntry, KeyCode::Enter, _, _) => Some(Msg::SubmitInput),
 
                 // Message log scrolling
-                (AppState::TextEntry, KeyCode::PageUp, _) => Some(Msg::ScrollMessageLog(-5)),
-                (AppState::TextEntry, KeyCode::PageDown, _) => Some(Msg::ScrollMessageLog(5)),
-                (AppState::TextEntry, KeyCode::Up, _) => Some(Msg::ScrollMessageLog(-5)),
-                (AppState::TextEntry, KeyCode::Down, _) => Some(Msg::ScrollMessageLog(5)),
-                (AppState::TextEntry, KeyCode::Left, _) => {
+                (AppState::TextEntry, KeyCode::PageUp, _, _) => Some(Msg::ScrollMessageLog(-5)),
+                (AppState::TextEntry, KeyCode::PageDown, _, _) => Some(Msg::ScrollMessageLog(5)),
+                (AppState::TextEntry, KeyCode::Up, _, _) => Some(Msg::ScrollMessageLog(-5)),
+                (AppState::TextEntry, KeyCode::Down, _, _) => Some(Msg::ScrollMessageLog(5)),
+                (AppState::TextEntry, KeyCode::Left, _, _) => {
                     Some(Msg::ScrollMessageLogHorizontal(-5))
                 }
-                (AppState::TextEntry, KeyCode::Right, _) => {
+                (AppState::TextEntry, KeyCode::Right, _, _) => {
                     Some(Msg::ScrollMessageLogHorizontal(5))
                 }
 
                 // Session selector events
-                (AppState::SelectSession, KeyCode::Up, _) => {
+                (AppState::SelectSession, KeyCode::Up, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
                 }
-                (AppState::SelectSession, KeyCode::Down, _) => {
+                (AppState::SelectSession, KeyCode::Down, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
                 }
-                (AppState::SelectSession, KeyCode::Char('k'), _) => {
+                (AppState::SelectSession, KeyCode::Char('k'), _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
                 }
-                (AppState::SelectSession, KeyCode::Char('j'), _) => {
+                (AppState::SelectSession, KeyCode::Char('j'), _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
                 }
-                (AppState::SelectSession, KeyCode::Enter, _) => {
+                (AppState::SelectSession, KeyCode::Enter, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Select))
                 }
-                (AppState::SelectSession, KeyCode::Esc, _) => {
+                (AppState::SelectSession, KeyCode::Esc, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Cancel))
                 }
 
                 // Retry connection
-                (AppState::ConnectionError(_), KeyCode::Char('r'), _) => {
+                (AppState::ConnectionError(_), KeyCode::Char('r'), _, _) => {
                     Some(Msg::InitializeClient)
                 }
-                (AppState::Welcome, KeyCode::Char('r'), _) => {
+                (AppState::Welcome, KeyCode::Char('r'), _, _) => {
                     if matches!(model.connection_status, ConnectionStatus::Disconnected) {
                         Some(Msg::InitializeClient)
                     } else {

@@ -164,9 +164,11 @@ impl Program {
                 let old_guard = self.guard.take();
                 let mut old_terminal = self.terminal.take();
 
-                // Clear the TUI, so it's not offset in the future
-                if let Some(terminal) = old_terminal.as_mut() {
-                    terminal.draw(|f| view_clear(&self.model, f))?;
+                if !inline_mode {
+                    // Clear the TUI when leaving inline mode, so it's not offset in the future
+                    if let Some(terminal) = old_terminal.as_mut() {
+                        terminal.draw(|f| view_clear(&self.model, f))?;
+                    }
                 };
 
                 // Explicitly drop the old guard and terminal

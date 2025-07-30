@@ -10,6 +10,7 @@ pub enum RepeatShortcutKey {
     CtrlC,
     CtrlD,
     Esc,
+    Leader,
 }
 
 #[derive(Debug, Clone, PartialEq)]

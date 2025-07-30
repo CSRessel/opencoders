@@ -122,7 +122,7 @@ impl Program {
         if self.model.needs_manual_output() {
             if let Some(terminal) = self.terminal.as_mut() {
                 // Clear the TUI
-                terminal.draw(|f| view_clear(&self.model, f))?;
+                terminal.draw(|f| view_clear(f))?;
 
                 // Manually execute with crossterm
                 view_manual(&self.model)?;
@@ -165,9 +165,14 @@ impl Program {
                 let mut old_terminal = self.terminal.take();
 
                 if !inline_mode {
-                    // Clear the TUI when leaving inline mode, so it's not offset in the future
                     if let Some(terminal) = old_terminal.as_mut() {
-                        terminal.draw(|f| view_clear(&self.model, f))?;
+                        // Clear the TUI when leaving inline mode, so it doesn't
+                        // leave artifacts in the history
+                        terminal.draw(|f| view_clear(f))?;
+                        // Move the cursor back to the top left of the TUI,
+                        // so if we switch back and forth we don't offset
+                        terminal
+                            .draw(|f| f.set_cursor_position((f.area().left(), f.area().top())))?;
                     }
                 };
 
@@ -176,7 +181,7 @@ impl Program {
                 drop(old_terminal);
 
                 let new_init = ModelInit::new(inline_mode);
-                let (guard, terminal) = TerminalGuard::new(&new_init, 1)?;
+                let (guard, terminal) = TerminalGuard::new(&new_init, self.model.config.height)?;
                 self.guard = Some(guard);
                 self.terminal = Some(terminal);
                 self.model.init = new_init;

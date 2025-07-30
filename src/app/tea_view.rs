@@ -95,7 +95,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
     })
 }
 
-pub fn view_clear(_model: &Model, frame: &mut Frame) {
+pub fn view_clear(frame: &mut Frame) {
     // Write an empty frame to force full redraw of all cells
     frame.render_widget(Paragraph::new(""), frame.area());
 }
@@ -132,7 +132,7 @@ fn render_welcome_screen(frame: &mut Frame) {
         frame.render_widget(paragraph, vertical_chunks[0]);
     } else {
         let constraints = vec![
-            Constraint::Length(welcome_text_height()),
+            Constraint::Length(welcome_text_height().saturating_add(2)),
             Constraint::Length(line_height),
         ];
 

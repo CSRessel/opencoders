@@ -80,7 +80,7 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
 
     crossterm::terminal::disable_raw_mode()?;
     // Move cursor up outside the TUI height
-    crossterm::execute!(io::stdout(), crossterm::cursor::MoveUp(model.height),)?;
+    crossterm::execute!(io::stdout(), crossterm::cursor::MoveUp(5),)?;
 
     match model.state {
         AppState::TextEntry => render_manual_history(&model)?,
@@ -88,7 +88,7 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Move cursor back down to TUI
-    crossterm::execute!(io::stdout(), crossterm::cursor::MoveDown(model.height))?;
+    crossterm::execute!(io::stdout(), crossterm::cursor::MoveDown(1))?;
     crossterm::terminal::enable_raw_mode()?;
     Ok(())
 }
@@ -151,7 +151,7 @@ fn render_welcome_screen(frame: &mut Frame) {
     ";
 
     let text = Text::from(status_text + help_text);
-    let line_height = (text.to_text().lines.len() as u16).max(model.get().height);
+    let line_height = (text.to_text().lines.len().saturating_add(2) as u16).max(model.get().height);
     let paragraph = Paragraph::new(text);
 
     if model.init().inline_mode() {
@@ -181,7 +181,7 @@ fn render_text_entry_screen(frame: &mut Frame) {
     let terminal_width = frame.area().width;
     let content_width = calculate_content_width(terminal_width);
     let left_padding = (terminal_width.saturating_sub(content_width)) / 2;
-    let right_padding = terminal_width.saturating_sub(content_width + left_padding);
+    let right_padding = terminal_width.saturating_sub(content_width.saturating_add(left_padding));
 
     // Create horizontal layout for centering
     let horizontal_chunks = Layout::default()

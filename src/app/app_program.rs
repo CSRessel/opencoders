@@ -123,9 +123,10 @@ impl Program {
             if let Some(terminal) = self.terminal.as_mut() {
                 // Clear the TUI
                 terminal.draw(|f| view_clear(&self.model, f))?;
+
+                // Manually execute with crossterm
+                view_manual(&self.model)?;
             }
-            // Manually execute with crossterm
-            view_manual(&self.model)?;
         }
 
         // View: Pure rendering, within the TUI
@@ -161,14 +162,19 @@ impl Program {
             Cmd::RebootTerminalWithInline(inline_mode) => {
                 // Deconstruct the old terminal by taking ownership from the Option
                 let old_guard = self.guard.take();
-                let old_terminal = self.terminal.take();
+                let mut old_terminal = self.terminal.take();
+
+                // Clear the TUI, so it's not offset in the future
+                if let Some(terminal) = old_terminal.as_mut() {
+                    terminal.draw(|f| view_clear(&self.model, f))?;
+                };
 
                 // Explicitly drop the old guard and terminal
                 drop(old_guard);
                 drop(old_terminal);
 
                 let new_init = ModelInit::new(inline_mode);
-                let (guard, terminal) = TerminalGuard::new(&new_init, self.model.height)?;
+                let (guard, terminal) = TerminalGuard::new(&new_init, 1)?;
                 self.guard = Some(guard);
                 self.terminal = Some(terminal);
                 self.model.init = new_init;
@@ -179,12 +185,13 @@ impl Program {
                     if self.model.init.inline_mode() {
                         // Update model state first
                         self.model.height = new_height;
-                        
+
                         // Use ratatui's resize method with new inline viewport
                         let terminal_size = terminal.size()?;
-                        let new_viewport_area = ratatui::layout::Rect::new(0, 0, terminal_size.width, new_height);
+                        let new_viewport_area =
+                            ratatui::layout::Rect::new(0, 0, terminal_size.width, new_height);
                         terminal.resize(new_viewport_area)?;
-                        
+
                         // Force re-render
                         self.needs_render = true;
                     }

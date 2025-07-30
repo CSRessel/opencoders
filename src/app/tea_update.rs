@@ -221,15 +221,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             model.state = AppState::SelectSession;
             model
                 .session_selector
-                .handle_event(PopoverSelectorEvent::Show);
-            model
-                .session_selector
-                .handle_event(PopoverSelectorEvent::SetLoading(true));
-
-            // Cache the render height for accurate scroll calculations
-            model
-                .session_selector
-                .cache_render_height_for_terminal(model.height);
+                .cache_render_height_for_terminal(model.config.height);
 
             // Set current session index if we have an active session
             let current_index = if let Some(current_session) = model.session() {
@@ -288,7 +280,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             // Re-cache the render height since popup size may have changed with new items
             model
                 .session_selector
-                .cache_render_height_for_terminal(model.height);
+                .cache_render_height_for_terminal(model.config.height);
 
             // Re-calculate and set current session index after items are loaded
             let current_index = if let Some(current_session) = model.session() {

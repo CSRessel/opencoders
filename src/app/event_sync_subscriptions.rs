@@ -30,7 +30,7 @@ pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::err
     if model.has_active_timeout() {
         if let Some(timeout) = &model.repeat_shortcut_timeout {
             if let Ok(elapsed) = timeout.started_at.elapsed() {
-                if elapsed.as_millis() >= model.keys_shortcut_timeout_ms as u128 {
+                if elapsed.as_millis() >= model.config.keys_shortcut_timeout_ms as u128 {
                     return Ok(Some(Msg::ClearTimeout));
                 }
             }
@@ -82,15 +82,15 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppState::TextEntry, KeyCode::Enter, _) => Some(Msg::SubmitInput),
 
                 // Message log scrolling
-                (AppState::TextEntry, KeyCode::PageUp, _) => Some(Msg::ScrollMessageLog(-10)),
-                (AppState::TextEntry, KeyCode::PageDown, _) => Some(Msg::ScrollMessageLog(10)),
-                (AppState::TextEntry, KeyCode::Up, _) => Some(Msg::ScrollMessageLog(-10)),
-                (AppState::TextEntry, KeyCode::Down, _) => Some(Msg::ScrollMessageLog(10)),
+                (AppState::TextEntry, KeyCode::PageUp, _) => Some(Msg::ScrollMessageLog(-5)),
+                (AppState::TextEntry, KeyCode::PageDown, _) => Some(Msg::ScrollMessageLog(5)),
+                (AppState::TextEntry, KeyCode::Up, _) => Some(Msg::ScrollMessageLog(-5)),
+                (AppState::TextEntry, KeyCode::Down, _) => Some(Msg::ScrollMessageLog(5)),
                 (AppState::TextEntry, KeyCode::Left, _) => {
-                    Some(Msg::ScrollMessageLogHorizontal(-10))
+                    Some(Msg::ScrollMessageLogHorizontal(-5))
                 }
                 (AppState::TextEntry, KeyCode::Right, _) => {
-                    Some(Msg::ScrollMessageLogHorizontal(10))
+                    Some(Msg::ScrollMessageLogHorizontal(5))
                 }
 
                 // Session selector events

@@ -35,14 +35,7 @@ pub enum SessionState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
     pub init: ModelInit,
-    pub height: u16,
-    pub ui_is_rounded: bool,
-    // pub ui_block_is_rounded  := true
-    // pub ui_block_is_bordered := true
-    // pub ui_block_padding     := 0
-    // pub ui_status_is_bottom  := true
-    // pub ui_status_use_labels := true
-    pub keys_shortcut_timeout_ms: u16,
+    pub config: UserConfig,
     // App state
     pub state: AppState,
     pub input_history: Vec<String>,
@@ -83,6 +76,17 @@ mod model_init {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct UserConfig {
+    pub ui_block_is_rounded: bool,
+    pub ui_block_is_bordered: bool,
+    pub ui_block_padding: u16,
+    pub ui_status_is_bottom: bool,
+    pub ui_status_use_labels: bool,
+    pub height: u16,
+    pub keys_shortcut_timeout_ms: u16,
+}
+
 pub use model_init::ModelInit;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -120,9 +124,15 @@ impl Model {
 
         Model {
             init: ModelInit::new(true),
-            height: DEFAULT_HEIGHT,
-            ui_is_rounded: DEFAULT_UI_IS_ROUNDED,
-            keys_shortcut_timeout_ms: 1000,
+            config: UserConfig {
+                ui_block_is_rounded: DEFAULT_UI_IS_ROUNDED,
+                ui_block_is_bordered: true,
+                ui_block_padding: 0,
+                ui_status_is_bottom: true,
+                ui_status_use_labels: true,
+                height: DEFAULT_HEIGHT,
+                keys_shortcut_timeout_ms: 1000,
+            },
             state: AppState::ConnectingToServer,
             input_history: Vec::new(),
             last_input: None,

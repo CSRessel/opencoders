@@ -29,6 +29,9 @@ use std::io::{self, Write};
 // ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
 // ⠧ Working                                    Anthropic Claude Opus (21.4k tokens / 9% context)
 //
+// ^ throbber                                   ^ label provider       ^ count        ^ percent
+//   ^ label                                              ^ label model      ^ label     ^ label
+//
 // Messages:
 //
 // ╭──────────╮
@@ -117,7 +120,7 @@ fn render_welcome_screen(frame: &mut Frame) {
     ";
 
     let text = Text::from(status_text + help_text);
-    let line_height = (text.to_text().lines.len().saturating_add(2) as u16).max(model.get().height);
+    let line_height = (text.to_text().lines.len().saturating_add(2) as u16).max(model.get().config.height);
     let paragraph = Paragraph::new(text);
 
     if model.init().inline_mode() {

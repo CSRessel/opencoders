@@ -34,7 +34,7 @@ impl Program {
         let welcome_text = create_welcome_text();
         print!("{}\n\n\n", welcome_text);
 
-        let (guard, terminal) = TerminalGuard::new(&model.init, model.height)?;
+        let (guard, terminal) = TerminalGuard::new(&model.init, model.config.height)?;
 
         // Create async task manager
         let task_manager = AsyncTaskManager::new();
@@ -184,7 +184,7 @@ impl Program {
                 if let Some(terminal) = self.terminal.as_mut() {
                     if self.model.init.inline_mode() {
                         // Update model state first
-                        self.model.height = new_height;
+                        self.model.config.height = new_height;
 
                         // Use ratatui's resize method with new inline viewport
                         let terminal_size = terminal.size()?;

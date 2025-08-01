@@ -1,4 +1,7 @@
-use crate::app::{ui_components::{MessagePart, Block, Paragraph}, view_model_context::ViewModelContext};
+use crate::app::{
+    ui_components::{Block, MessagePart, Paragraph},
+    view_model_context::ViewModelContext,
+};
 use opencode_sdk::models::{
     GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
 };
@@ -8,10 +11,7 @@ use ratatui::{
     style::{Color, Style, Stylize},
     symbols::scrollbar,
     text::{Line, Span, Text},
-    widgets::{
-        Borders, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget,
-        Widget,
-    },
+    widgets::{Borders, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget},
     Frame,
 };
 

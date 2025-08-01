@@ -162,6 +162,7 @@ impl TextInput {
 
 impl Widget for &TextInput {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        let model = ViewModelContext::current();
         let display_text = self.display_text();
 
         // Split the area to accommodate status line if session ID exists
@@ -191,7 +192,12 @@ impl Widget for &TextInput {
         paragraph.render(input_area, buf);
 
         if let Some(status_area) = status_area {
-            let status_text = " Anthropic Claude Sonnet (20.4k tokens / 9% context)";
+            let status_text = format!(
+                " {} {} (20.4k tokens / 9% context)",
+                model.get().sdk_provider,
+                model.get().sdk_model
+            );
+            let status_len = status_text.len();
             let status_paragraph = Paragraph::new(Line::from(status_text));
 
             // Simple spinner
@@ -204,7 +210,7 @@ impl Widget for &TextInput {
                     .constraints([
                         Constraint::Min(start_width / 2),
                         Constraint::Min(start_width),
-                        Constraint::Length(status_text.len() as u16),
+                        Constraint::Length(status_len as u16),
                     ])
                     .split(status_area);
                 (chunks[0], chunks[1], chunks[2])

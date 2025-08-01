@@ -15,6 +15,7 @@ thiserror = "1.0"
 uuid = { version = "1.0", features = ["v4"] }
 
 opencode-sdk = { path = "./opencode-sdk" }
+throbber-widgets-tui = "=0.8.0"
 
 [dev-dependencies]
 tokio-test = "0.4"

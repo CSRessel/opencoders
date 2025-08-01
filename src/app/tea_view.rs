@@ -38,12 +38,6 @@ use std::io::{self, Write};
 // │ > /quit  │
 // ╰──────────╯
 
-fn calculate_content_width(terminal_width: u16) -> u16 {
-    let min_width = 80;
-    let ninety_percent = (terminal_width * 90) / 100;
-    min_width.max(ninety_percent).min(terminal_width)
-}
-
 pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     // Handle any prints that precede the dynamic TUI interface
 
@@ -149,7 +143,12 @@ fn render_welcome_screen(frame: &mut Frame) {
 fn render_text_entry_screen(frame: &mut Frame) {
     let model = ViewModelContext::current();
     let terminal_width = frame.area().width;
-    let content_width = calculate_content_width(terminal_width);
+    let content_width = match model.init().inline_mode() {
+        // Inline is max width 120 for status box
+        true => terminal_width.max(120),
+        // Full screen is 1 character padding
+        false => terminal_width.saturating_sub(2),
+    };
     let left_padding = (terminal_width.saturating_sub(content_width)) / 2;
     let right_padding = terminal_width.saturating_sub(content_width.saturating_add(left_padding));
 

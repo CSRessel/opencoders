@@ -190,14 +190,38 @@ impl Widget for &TextInput {
 
         paragraph.render(input_area, buf);
 
-        // Render session ID status line if present
-        if let (Some(session_id), Some(status_area)) = (&self.session_id, status_area) {
-            let status_text = format!("Session: {}", session_id);
-            let status_paragraph = Paragraph::new(Line::from(Span::styled(
-                status_text,
-                Style::default().fg(Color::DarkGray),
-            )));
-            status_paragraph.render(status_area, buf);
+        if let Some(status_area) = status_area {
+            let status_text = " Anthropic Claude Sonnet (20.4k tokens / 9% context)";
+            let status_paragraph = Paragraph::new(Line::from(status_text));
+
+            // Simple spinner
+            let loading_paragraph = throbber_widgets_tui::Throbber::default().label("Working...");
+
+            let (status_line_start, status_line_center, status_line_end) = {
+                let start_width = (area.width / 4).min(10);
+                let chunks = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([
+                        Constraint::Min(start_width / 2),
+                        Constraint::Min(start_width),
+                        Constraint::Length(status_text.len() as u16),
+                    ])
+                    .split(status_area);
+                (chunks[0], chunks[1], chunks[2])
+            };
+
+            loading_paragraph.render(status_line_start, buf);
+
+            // Render session ID status line if present
+            if let Some(session_id) = &self.session_id {
+                let session_paragraph = Paragraph::new(Line::from(Span::styled(
+                    session_id,
+                    Style::default().fg(Color::DarkGray),
+                )));
+                session_paragraph.render(status_line_center, buf);
+            }
+
+            status_paragraph.render(status_line_end, buf);
         }
     }
 }

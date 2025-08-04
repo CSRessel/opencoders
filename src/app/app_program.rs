@@ -7,7 +7,7 @@ use crate::{
         tea_update::update,
         tea_view::{view, view_clear, view_manual},
         terminal::TerminalGuard,
-        ui_components::banner::create_welcome_text,
+        ui_components::{banner::create_welcome_text, text_input::TEXT_INPUT_HEIGHT},
     },
     log_error,
     sdk::OpenCodeClient,
@@ -169,7 +169,7 @@ impl Program {
 
     async fn spawn_command(&mut self, cmd: Cmd) -> Result<(), Box<dyn std::error::Error>> {
         match cmd {
-            Cmd::RebootTerminalWithInline(inline_mode) => {
+            Cmd::TerminalRebootWithInline(inline_mode) => {
                 // Deconstruct the old terminal by taking ownership from the Option
                 let old_guard = self.guard.take();
                 let mut old_terminal = self.terminal.take();
@@ -197,7 +197,7 @@ impl Program {
                 self.model.init = new_init;
             }
 
-            Cmd::ResizeInlineViewport(new_height) => {
+            Cmd::TerminalResizeInlineViewport(new_height) => {
                 if let Some(terminal) = self.terminal.as_mut() {
                     if self.model.init.inline_mode() {
                         // Update model state first
@@ -215,9 +215,25 @@ impl Program {
                 }
             }
 
-            Cmd::AutoResizeTerminal => {
+            Cmd::TerminalAutoResize => {
                 if let Some(terminal) = self.terminal.as_mut() {
                     terminal.autoresize()?;
+                    self.needs_render = true;
+                }
+            }
+
+            Cmd::TerminalScrollPastHeight => {
+                if let Some(terminal) = self.terminal.as_mut() {
+                    // Clear the TUI
+                    terminal.draw(|f| view_clear(f))?;
+
+                    // Rows of message output that need to be moved upt,
+                    // before more TUI can be rendered
+                    let scroll_line_count = self.model.config.height - TEXT_INPUT_HEIGHT;
+                    crossterm::execute!(
+                        io::stdout(),
+                        crossterm::terminal::ScrollUp(scroll_line_count)
+                    )?;
                     self.needs_render = true;
                 }
             }
@@ -318,10 +334,11 @@ impl Program {
                         | Cmd::AsyncLoadSessions(_)
                         | Cmd::AsyncLoadSessionMessages(_, _)
                         | Cmd::AsyncCancelTask(_)
-                        | Cmd::RebootTerminalWithInline(_)
-                        | Cmd::ResizeInlineViewport(_)
                         | Cmd::AsyncSessionAbort
-                        | Cmd::AutoResizeTerminal => {
+                        | Cmd::TerminalRebootWithInline(_)
+                        | Cmd::TerminalResizeInlineViewport(_)
+                        | Cmd::TerminalScrollPastHeight
+                        | Cmd::TerminalAutoResize => {
                             Box::pin(self.spawn_command(cmd)).await?;
                         }
                         Cmd::None => {}

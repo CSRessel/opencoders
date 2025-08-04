@@ -67,11 +67,18 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 // TODO we need to crossterm scroll down height many lines
                 // when coming from inline mode first...
                 model.clear_input_state();
-            } else if matches!(model.state, AppState::TextEntry) {
-                // Auto-scroll to bottom when entering text entry mode
-                model.message_log.touch_scroll();
+                if model.init.inline_mode() {
+                    (model, Cmd::TerminalScrollPastHeight)
+                } else {
+                    (model, Cmd::None)
+                }
+            } else {
+                if matches!(model.state, AppState::TextEntry) {
+                    // Auto-scroll to bottom when entering text entry mode
+                    model.message_log.touch_scroll();
+                }
+                (model, Cmd::None)
             }
-            (model, Cmd::None)
         }
 
         // Client initialization messages
@@ -153,7 +160,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         Msg::ChangeInline => {
             let new_inline = !model.init.inline_mode().clone();
-            (model, Cmd::RebootTerminalWithInline(new_inline))
+            (model, Cmd::TerminalRebootWithInline(new_inline))
         }
 
         Msg::Quit => {
@@ -210,12 +217,12 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         Msg::TerminalResize(_width, _height) => {
             // Enhanced to trigger autoresize for seamless viewport updates
-            (model, Cmd::AutoResizeTerminal)
+            (model, Cmd::TerminalAutoResize)
         }
 
         Msg::ChangeInlineHeight(new_height) => {
             if model.init.inline_mode() {
-                (model, Cmd::ResizeInlineViewport(new_height))
+                (model, Cmd::TerminalResizeInlineViewport(new_height))
             } else {
                 (model, Cmd::None) // No-op if not in inline mode
             }

@@ -63,7 +63,7 @@ fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>
 
     for message in messages {
         // TODO: handle multiple scrolls for multi-line wrapping
-        crossterm::execute!(io::stdout(), crossterm::terminal::ScrollUp(1),)?;
+        crossterm::execute!(io::stdout(), crossterm::terminal::ScrollUp(1))?;
         // Go to start of line
         crossterm::execute!(io::stdout(), crossterm::cursor::MoveToColumn(0))?;
         print!("> {}", message);

@@ -69,10 +69,13 @@ pub enum Msg {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {
-    RebootTerminalWithInline(bool),
-    ResizeInlineViewport(u16), // new height for inline mode
-    AutoResizeTerminal,        // trigger autoresize for any viewport changes
     None,
+
+    // Terminal or crossterm related side-effects
+    TerminalAutoResize,             // trigger autoresize for any viewport changes
+    TerminalRebootWithInline(bool), // reinitialize for new viewport
+    TerminalResizeInlineViewport(u16), // new height for inline mode
+    TerminalScrollPastHeight,       // scroll past any manual stdio output
 
     // Async commands that don't block
     AsyncSpawnClientDiscovery,

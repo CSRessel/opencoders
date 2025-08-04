@@ -1,3 +1,21 @@
+//! Dual stdout/inline TUI approach:
+//!
+//! 1. When starting inline, bottom align the TUI:
+//!    - If not at bottom of terminal window, move to max row - height - welcome text
+//!    - Print welcome text
+//!    - scroll down welcome height rows
+//!    - Launch inline TUI
+//! 2. Render cycle:
+//!    - Clear TUI viewport if manual output needed
+//!    - Disable raw mode, move cursor UP outside TUI area
+//!    - Print messages to stdout (manually scroll terminal history per line)
+//!    - Move cursor back DOWN to TUI area, re-enable raw mode
+//!    - Render TUI content in fixed viewport at bottom
+//! 3. Result: Manual content in scrollback history, TUI fixed at terminal bottom
+//!
+//! The fullscreen viewport has none of these intricacies, because all message
+//! history scrolls within the message log.
+
 use crate::{
     app::{
         event_async_task_manager::AsyncTaskManager,
@@ -6,8 +24,11 @@ use crate::{
         tea_model::{AppState, Model, ModelInit},
         tea_update::update,
         tea_view::{view, view_clear, view_manual},
-        terminal::TerminalGuard,
-        ui_components::{banner::create_welcome_text, text_input::TEXT_INPUT_HEIGHT},
+        terminal::{align_crossterm_output_to_bottom, TerminalGuard},
+        ui_components::{
+            banner::{create_welcome_text, welcome_text_height},
+            text_input::TEXT_INPUT_HEIGHT,
+        },
     },
     log_error,
     sdk::OpenCodeClient,
@@ -30,20 +51,11 @@ impl Program {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let model = Model::new();
 
+        align_crossterm_output_to_bottom(&model)?;
+
         // Print welcome message to stdout before entering TUI
         let welcome_text = create_welcome_text();
-        print!("{}\n\n\n", welcome_text);
-
-        let (_window_cols, window_rows) = crossterm::terminal::size()?;
-        let (_start_col, start_row) = crossterm::cursor::position()?;
-        let expected_start_row = window_rows.saturating_sub(model.config.height.saturating_add(1));
-        if start_row < expected_start_row {
-            crossterm::execute!(
-                io::stdout(),
-                crossterm::cursor::MoveTo(0, expected_start_row)
-            )?;
-        }
-
+        println!("{}", welcome_text);
         let (guard, terminal) = TerminalGuard::new(&model.init, model.config.height)?;
 
         // Create async task manager
@@ -223,11 +235,14 @@ impl Program {
             }
 
             Cmd::TerminalScrollPastHeight => {
+                // Inline mode text input will have some stdout messages in
+                // viewport, so switching screens we have to push that up
+
                 if let Some(terminal) = self.terminal.as_mut() {
                     // Clear the TUI
                     terminal.draw(|f| view_clear(f))?;
 
-                    // Rows of message output that need to be moved upt,
+                    // Rows of message output that need to be moved up,
                     // before more TUI can be rendered
                     let scroll_line_count = self.model.config.height - TEXT_INPUT_HEIGHT;
                     crossterm::execute!(

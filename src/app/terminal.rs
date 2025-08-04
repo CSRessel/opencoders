@@ -1,4 +1,4 @@
-use crate::app::tea_model::ModelInit;
+use crate::app::tea_model::{Model, ModelInit};
 use crate::{log_debug, log_info, tui_error};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -10,6 +10,19 @@ use std::io::{self, Write};
 
 pub struct TerminalGuard {
     init: ModelInit,
+}
+
+pub fn align_crossterm_output_to_bottom(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
+    let (_window_cols, window_rows) = crossterm::terminal::size()?;
+    let (_start_col, start_row) = crossterm::cursor::position()?;
+    let expected_start_row = window_rows.saturating_sub(model.config.height.saturating_add(1));
+    if start_row < expected_start_row {
+        crossterm::execute!(
+            io::stdout(),
+            crossterm::cursor::MoveTo(0, expected_start_row)
+        )?;
+    }
+    Ok(())
 }
 
 impl TerminalGuard {

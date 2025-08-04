@@ -1,6 +1,8 @@
 use crate::app::{
     tea_model::{AppState, ConnectionStatus, Model},
-    ui_components::{banner::welcome_text_height, create_welcome_text},
+    ui_components::{
+        banner::welcome_text_height, create_welcome_text, text_input::TEXT_INPUT_HEIGHT,
+    },
     view_model_context::ViewModelContext,
 };
 use core::error;
@@ -162,28 +164,32 @@ fn render_text_entry_screen(frame: &mut Frame) {
         ])
         .split(frame.area());
 
-    let mut content_area = horizontal_chunks[1];
+    let content_area = horizontal_chunks[1];
 
-    let input_height = if model.session().is_some() { 4 } else { 3 };
+    let input_height = TEXT_INPUT_HEIGHT;
+    let spacer_height = match model.init().inline_mode() {
+        true => &model.get().config.height - input_height,
+        false => 0,
+    };
+    // Create vertical layout for (optional) message log and (requisite) input box
+    let vertical_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),                // (optional) Message log
+            Constraint::Length(spacer_height), // (optional) Buffer space
+            Constraint::Length(input_height),  //            Input box
+        ])
+        .split(content_area);
 
     if model.init().inline_mode() {
         // Render only the text input for inline mode
-        content_area.height = input_height;
-        frame.render_widget(&model.get().text_input, content_area);
+        // content_area.height = input_height;
+        frame.render_widget(&model.get().text_input, vertical_chunks[2]);
     } else {
-        // Create vertical layout for message log and input box
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(0),               // Message log
-                Constraint::Length(input_height), // Input box
-            ])
-            .split(content_area);
-
         // Note: We can't send messages from the view layer in TEA architecture
         // Scroll validation will happen during scroll events and when content changes
         frame.render_widget(&model.get().message_log, vertical_chunks[0]);
-        frame.render_widget(&model.get().text_input, vertical_chunks[1]);
+        frame.render_widget(&model.get().text_input, vertical_chunks[2]);
     }
 }
 

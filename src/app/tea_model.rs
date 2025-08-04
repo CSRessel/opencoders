@@ -116,7 +116,6 @@ pub enum ConnectionStatus {
 }
 
 const DEFAULT_HEIGHT: u16 = 12;
-const DEFAULT_UI_IS_ROUNDED: bool = true;
 
 impl Model {
     pub fn new() -> Self {
@@ -129,7 +128,7 @@ impl Model {
         Model {
             init: ModelInit::new(true),
             config: UserConfig {
-                ui_block_is_rounded: DEFAULT_UI_IS_ROUNDED,
+                ui_block_is_rounded: true,
                 ui_block_is_bordered: true,
                 ui_block_padding: 0,
                 ui_status_is_bottom: true,

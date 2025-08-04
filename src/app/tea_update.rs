@@ -64,6 +64,8 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
             model.state = new_state.clone();
             if matches!(model.state, AppState::Welcome) {
+                // TODO we need to crossterm scroll down height many lines
+                // when coming from inline mode first...
                 model.clear_input_state();
             } else if matches!(model.state, AppState::TextEntry) {
                 // Auto-scroll to bottom when entering text entry mode

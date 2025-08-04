@@ -26,6 +26,13 @@ pub enum TextInputEvent {
     Cancel,
 }
 
+pub const TEXT_INPUT_HEIGHT: u16 = 4;
+// E.g.:
+// ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ >                                                                                           │
+// ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
+// ⠧ Working                                    Anthropic Claude Opus (21.4k tokens / 9% context)
+
 impl TextInput {
     pub fn new() -> Self {
         Self {
@@ -166,7 +173,7 @@ impl Widget for &TextInput {
         let display_text = self.display_text();
 
         // Split the area to accommodate status line if session ID exists
-        let (input_area, status_area) = if self.session_id.is_some() {
+        let (input_area, status_area) = {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
@@ -175,8 +182,6 @@ impl Widget for &TextInput {
                 ])
                 .split(area);
             (chunks[0], Some(chunks[1]))
-        } else {
-            (area, None)
         };
 
         let block = Block::default()

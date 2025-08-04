@@ -120,7 +120,8 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppState::SelectSession, KeyCode::Up, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
                 }
-                (AppState::SelectSession, KeyCode::Down, _, _) => {
+                (AppState::SelectSession, KeyCode::Down, _, _)
+                | (AppState::SelectSession, KeyCode::Tab, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
                 }
                 (AppState::SelectSession, KeyCode::Char('k'), _, _) => {

@@ -13,7 +13,7 @@ use crate::{
     sdk::OpenCodeClient,
 };
 use crossterm::event::{self, Event};
-use ratatui::{backend::CrosstermBackend, style::Color, text::Text, Terminal};
+use ratatui::{backend::CrosstermBackend, crossterm, style::Color, text::Text, Terminal};
 use std::io::{self, Write};
 use std::time::Duration;
 use tokio::time::{interval, Interval};
@@ -33,6 +33,16 @@ impl Program {
         // Print welcome message to stdout before entering TUI
         let welcome_text = create_welcome_text();
         print!("{}\n\n\n", welcome_text);
+
+        let (_window_cols, window_rows) = crossterm::terminal::size()?;
+        let (_start_col, start_row) = crossterm::cursor::position()?;
+        let expected_start_row = window_rows.saturating_sub(model.config.height.saturating_add(1));
+        if start_row < expected_start_row {
+            crossterm::execute!(
+                io::stdout(),
+                crossterm::cursor::MoveTo(0, expected_start_row)
+            )?;
+        }
 
         let (guard, terminal) = TerminalGuard::new(&model.init, model.config.height)?;
 

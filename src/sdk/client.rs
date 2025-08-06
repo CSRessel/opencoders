@@ -25,6 +25,10 @@ pub struct OpenCodeClient {
     #[allow(dead_code)]
     event_stream: Option<Arc<RwLock<EventStream>>>,
 }
+const INPUT_PREFIX_MESSAGE: &str = "msg_";
+const INPUT_PREFIX_SESSION: &str = "ses_";
+const INPUT_PREFIX_USER: &str = "usr_";
+const INPUT_PREFIX_PART: &str = "prt_";
 
 impl OpenCodeClient {
     /// Create a new OpenCode client
@@ -71,16 +75,20 @@ impl OpenCodeClient {
         &self.config.base_path
     }
 
+    /// Get the configuration for this client
+    pub fn configuration(&self) -> &Configuration {
+        &self.config
+    }
+
     /// Test connection to the server
     pub async fn test_connection(&self) -> Result<()> {
-        log_debug!("Testing connection to: {}", self.base_url());
         match self.get_app_info().await {
             Ok(_) => {
-                log_info!("Connection test successful");
+                log_info!("Connected to OpenCode server at {}", self.base_url());
                 Ok(())
             }
             Err(e) => {
-                log_error!("Connection test failed: {}", e);
+                log_error!("Failed to connect to server at {}: {}", self.base_url(), e);
                 Err(e)
             }
         }
@@ -98,17 +106,9 @@ impl OpenCodeClient {
 
     /// Get application information
     pub async fn get_app_info(&self) -> Result<App> {
-        log_debug!("Fetching app info");
-        match default_api::get_app(&self.config).await {
-            Ok(app) => {
-                log_debug!("App info retrieved successfully");
-                Ok(app)
-            }
-            Err(e) => {
-                log_error!("Failed to get app info: {}", e);
-                Err(OpenCodeError::from(e))
-            }
-        }
+        default_api::get_app(&self.config)
+            .await
+            .map_err(OpenCodeError::from)
     }
 
     /// Initialize the application
@@ -250,52 +250,71 @@ impl OpenCodeClient {
         &self,
         session_id: &str,
     ) -> Result<Vec<GetSessionByIdMessage200ResponseInner>> {
-        log_debug!("Fetching messages for session: {}", session_id);
+        let params = default_api::GetSessionByIdMessageParams {
+            id: session_id.to_string(),
+        };
 
-        // Make the raw HTTP request to get the response before deserialization
-        let uri_str = format!("{}/session/{}/message", self.config.base_path, session_id);
-        log_debug!("Making request to: {}", uri_str);
-
-        let mut req_builder = self.config.client.request(reqwest::Method::GET, &uri_str);
-        if let Some(ref user_agent) = self.config.user_agent {
-            req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
-        }
-
-        let req = req_builder.build().map_err(OpenCodeError::Http)?;
-        let resp = self
-            .config
-            .client
-            .execute(req)
-            .await
-            .map_err(OpenCodeError::Http)?;
-
-        let status = resp.status();
-        log_debug!("Response status: {}", status);
-
-        let content = resp.text().await.map_err(OpenCodeError::Http)?;
-        log_debug!("Raw API response content: {}", content);
-
-        // TODO pretty-print the raw JSON response to debugmessage.json!
-
-        if !status.is_client_error() && !status.is_server_error() {
-            // Try to deserialize the response
-            match serde_json::from_str::<Vec<GetSessionByIdMessage200ResponseInner>>(&content) {
-                Ok(messages) => {
-                    log_debug!("Successfully deserialized {} messages", messages.len());
-                    Ok(messages)
-                }
-                Err(e) => {
-                    log_debug!("Deserialization error: {}", e);
-                    log_debug!("Failed content was: {}", content);
-                    Err(OpenCodeError::Serialization(e))
-                }
+        match default_api::get_session_by_id_message(&self.config, params).await {
+            Ok(messages) => {
+                log_info!(
+                    "Retrieved {} messages for session {}",
+                    messages.len(),
+                    session_id
+                );
+                Ok(messages)
             }
-        } else {
-            log_debug!("HTTP error response: {}", content);
-            Err(OpenCodeError::api_error(
-                status.as_u16(),
-                format!("HTTP {} - {}", status, content),
-            ))
+            Err(e) => {
+                log_error!("Failed to get messages for session {}: {}", session_id, e);
+                Err(OpenCodeError::from(e))
+            }
+        }
+    }
+
+    /// Send a user message to a session
+    pub async fn send_user_message(
+        &self,
+        session_id: &str,
+        text: &str,
+        provider_id: &str,
+        model_id: &str,
+        mode: Option<&str>,
+    ) -> Result<AssistantMessage> {
+        log_info!("Sending message to session {}", session_id);
+
+        let text_part = TextPartInput {
+            id: Some(uuid::Uuid::new_v4().to_string()),
+            r#type: "text".to_string(),
+            text: text.to_string(),
+            synthetic: None,
+            time: None,
+        };
+
+        let part = PostSessionByIdMessageRequestPartsInner::Text(Box::new(text_part));
+
+        let random_message_id = uuid::Uuid::new_v4().to_string();
+        let request = PostSessionByIdMessageRequest {
+            message_id: Some(INPUT_PREFIX_MESSAGE.to_string() + &random_message_id),
+            provider_id: provider_id.to_string(),
+            model_id: model_id.to_string(),
+            mode: mode.map(|m| m.to_string()),
+            tools: None,
+            parts: vec![part],
+        };
+
+        let params = default_api::PostSessionByIdMessageParams {
+            id: session_id.to_string(),
+            post_session_by_id_message_request: Some(request),
+        };
+
+        match default_api::post_session_by_id_message(&self.config, params).await {
+            Ok(message) => {
+                log_info!("Message sent successfully");
+                Ok(message)
+            }
+            Err(e) => {
+                log_error!("Failed to send message: {}", e);
+                Err(OpenCodeError::from(e))
+            }
         }
     }
 

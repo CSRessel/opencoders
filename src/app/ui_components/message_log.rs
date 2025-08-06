@@ -156,36 +156,6 @@ impl MessageLog {
         self.refresh_scrollbar_states();
     }
 
-    pub fn create_and_push_user_message(&mut self, submitted_text: &String) {
-        let user_message = UserMessage {
-            id: "".to_string(),
-            session_id: "".to_string(),
-            role: "user".to_string(),
-            time: Default::default(),
-        };
-
-        let text_part = TextPart {
-            id: "".to_string(),
-            session_id: "".to_string(),
-            message_id: "".to_string(),
-            r#type: "text".to_string(),
-            text: submitted_text.clone(),
-            synthetic: None,
-            time: None,
-        };
-
-        let message_container = GetSessionByIdMessage200ResponseInner {
-            info: Box::new(Message::User(Box::new(user_message))),
-            parts: vec![Part::Text(Box::new(text_part))],
-        };
-
-        self.messages.push(message_container);
-        self.mark_content_dirty();
-
-        // Auto-scroll to bottom when new message is added
-        self.touch_scroll();
-    }
-
     pub fn set_messages(&mut self, messages: Vec<GetSessionByIdMessage200ResponseInner>) {
         self.messages = messages;
         self.mark_content_dirty();

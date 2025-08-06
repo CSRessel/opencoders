@@ -31,7 +31,7 @@ use crate::{
         },
     },
     log_error,
-    sdk::OpenCodeClient,
+    sdk::{extensions::events::EventStream, OpenCodeClient},
 };
 use crossterm::event::{self, Event};
 use ratatui::{backend::CrosstermBackend, crossterm, style::Color, text::Text, Terminal};
@@ -318,12 +318,43 @@ impl Program {
                 });
             }
 
+            Cmd::AsyncLoadModes(client) => {
+                // Spawn async modes loading task
+                self.task_manager.spawn_task(async move {
+                    match client.get_modes().await {
+                        Ok(modes) => Msg::ModesLoaded(modes),
+                        Err(error) => Msg::ModesLoadFailed(error),
+                    }
+                });
+            }
+
             Cmd::AsyncLoadSessionMessages(client, session_id) => {
                 // Spawn async session messages loading task
                 self.task_manager.spawn_task(async move {
                     match client.get_messages(&session_id).await {
                         Ok(messages) => Msg::SessionMessagesLoaded(messages),
                         Err(error) => Msg::SessionMessagesLoadFailed(error),
+                    }
+                });
+            }
+
+            Cmd::AsyncSendUserMessage(client, session_id, text, provider_id, model_id, mode) => {
+                // Spawn async user message sending task
+                self.task_manager.spawn_task(async move {
+                    // Convert Mode object to string for API call
+                    let mode_for_api = mode.as_ref().map(|m| m.name.as_str());
+                    match client
+                        .send_user_message(
+                            &session_id,
+                            &text,
+                            &provider_id,
+                            &model_id,
+                            mode_for_api,
+                        )
+                        .await
+                    {
+                        Ok(_) => Msg::UserMessageSent(text),
+                        Err(error) => Msg::UserMessageSendFailed(error),
                     }
                 });
             }
@@ -338,6 +369,36 @@ impl Program {
                 self.task_manager.cancel_task(task_id);
             }
 
+            Cmd::AsyncStartEventStream(client) => {
+                // Spawn async event stream initialization task
+                self.task_manager.spawn_task(async move {
+                    match EventStream::new(client.configuration().clone()).await {
+                        Ok(event_stream) => {
+                            let handle = event_stream.handle();
+                            Msg::EventStreamConnected(handle)
+                        }
+                        Err(error) => Msg::EventStreamError(format!(
+                            "Failed to start event stream: {}",
+                            error
+                        )),
+                    }
+                });
+            }
+
+            Cmd::AsyncStopEventStream => {
+                // Event stream will be dropped when the handle is removed from the model
+                // No explicit action needed as the EventStream handles cleanup internally
+            }
+
+            Cmd::AsyncReconnectEventStream => {
+                // For now, we'll just try to reconnect after a delay
+                // In a real implementation, you might want to use the existing client
+                self.task_manager.spawn_task(async move {
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    Msg::EventStreamError("Reconnection not implemented yet".to_string())
+                });
+            }
+
             Cmd::Batch(commands) => {
                 // Handle batch commands by processing them in the main loop
                 // rather than recursively to avoid infinite future size
@@ -347,9 +408,14 @@ impl Program {
                         | Cmd::AsyncSpawnSessionInit(_)
                         | Cmd::AsyncCreateSessionWithMessage(_, _)
                         | Cmd::AsyncLoadSessions(_)
+                        | Cmd::AsyncLoadModes(_)
                         | Cmd::AsyncLoadSessionMessages(_, _)
+                        | Cmd::AsyncSendUserMessage(_, _, _, _, _, _)
                         | Cmd::AsyncCancelTask(_)
                         | Cmd::AsyncSessionAbort
+                        | Cmd::AsyncStartEventStream(_)
+                        | Cmd::AsyncStopEventStream
+                        | Cmd::AsyncReconnectEventStream
                         | Cmd::TerminalRebootWithInline(_)
                         | Cmd::TerminalResizeInlineViewport(_)
                         | Cmd::TerminalScrollPastHeight

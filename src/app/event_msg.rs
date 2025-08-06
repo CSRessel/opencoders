@@ -4,9 +4,9 @@ use crate::{
         tea_model::{AppState, RepeatShortcutKey},
         ui_components::PopoverSelectorEvent,
     },
-    sdk::{OpenCodeClient, OpenCodeError},
+    sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
-use opencode_sdk::models::{GetSessionByIdMessage200ResponseInner, Session};
+use opencode_sdk::models::{Event, GetSessionByIdMessage200ResponseInner, Mode, Session};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Msg {
@@ -38,9 +38,25 @@ pub enum Msg {
     SessionsLoaded(Vec<Session>),
     SessionsLoadFailed(OpenCodeError),
 
+    // Modes messages
+    ModesLoaded(Vec<Mode>),
+    ModesLoadFailed(OpenCodeError),
+    CycleModeState,
+
     // Session messages
     SessionMessagesLoaded(Vec<GetSessionByIdMessage200ResponseInner>),
     SessionMessagesLoadFailed(OpenCodeError),
+    
+    // User message sending
+    UserMessageSent(String), // The text that was sent
+    UserMessageSendFailed(OpenCodeError),
+
+    // Event stream messages
+    EventReceived(Event),
+    EventStreamConnected(EventStreamHandle),
+    EventStreamDisconnected,
+    EventStreamError(String),
+    EventStreamReconnecting(u32), // attempt number
 
     // TODO
     // Session interactions
@@ -82,9 +98,16 @@ pub enum Cmd {
     AsyncSpawnSessionInit(OpenCodeClient),
     AsyncCreateSessionWithMessage(OpenCodeClient, String),
     AsyncLoadSessions(OpenCodeClient),
+    AsyncLoadModes(OpenCodeClient),
     AsyncLoadSessionMessages(OpenCodeClient, String),
+    AsyncSendUserMessage(OpenCodeClient, String, String, String, String, Option<Mode>), // client, session_id, text, provider_id, model_id, mode
     AsyncCancelTask(TaskId),
     AsyncSessionAbort,
+
+    // Event stream commands
+    AsyncStartEventStream(OpenCodeClient),
+    AsyncStopEventStream,
+    AsyncReconnectEventStream,
 
     // Batched commands for efficiency
     Batch(Vec<Cmd>),
@@ -94,4 +117,5 @@ pub enum Cmd {
 pub enum Sub {
     KeyboardInput,
     TerminalResize,
+    EventStream,
 }

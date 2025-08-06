@@ -9,6 +9,7 @@ pub mod discovery;
 pub mod error;
 pub mod extensions;
 pub mod session_manager;
+// pub mod streams;
 
 // High-level exports for easy use
 pub use client::OpenCodeClient;
@@ -18,8 +19,8 @@ pub use session_manager::SessionManager;
 
 // Re-export commonly used generated types for convenience
 pub use opencode_sdk::models::{
-    App, AssistantMessage, Config, Event, FilePart, Match, Message, Mode, Provider, Session, TextPart,
-    ToolPart, UserMessage,
+    App, AssistantMessage, Config, Event, FilePart, Match, Message, Mode, Provider, Session,
+    TextPart, ToolPart, UserMessage,
 };
 
 // Convenience type aliases

@@ -1,8 +1,11 @@
 use crate::{
-    app::ui_components::{MessageLog, PopoverSelector, PopoverSelectorEvent, TextInput},
-    sdk::{OpenCodeClient, OpenCodeError},
+    app::{
+        message_state::MessageState,
+        ui_components::{MessageLog, PopoverSelector, PopoverSelectorEvent, TextInput},
+    },
+    sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
-use opencode_sdk::models::Session;
+use opencode_sdk::models::{Mode, Session};
 use std::time::SystemTime;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,6 +37,15 @@ pub enum SessionState {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum EventStreamState {
+    Disconnected,
+    Connecting,
+    Connected(EventStreamHandle),
+    Reconnecting { attempt: u32, last_error: String },
+    Failed(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Model {
     pub init: ModelInit,
     pub config: UserConfig,
@@ -53,8 +65,13 @@ pub struct Model {
     pub client: Option<OpenCodeClient>,
     pub session_state: SessionState,
     pub sessions: Vec<Session>,
+    pub modes: Vec<Mode>,
+    pub mode_state: Option<usize>,
     pub connection_status: ConnectionStatus,
     pub pending_first_message: Option<String>,
+    // Message state and event streaming
+    pub message_state: MessageState,
+    pub event_stream_state: EventStreamState,
     // Unified repeat shortcut timeout system
     pub repeat_shortcut_timeout: Option<RepeatShortcutTimeout>,
 }
@@ -149,25 +166,24 @@ impl Model {
             client: None,
             session_state: SessionState::None,
             sessions: Vec::new(),
+            modes: Vec::new(),
+            mode_state: None,
             connection_status: ConnectionStatus::Connecting,
             pending_first_message: None,
+            message_state: MessageState::new(),
+            event_stream_state: EventStreamState::Disconnected,
             repeat_shortcut_timeout: None,
         }
     }
 
     // Message outputs
     pub fn needs_manual_output(&self) -> bool {
-        return self.init.inline_mode() & (self.messages_needing_stdout_print().len() > 0);
+        return self.init.inline_mode() & self.message_state.has_messages_needing_stdout_print();
     }
 
-    pub fn messages_needing_stdout_print(&self) -> &[String] {
-        // All messages that haven't been printed to stdout yet
-        let printed_count = self.printed_to_stdout_count;
-        if printed_count < self.input_history.len() {
-            &self.input_history[printed_count..]
-        } else {
-            &[]
-        }
+    pub fn messages_needing_stdout_print(&self) -> Vec<String> {
+        // All messages that haven't been printed to stdout yet from message state
+        self.message_state.get_messages_needing_stdout_print()
     }
 
     // State transition helpers
@@ -187,6 +203,8 @@ impl Model {
     }
 
     pub fn mark_messages_printed_to_stdout(&mut self, count: usize) {
+        self.message_state.mark_messages_printed_to_stdout(count);
+        // Keep the old counter for backward compatibility with input_history
         self.printed_to_stdout_count += count;
     }
 
@@ -332,5 +350,23 @@ impl Model {
             }
         }
         false
+    }
+
+    // Mode management
+    pub fn set_mode_by_index(&mut self, index: Option<usize>) {
+        self.mode_state = index;
+    }
+
+    pub fn get_current_mode(&self) -> Option<&Mode> {
+        self.mode_state.and_then(|index| self.modes.get(index))
+    }
+
+    pub fn get_current_mode_name(&self) -> Option<&str> {
+        self.get_current_mode().map(|mode| mode.name.as_str())
+    }
+
+    pub fn set_modes(&mut self, modes: Vec<Mode>) {
+        self.modes = modes;
+        self.mode_state = Some(0);
     }
 }

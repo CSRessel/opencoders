@@ -83,6 +83,15 @@ pub struct EventStreamHandle {
     receiver: broadcast::Receiver<Event>,
 }
 
+impl PartialEq for EventStreamHandle {
+    fn eq(&self, _other: &Self) -> bool {
+        // Since broadcast::Receiver doesn't implement PartialEq,
+        // we'll consider all EventStreamHandles equal for now
+        // In a real implementation, you might want to compare some unique identifier
+        true
+    }
+}
+
 impl EventStreamHandle {
     /// Receive the next event (blocking)
     pub async fn next_event(&mut self) -> Option<Event> {

@@ -1,15 +1,12 @@
-use crate::{
-    app::{
-        event_msg::{Msg, Sub},
-        tea_model::{AppState, ConnectionStatus, Model, RepeatShortcutKey},
-        ui_components::PopoverSelectorEvent,
-    },
-    log_debug,
+use crate::app::{
+    event_msg::{Msg, Sub},
+    tea_model::{AppState, ConnectionStatus, EventStreamState, Model, RepeatShortcutKey},
+    ui_components::PopoverSelectorEvent,
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
 pub fn subscriptions(model: &Model) -> Vec<Sub> {
-    match model.state {
+    let mut subs = match model.state {
         AppState::Welcome
         | AppState::TextEntry
         | AppState::ConnectingToServer
@@ -17,7 +14,16 @@ pub fn subscriptions(model: &Model) -> Vec<Sub> {
         | AppState::SelectSession
         | AppState::ConnectionError(_) => vec![Sub::KeyboardInput, Sub::TerminalResize],
         AppState::Quit => vec![],
+    };
+
+    // Add event stream subscription when connected and in active states
+    if matches!(model.state, AppState::TextEntry | AppState::Welcome)
+        && matches!(model.event_stream_state, EventStreamState::Connected(_))
+    {
+        subs.push(Sub::EventStream);
     }
+
+    subs
 }
 
 pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::error::Error>> {
@@ -26,6 +32,17 @@ pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::err
     if subs.contains(&Sub::KeyboardInput) || subs.contains(&Sub::TerminalResize) {
         if event::poll(std::time::Duration::from_millis(8))? {
             return Ok(crossterm_to_msg(event::read()?, &model));
+        }
+    }
+
+    // Poll event stream for new events
+    if subs.contains(&Sub::EventStream) {
+        if let EventStreamState::Connected(ref event_stream) = model.event_stream_state {
+            // Clone the event stream handle to avoid borrowing issues
+            let mut event_stream_clone = event_stream.clone();
+            if let Some(event) = event_stream_clone.try_next_event() {
+                return Ok(Some(Msg::EventReceived(event)));
+            }
         }
     }
 
@@ -103,6 +120,7 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppState::TextEntry, KeyCode::Char(c), _, _) => Some(Msg::KeyPressed(c)),
                 (AppState::TextEntry, KeyCode::Backspace, _, _) => Some(Msg::Backspace),
                 (AppState::TextEntry, KeyCode::Enter, _, _) => Some(Msg::SubmitInput),
+                (AppState::TextEntry, KeyCode::Tab, _, _) => Some(Msg::CycleModeState),
 
                 // Message log scrolling
                 (AppState::TextEntry, KeyCode::PageUp, _, _) => Some(Msg::ScrollMessageLog(-5)),

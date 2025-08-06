@@ -15,25 +15,25 @@ pub fn create_welcome_text() -> Text<'static> {
     #[rustfmt::skip]
     let letters = vec![
         vec!["▄▀▀█",
-             "█░░█",
+             "█  █",
              "▀▀▀ "], // o
         vec!["▄▀▀█",
-             "█░░█",
+             "█  █",
              "█▀▀ "], // p
         vec!["▄▀▀▀",
              "█▀▀▀",
              "▀▀▀▀"], // e
         vec!["█▀▀▄",
-             "█░░█",
+             "█  █",
              "▀  ▀"], // n
         vec!["▄▀▀▀",
-             "█░░░",
+             "█   ",
              "▀▀▀▀"], // c
         vec!["▄▀▀█",
-             "█░░█",
+             "█  █",
              "▀▀▀ "], // o
         vec!["█▀▀▄",
-             "█░░█",
+             "█  █",
              "▀▀▀ "], // d
         vec!["▄▀▀▀",
              "█▀▀▀",
@@ -55,8 +55,8 @@ pub fn create_welcome_text() -> Text<'static> {
         Color::White,
         Color::White,
         Color::White,
-        Color::Gray,
-        Color::Gray,
+        Color::Red,
+        Color::Red,
     ];
 
     let mut lines = vec![Line::from("")];

@@ -3,6 +3,7 @@ mod event_async_task_manager;
 mod event_msg;
 mod event_sync_subscriptions;
 pub mod logger;
+mod message_state;
 mod tea_model;
 mod tea_update;
 mod tea_view;

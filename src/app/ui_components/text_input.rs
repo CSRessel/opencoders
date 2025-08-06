@@ -10,6 +10,9 @@ use ratatui::{
     widgets::{Borders, Widget},
 };
 
+const MODE_COLORS: [Color; 3] = [Color::Black, Color::Magenta, Color::Green];
+const MODE_DEFAULT_COLOR: Color = Color::Gray;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TextInput {
     content: String,
@@ -32,7 +35,7 @@ pub const TEXT_INPUT_HEIGHT: u16 = 4;
 // ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ >                                                                                           │
 // ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
-// ⠧ Working                                    Anthropic Claude Opus (21.4k tokens / 9% context)
+// ⠧ Working                             Anthropic Claude Opus (21.4k tokens / 9% context) > build
 
 impl TextInput {
     pub fn new() -> Self {
@@ -198,10 +201,33 @@ impl Widget for &TextInput {
         paragraph.render(input_area, buf);
 
         if let Some(status_area) = status_area {
+            // Get current mode info for display
+            let (mode_text, mode_color) = if let Some(mode_index) = model.get().mode_state {
+                if let Some(mode) = model.get().modes.get(mode_index) {
+                    let bg_color = MODE_COLORS
+                        .get(mode_index)
+                        .copied()
+                        .unwrap_or(MODE_DEFAULT_COLOR);
+                    (mode.name.to_uppercase(), bg_color)
+                } else {
+                    ("UNKNOWN".to_string(), MODE_DEFAULT_COLOR)
+                }
+            } else {
+                ("NO MODE".to_string(), MODE_DEFAULT_COLOR)
+            };
+            let mut mode_len = mode_text.len();
+            let mode_padding = " ".repeat(8 - mode_len);
+            mode_len += mode_padding.len();
+            // Render mode with background color
+            let mode_paragraph = Paragraph::new(Line::from(Span::styled(
+                format!(" {}{} ", mode_text, mode_padding),
+                Style::default().bg(mode_color).fg(Color::White),
+            )));
+
             let status_text = format!(
-                " {} {} (20.4k tokens / 9% context)",
+                " {} {} (20.4k tokens / 9% context) >",
                 model.get().sdk_provider,
-                model.get().sdk_model
+                model.get().sdk_model,
             );
             let status_len = status_text.len();
             let status_paragraph = Paragraph::new(Line::from(status_text));
@@ -224,7 +250,7 @@ impl Widget for &TextInput {
             };
             let loading_paragraph = throbber_widgets_tui::Throbber::default().label(loading_label);
 
-            let (status_line_start, status_line_center, status_line_end) = {
+            let (status_line_start, status_line_center, status_line_provider, status_line_mode) = {
                 let start_width = (area.width / 4).min(10);
                 let chunks = Layout::default()
                     .direction(Direction::Horizontal)
@@ -232,9 +258,10 @@ impl Widget for &TextInput {
                         Constraint::Min(start_width / 2),
                         Constraint::Min(start_width),
                         Constraint::Length(status_len as u16),
+                        Constraint::Length(mode_len as u16),
                     ])
                     .split(status_area);
-                (chunks[0], chunks[1], chunks[2])
+                (chunks[0], chunks[1], chunks[2], chunks[3])
             };
 
             loading_paragraph.render(status_line_start, buf);
@@ -248,7 +275,9 @@ impl Widget for &TextInput {
                 session_paragraph.render(status_line_center, buf);
             }
 
-            status_paragraph.render(status_line_end, buf);
+            status_paragraph.render(status_line_provider, buf);
+
+            mode_paragraph.render(status_line_mode, buf);
         }
     }
 }

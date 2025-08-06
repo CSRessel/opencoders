@@ -58,15 +58,45 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn calculate_wrapped_lines(text: &str, width: u16) -> usize {
+    if width == 0 {
+        return 1;
+    }
+
+    text.lines()
+        .map(|line| {
+            if line.is_empty() {
+                1
+            } else {
+                ((line.len() as u16 + width - 1) / width).max(1) as usize // Ceiling division, minimum 1
+            }
+        })
+        .sum()
+}
+
 fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     let messages = model.messages_needing_stdout_print();
+    let (terminal_width, _) = crossterm::terminal::size()?;
+    let effective_width = terminal_width.saturating_sub(2); // Account for "> " prefix
 
-    for message in messages {
-        // TODO: handle multiple scrolls for multi-line wrapping
-        crossterm::execute!(io::stdout(), crossterm::terminal::ScrollUp(1))?;
+    for message in &messages {
+        // Count explicit newlines
+        let newline_count = message.matches('\n').count();
+
+        // Calculate wrapped lines based on terminal width
+        let wrapped_lines = calculate_wrapped_lines(message, effective_width);
+
+        // Total lines = max of explicit newlines vs wrapped lines
+        let total_lines = wrapped_lines.max(newline_count + 1);
+
         // Go to start of line
         crossterm::execute!(io::stdout(), crossterm::cursor::MoveToColumn(0))?;
-        print!("> {}", message);
+        print!("> {}\n", message);
+        // Scroll up by the total number of lines this message will occupy
+        crossterm::execute!(
+            io::stdout(),
+            crossterm::terminal::ScrollUp(total_lines.min(TEXT_INPUT_HEIGHT as usize) as u16)
+        )?;
     }
 
     Ok(())

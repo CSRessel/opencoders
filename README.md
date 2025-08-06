@@ -72,11 +72,13 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 ```bash
 # Clone and setup the main opencode monorepo
 gh repo clone sst/opencode
-cd opencode/packages/opencode/
+cd opencode/
+bun install
+cd packages/opencode/
 bun install
 
 # Navigate back and setup the Rust TUI client
-cd ../../
+cd ../
 gh repo clone CSRessel/opencoders
 cd opencoders
 cargo build --release

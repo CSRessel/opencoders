@@ -6,7 +6,6 @@ use crate::sdk::{
     extensions::events::{EventStream, EventStreamHandle},
     LogLevel,
 };
-use crate::{log_debug, log_error, log_info};
 use opencode_sdk::{
     apis::{configuration::Configuration, default_api},
     models::{post_log_request, *},
@@ -57,9 +56,9 @@ impl OpenCodeClient {
 
     /// Discover and connect to a running OpenCode server
     pub async fn discover() -> Result<Self> {
-        log_info!("Discovering OpenCode server");
+        tracing::info!("Discovering OpenCode server");
         let server_url = discover_opencode_server().await?;
-        log_info!("Connected to OpenCode server at: {}", server_url);
+        tracing::info!("Connected to OpenCode server at: {}", server_url);
         Ok(Self::new(&server_url))
     }
 
@@ -84,11 +83,11 @@ impl OpenCodeClient {
     pub async fn test_connection(&self) -> Result<()> {
         match self.get_app_info().await {
             Ok(_) => {
-                log_info!("Connected to OpenCode server at {}", self.base_url());
+                tracing::info!("Connected to OpenCode server at {}", self.base_url());
                 Ok(())
             }
             Err(e) => {
-                log_error!("Failed to connect to server at {}: {}", self.base_url(), e);
+                tracing::error!("Failed to connect to server at {}: {}", self.base_url(), e);
                 Err(e)
             }
         }
@@ -256,7 +255,7 @@ impl OpenCodeClient {
 
         match default_api::get_session_by_id_message(&self.config, params).await {
             Ok(messages) => {
-                log_info!(
+                tracing::info!(
                     "Retrieved {} messages for session {}",
                     messages.len(),
                     session_id
@@ -264,7 +263,7 @@ impl OpenCodeClient {
                 Ok(messages)
             }
             Err(e) => {
-                log_error!("Failed to get messages for session {}: {}", session_id, e);
+                tracing::error!("Failed to get messages for session {}: {}", session_id, e);
                 Err(OpenCodeError::from(e))
             }
         }
@@ -279,7 +278,7 @@ impl OpenCodeClient {
         model_id: &str,
         mode: Option<&str>,
     ) -> Result<AssistantMessage> {
-        log_info!("Sending message to session {}", session_id);
+        tracing::info!("Sending message to session {}", session_id);
 
         let text_part = TextPartInput {
             id: Some(uuid::Uuid::new_v4().to_string()),
@@ -308,11 +307,11 @@ impl OpenCodeClient {
 
         match default_api::post_session_by_id_message(&self.config, params).await {
             Ok(message) => {
-                log_info!("Message sent successfully");
+                tracing::info!("Message sent successfully");
                 Ok(message)
             }
             Err(e) => {
-                log_error!("Failed to send message: {}", e);
+                tracing::error!("Failed to send message: {}", e);
                 Err(OpenCodeError::from(e))
             }
         }

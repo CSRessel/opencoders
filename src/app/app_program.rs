@@ -30,7 +30,6 @@ use crate::{
             text_input::TEXT_INPUT_HEIGHT,
         },
     },
-    log_error,
     sdk::{extensions::events::EventStream, OpenCodeClient},
 };
 use crossterm::event::{self, Event};
@@ -309,11 +308,11 @@ impl Program {
                     // If we have a selected session ID, save it as the last session first
                     if let Some(session_id) = selected_session_id {
                         if let Err(e) = client.switch_to_session(&session_id).await {
-                            log_error!("save session ID {} failed: {}", session_id, e);
+                            tracing::error!("save session ID {} failed: {}", session_id, e);
                         }
                     } else {
                         if let Err(e) = client.clear_current_session().await {
-                            log_error!("clear session failed: {}", e);
+                            tracing::error!("clear session failed: {}", e);
                         }
                     }
 
@@ -330,14 +329,14 @@ impl Program {
                 self.task_manager.spawn_task(async move {
                     // Clear any existing session first
                     if let Err(error) = client.clear_current_session().await {
-                        log_error!("clear session failed: {}", error);
+                        tracing::error!("clear session failed: {}", error);
                         Msg::SessionCreationFailed(error)
                     } else {
                         // Create new session
                         match client.create_new_session().await {
                             Ok(session) => Msg::SessionCreatedWithMessage(session, first_message),
                             Err(error) => {
-                                log_error!("create session failed: {}", error);
+                                tracing::error!("create session failed: {}", error);
                                 Msg::SessionCreationFailed(error)
                             }
                         }

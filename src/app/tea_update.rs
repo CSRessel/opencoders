@@ -4,7 +4,6 @@ use crate::{
         tea_model::*,
         ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
     },
-    log_debug, log_error, log_info,
 };
 use opencode_sdk::models::{
     GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
@@ -61,7 +60,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                             (provider, model_name, Some(current_mode.clone()))
                         } else {
                             // Fallback to hardcoded values if no mode selected
-                            log_debug!("No mode selected, using fallback provider/model");
+                            tracing::debug!("No mode selected, using fallback provider/model");
                             (model.sdk_provider.clone(), model.sdk_model.clone(), None)
                         };
                     return (
@@ -120,7 +119,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::ClientConnected(client) => {
-            log_info!("Client connected successfully");
+            tracing::info!("Client connected successfully");
             model.client = Some(client.clone());
             model.transition_to_connected();
             // Load modes immediately when client connects
@@ -196,7 +195,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                         (provider, model_name, Some(current_mode.clone()))
                     } else {
                         // Fallback to hardcoded values if no mode selected
-                        log_debug!(
+                        tracing::debug!(
                             "No mode selected for session creation, using fallback provider/model"
                         );
                         (model.sdk_provider.clone(), model.sdk_model.clone(), None)
@@ -354,7 +353,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 .handle_event(PopoverSelectorEvent::Show);
 
             if let Some(client) = model.client.clone() {
-                log_debug!("waiting for session load......");
+                tracing::debug!("waiting for session load......");
                 (
                     model,
                     Cmd::Batch(vec![
@@ -363,7 +362,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                     ]),
                 )
             } else {
-                log_debug!("no client yet......");
+                tracing::debug!("no client yet......");
                 model
                     .session_selector
                     .handle_event(PopoverSelectorEvent::SetError(Some(
@@ -422,7 +421,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::SessionsLoadFailed(error) => {
-            log_error!("Failed to load sessions: {}", error);
+            tracing::error!("Failed to load sessions: {}", error);
             model
                 .session_selector
                 .handle_event(PopoverSelectorEvent::SetError(Some(format!(
@@ -438,7 +437,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::ModesLoadFailed(error) => {
-            log_error!("Failed to load modes: {}", error);
+            tracing::error!("Failed to load modes: {}", error);
             // Don't show error to user for modes loading failure, just log it
             (model, Cmd::None)
         }
@@ -447,29 +446,29 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             if model.modes.is_empty() {
                 // Request modes from server if empty
                 if let Some(client) = model.client.clone() {
-                    log_debug!("Modes array empty, requesting from server");
+                    tracing::debug!("Modes array empty, requesting from server");
                     (model, Cmd::AsyncLoadModes(client))
                 } else {
-                    log_debug!("No client available to load modes");
+                    tracing::debug!("No client available to load modes");
                     (model, Cmd::None)
                 }
             } else {
                 // Cycle through modes
                 let next_index = match model.mode_state {
                     None => {
-                        log_debug!("No mode selected, setting to first mode (index 0)");
+                        tracing::debug!("No mode selected, setting to first mode (index 0)");
                         Some(0)
                     }
                     Some(current) => {
                         if current >= model.modes.len() {
-                            log_debug!(
+                            tracing::debug!(
                                 "Current mode index {} out of bounds, resetting to 0",
                                 current
                             );
                             Some(0)
                         } else {
                             let next = (current + 1) % model.modes.len();
-                            log_debug!("Cycling from mode {} to mode {}", current, next);
+                            tracing::debug!("Cycling from mode {} to mode {}", current, next);
                             Some(next)
                         }
                     }
@@ -481,25 +480,25 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         Msg::SessionMessagesLoaded(messages) => {
             // Log debug output for fetched messages
-            crate::log_debug!("Fetched {} session messages", messages.len());
+            tracing::debug!("Fetched {} session messages", messages.len());
             model.message_state.load_messages(messages.clone());
             model.message_log.set_messages(messages);
             (model, Cmd::None)
         }
 
         Msg::SessionMessagesLoadFailed(error) => {
-            crate::log_debug!("Failed to load session messages: {}", error);
+            tracing::debug!("Failed to load session messages: {}", error);
             (model, Cmd::None)
         }
 
         Msg::UserMessageSent(text) => {
-            crate::log_debug!("User message sent successfully: {}", text);
+            tracing::debug!("User message sent successfully: {}", text);
             // The message will be received via SSE events and added to message state
             (model, Cmd::None)
         }
 
         Msg::UserMessageSendFailed(error) => {
-            crate::log_debug!("Failed to send user message: {}", error);
+            tracing::debug!("Failed to send user message: {}", error);
             // Could show error in UI or retry
             (model, Cmd::None)
         }
@@ -511,25 +510,25 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::EventStreamConnected(event_stream) => {
-            crate::log_debug!("Event stream connected");
+            tracing::debug!("Event stream connected");
             model.event_stream_state = EventStreamState::Connected(event_stream);
             (model, Cmd::None)
         }
 
         Msg::EventStreamDisconnected => {
-            crate::log_debug!("Event stream disconnected");
+            tracing::debug!("Event stream disconnected");
             model.event_stream_state = EventStreamState::Disconnected;
             (model, Cmd::None)
         }
 
         Msg::EventStreamError(error) => {
-            crate::log_debug!("Event stream error: {}", error);
+            tracing::debug!("Event stream error: {}", error);
             let cmd = handle_event_stream_error(&mut model, error);
             (model, cmd)
         }
 
         Msg::EventStreamReconnecting(attempt) => {
-            crate::log_debug!("Event stream reconnecting (attempt {})", attempt);
+            tracing::debug!("Event stream reconnecting (attempt {})", attempt);
             model.event_stream_state = EventStreamState::Reconnecting {
                 attempt,
                 last_error: "Connection lost".to_string(),
@@ -564,7 +563,7 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
                 .update_message(*msg_event.properties.info)
             {
                 updated = true;
-                crate::log_debug!("Updated message from event");
+                tracing::debug!("Updated message from event");
             }
         }
         Event::MessagePeriodPartPeriodUpdated(part_event) => {
@@ -573,7 +572,7 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
                 .update_message_part(*part_event.properties.part)
             {
                 updated = true;
-                crate::log_debug!("Updated message part from event");
+                tracing::debug!("Updated message part from event");
             }
         }
         Event::MessagePeriodRemoved(remove_event) => {
@@ -582,7 +581,7 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
                 &remove_event.properties.message_id,
             ) {
                 updated = true;
-                crate::log_debug!("Removed message from event");
+                tracing::debug!("Removed message from event");
             }
         }
         _ => {

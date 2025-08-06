@@ -1,5 +1,4 @@
 use crate::app::tea_model::{Model, ModelInit};
-use crate::{log_debug, log_info, tui_error};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
@@ -30,30 +29,30 @@ impl TerminalGuard {
         init: &ModelInit,
         height: u16,
     ) -> Result<(Self, Terminal<CrosstermBackend<io::Stdout>>), Box<dyn std::error::Error>> {
-        log_info!(
+        tracing::info!(
             "Initializing terminal - inline_mode: {}",
             init.inline_mode()
         );
 
         if let Err(e) = enable_raw_mode() {
-            tui_error!("Failed to enable raw mode: {}", e);
+            tracing::error!("Failed to enable raw mode: {}", e);
             return Err(e.into());
         }
 
         let mut stdout = io::stdout();
         if let Err(e) = execute!(stdout, EnableMouseCapture) {
-            tui_error!("Failed to enable mouse capture: {}", e);
+            tracing::error!("Failed to enable mouse capture: {}", e);
             return Err(e.into());
         }
 
         if !init.inline_mode() {
-            log_debug!("Entering alternate screen mode");
+            tracing::debug!("Entering alternate screen mode");
             if let Err(e) = execute!(stdout, EnterAlternateScreen) {
-                tui_error!("Failed to enter alternate screen: {}", e);
+                tracing::error!("Failed to enter alternate screen: {}", e);
                 return Err(e.into());
             }
         } else {
-            log_debug!("Using inline mode with height: {}", height);
+            tracing::debug!("Using inline mode with height: {}", height);
         }
 
         let backend = CrosstermBackend::new(stdout);
@@ -72,38 +71,38 @@ impl TerminalGuard {
 
         let guard = TerminalGuard { init: init.clone() };
 
-        log_info!("Terminal initialized successfully");
+        tracing::info!("Terminal initialized successfully");
         Ok((guard, terminal))
     }
 }
 
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
-        log_info!(
+        tracing::info!(
             "Cleaning up terminal - inline_mode: {}",
             self.init.inline_mode()
         );
 
         if let Err(e) = disable_raw_mode() {
-            tui_error!("Failed to disable raw mode during cleanup: {}", e);
+            tracing::error!("Failed to disable raw mode during cleanup: {}", e);
         }
 
         let mut stdout = io::stdout();
         if let Err(e) = execute!(stdout, DisableMouseCapture) {
-            tui_error!("Failed to disable mouse capture during cleanup: {}", e);
+            tracing::error!("Failed to disable mouse capture during cleanup: {}", e);
         }
 
         if !self.init.inline_mode() {
-            log_debug!("Leaving alternate screen mode");
+            tracing::debug!("Leaving alternate screen mode");
             if let Err(e) = execute!(stdout, LeaveAlternateScreen) {
-                tui_error!("Failed to leave alternate screen during cleanup: {}", e);
+                tracing::error!("Failed to leave alternate screen during cleanup: {}", e);
             }
         }
 
         if let Err(e) = stdout.flush() {
-            tui_error!("Failed to flush stdout during cleanup: {}", e);
+            tracing::error!("Failed to flush stdout during cleanup: {}", e);
         }
 
-        log_info!("Terminal cleanup completed");
+        tracing::info!("Terminal cleanup completed");
     }
 }

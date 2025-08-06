@@ -1,4 +1,3 @@
-use crate::{log_debug, log_info, log_warn};
 use crate::app::event_msg::Msg;
 use std::collections::HashMap;
 use std::future::Future;
@@ -33,7 +32,7 @@ impl AsyncTaskManager {
         let task_id = self.next_id;
         self.next_id += 1;
 
-        log_debug!("Spawning async task with ID: {}", task_id);
+        tracing::debug!("Spawning async task with ID: {}", task_id);
 
         let sender = self.sender.clone();
         let handle = tokio::spawn(async move {
@@ -42,17 +41,17 @@ impl AsyncTaskManager {
         });
 
         self.handles.insert(task_id, handle);
-        log_debug!("Active tasks: {}", self.handles.len());
+        tracing::debug!("Active tasks: {}", self.handles.len());
         task_id
     }
 
     pub fn cancel_task(&mut self, task_id: TaskId) -> bool {
         if let Some(handle) = self.handles.remove(&task_id) {
-            log_debug!("Cancelling task with ID: {}", task_id);
+            tracing::debug!("Cancelling task with ID: {}", task_id);
             handle.abort();
             true
         } else {
-            log_warn!("Attempted to cancel non-existent task: {}", task_id);
+            tracing::warn!("Attempted to cancel non-existent task: {}", task_id);
             false
         }
     }
@@ -70,7 +69,7 @@ impl AsyncTaskManager {
         self.handles.retain(|_id, handle| !handle.is_finished());
         let cleaned_count = initial_count - self.handles.len();
         if cleaned_count > 0 {
-            log_debug!("Cleaned up {} completed tasks, {} remaining", cleaned_count, self.handles.len());
+            tracing::debug!("Cleaned up {} completed tasks, {} remaining", cleaned_count, self.handles.len());
         }
     }
 
@@ -83,7 +82,7 @@ impl Drop for AsyncTaskManager {
     fn drop(&mut self) {
         let task_count = self.handles.len();
         if task_count > 0 {
-            log_info!("Aborting {} remaining async tasks", task_count);
+            tracing::info!("Aborting {} remaining async tasks", task_count);
         }
         for (_, handle) in self.handles.drain() {
             handle.abort();

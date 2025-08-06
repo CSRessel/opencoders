@@ -1,5 +1,6 @@
 use crate::app::ui_components::{Block, Paragraph};
 use crate::app::view_model_context::ViewModelContext;
+use crate::app::tea_model::RepeatShortcutKey;
 use ratatui::text::Text;
 use ratatui::{
     buffer::Buffer,
@@ -205,8 +206,23 @@ impl Widget for &TextInput {
             let status_len = status_text.len();
             let status_paragraph = Paragraph::new(Line::from(status_text));
 
-            // Simple spinner
-            let loading_paragraph = throbber_widgets_tui::Throbber::default().label("Working...");
+            // Check for active repeat shortcut timeout and show appropriate message
+            let loading_label = if let Some(timeout) = &model.get().repeat_shortcut_timeout {
+                // Check if timeout is still active, not just if it exists
+                if model.get().has_active_timeout() {
+                    match timeout.key {
+                        RepeatShortcutKey::Leader => "Shortcut waiting...",
+                        RepeatShortcutKey::CtrlC => "Ctrl+C again to confirm",
+                        RepeatShortcutKey::CtrlD => "Ctrl+D again to confirm", 
+                        RepeatShortcutKey::Esc => "Esc again to confirm",
+                    }
+                } else {
+                    "Working..."
+                }
+            } else {
+                "Working..."
+            };
+            let loading_paragraph = throbber_widgets_tui::Throbber::default().label(loading_label);
 
             let (status_line_start, status_line_center, status_line_end) = {
                 let start_width = (area.width / 4).min(10);

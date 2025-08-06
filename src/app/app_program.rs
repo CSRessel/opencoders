@@ -20,7 +20,7 @@ use crate::{
     app::{
         event_async_task_manager::AsyncTaskManager,
         event_msg::{Cmd, Msg},
-        event_sync_subscriptions::poll_subscriptions,
+        event_sync_subscriptions,
         tea_model::{AppState, Model, ModelInit},
         tea_update::update,
         tea_view::{view, view_clear, view_manual},
@@ -113,6 +113,11 @@ impl Program {
                 self.spawn_command(cmd).await?;
             }
 
+            // Check for SSE events (non-blocking)
+            if self.poll_sse_events().await? {
+                had_events = true;
+            }
+
             // If we had events, continue loop immediately to process more
             if had_events {
                 continue;
@@ -177,6 +182,38 @@ impl Program {
         }
 
         Ok(None)
+    }
+
+    async fn poll_sse_events(&mut self) -> Result<bool, Box<dyn std::error::Error>> {
+        use crate::app::event_msg::Sub;
+        use crate::app::tea_model::EventStreamState;
+
+        // Only poll if the model is subscribed to the event stream
+        if !event_sync_subscriptions::subscriptions(&self.model).contains(&Sub::EventStream) {
+            return Ok(false);
+        }
+
+        let mut events = Vec::new();
+        if let EventStreamState::Connected(event_stream) = &mut self.model.event_stream_state {
+            // Loop to drain all pending events from the stream's buffer
+            while let Some(event) = event_stream.try_next_event() {
+                events.push(event);
+            }
+        }
+
+        if !events.is_empty() {
+            let mut processed_event = false;
+            for event in events {
+                let (new_model, cmd) = update(self.model.clone(), Msg::EventReceived(event));
+                self.model = new_model;
+                self.needs_render = true; // Signal that a re-render is needed
+                self.spawn_command(cmd).await?;
+                processed_event = true;
+            }
+            Ok(processed_event)
+        } else {
+            Ok(false)
+        }
     }
 
     async fn spawn_command(&mut self, cmd: Cmd) -> Result<(), Box<dyn std::error::Error>> {

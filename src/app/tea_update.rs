@@ -505,7 +505,10 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         // Event stream messages
-        Msg::EventReceived(event) => handle_event_received(&mut model, event),
+        Msg::EventReceived(event) => {
+            let cmd = handle_event_received(&mut model, event);
+            (model, cmd)
+        }
 
         Msg::EventStreamConnected(event_stream) => {
             crate::log_debug!("Event stream connected");
@@ -521,7 +524,8 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         Msg::EventStreamError(error) => {
             crate::log_debug!("Event stream error: {}", error);
-            handle_event_stream_error(&mut model, error)
+            let cmd = handle_event_stream_error(&mut model, error);
+            (model, cmd)
         }
 
         Msg::EventStreamReconnecting(attempt) => {
@@ -548,7 +552,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
     }
 }
 
-fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) -> (Model, Cmd) {
+fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) -> Cmd {
     use opencode_sdk::models::Event;
 
     let mut updated = false;
@@ -592,10 +596,10 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
         model.message_log.set_messages(display_messages);
     }
 
-    (model.clone(), Cmd::None)
+    Cmd::None
 }
 
-fn handle_event_stream_error(model: &mut Model, error: String) -> (Model, Cmd) {
+fn handle_event_stream_error(model: &mut Model, error: String) -> Cmd {
     match &model.event_stream_state {
         EventStreamState::Connected(_) => {
             // First failure - attempt reconnection
@@ -603,7 +607,7 @@ fn handle_event_stream_error(model: &mut Model, error: String) -> (Model, Cmd) {
                 attempt: 1,
                 last_error: error.clone(),
             };
-            (model.clone(), Cmd::AsyncReconnectEventStream)
+            Cmd::AsyncReconnectEventStream
         }
         EventStreamState::Reconnecting { attempt, .. } if *attempt < 3 => {
             // Retry up to 3 times
@@ -611,12 +615,12 @@ fn handle_event_stream_error(model: &mut Model, error: String) -> (Model, Cmd) {
                 attempt: attempt + 1,
                 last_error: error.clone(),
             };
-            (model.clone(), Cmd::AsyncReconnectEventStream)
+            Cmd::AsyncReconnectEventStream
         }
         _ => {
             // Give up after 3 attempts
             model.event_stream_state = EventStreamState::Failed(error);
-            (model.clone(), Cmd::None)
+            Cmd::None
         }
     }
 }

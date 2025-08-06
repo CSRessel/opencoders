@@ -26,40 +26,6 @@ pub fn subscriptions(model: &Model) -> Vec<Sub> {
     subs
 }
 
-pub fn poll_subscriptions(model: &Model) -> Result<Option<Msg>, Box<dyn std::error::Error>> {
-    let subs = subscriptions(model);
-
-    if subs.contains(&Sub::KeyboardInput) || subs.contains(&Sub::TerminalResize) {
-        if event::poll(std::time::Duration::from_millis(8))? {
-            return Ok(crossterm_to_msg(event::read()?, &model));
-        }
-    }
-
-    // Poll event stream for new events
-    if subs.contains(&Sub::EventStream) {
-        if let EventStreamState::Connected(ref event_stream) = model.event_stream_state {
-            // Clone the event stream handle to avoid borrowing issues
-            let mut event_stream_clone = event_stream.clone();
-            if let Some(event) = event_stream_clone.try_next_event() {
-                return Ok(Some(Msg::EventReceived(event)));
-            }
-        }
-    }
-
-    // Check for expired timeout and clear it
-    if model.has_active_timeout() {
-        if let Some(timeout) = &model.repeat_shortcut_timeout {
-            if let Ok(elapsed) = timeout.started_at.elapsed() {
-                if elapsed.as_millis() >= model.config.keys_shortcut_timeout_ms as u128 {
-                    return Ok(Some(Msg::ClearTimeout));
-                }
-            }
-        }
-    }
-
-    Ok(None)
-}
-
 pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
     match event {
         Event::Key(key) => {

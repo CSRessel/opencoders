@@ -1,3 +1,28 @@
+//! Optimized tracing configuration for the OpenCode TUI application.
+//!
+//! This module provides performance-optimized logging that:
+//! 1. Prioritizes TUI performance by avoiding stdout/stderr output
+//! 2. Provides granular, per-thread logging in debug builds
+//! 3. Minimizes overhead in release builds
+//! 4. Logs to files outside of the terminal interface
+//!
+//! ## Build Configuration
+//!
+//! ### Debug Builds (`cargo build`)
+//! - Detailed logging with thread IDs, names, file locations, and line numbers
+//! - Default level: `debug` for opencoders, `debug` for opencode-sdk
+//! - Log file: `~/.opencode/logs/opencode-debug.log` (daily rotation)
+//!
+//! ### Release Builds (`cargo build --release`)
+//! - Compact logging optimized for performance
+//! - Default level: `info` for opencoders, `warn` for opencode-sdk
+//! - Log file: `~/.opencode/logs/opencode.log` (daily rotation)
+//!
+//! ## Environment Variables
+//!
+//! - `OPENCODE_LOG_DIR`: Override log directory (default: `~/.opencode/logs`)
+//! - `RUST_LOG`: Override log levels (e.g., `RUST_LOG=opencoders=trace`)
+
 use anyhow::Result;
 use std::path::PathBuf;
 use tracing_appender::rolling;

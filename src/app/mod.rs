@@ -8,6 +8,7 @@ mod tea_model;
 mod tea_update;
 mod tea_view;
 mod terminal;
+mod tracing_macros;
 mod ui_components;
 mod view_model_context;
 

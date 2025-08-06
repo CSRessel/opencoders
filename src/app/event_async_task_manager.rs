@@ -1,4 +1,4 @@
-use crate::app::event_msg::Msg;
+use crate::app::{event_msg::Msg, tracing_macros::debug_hot_path};
 use std::collections::HashMap;
 use std::future::Future;
 use tokio::sync::mpsc;
@@ -41,7 +41,7 @@ impl AsyncTaskManager {
         });
 
         self.handles.insert(task_id, handle);
-        tracing::debug!("Active tasks: {}", self.handles.len());
+        debug_hot_path!("Active tasks: {}", self.handles.len());
         task_id
     }
 
@@ -69,7 +69,7 @@ impl AsyncTaskManager {
         self.handles.retain(|_id, handle| !handle.is_finished());
         let cleaned_count = initial_count - self.handles.len();
         if cleaned_count > 0 {
-            tracing::debug!("Cleaned up {} completed tasks, {} remaining", cleaned_count, self.handles.len());
+            debug_hot_path!("Cleaned up {} completed tasks, {} remaining", cleaned_count, self.handles.len());
         }
     }
 

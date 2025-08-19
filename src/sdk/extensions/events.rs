@@ -1,10 +1,9 @@
 //! Event stream handling for real-time updates
 
 use crate::sdk::error::{OpenCodeError, Result};
-use opencode_sdk::{apis::{configuration::Configuration, default_api}, models::Event};
+use opencode_sdk::{apis::configuration::Configuration, models::Event};
 use std::time::Duration;
 use tokio::sync::broadcast;
-use tokio::time::interval;
 
 /// Event stream for receiving real-time updates from the OpenCode server
 #[derive(Debug)]
@@ -39,41 +38,119 @@ impl EventStream {
         }
     }
 
-    /// Internal polling loop for events
+    /// Internal SSE stream processing for events
     async fn poll_events(config: Configuration, sender: broadcast::Sender<Event>) {
-        let mut interval = interval(Duration::from_millis(100)); // Poll every 100ms
         let mut consecutive_errors = 0;
         const MAX_CONSECUTIVE_ERRORS: u32 = 10;
-
+        
         loop {
-            interval.tick().await;
-
-            match default_api::get_event(&config).await {
-                Ok(event) => {
+            tracing::debug!("Starting SSE stream connection to /event");
+            
+            match Self::connect_sse_stream(&config).await {
+                Ok(()) => {
                     consecutive_errors = 0;
-
-                    // Send event to all subscribers
-                    if sender.send(event).is_err() {
-                        // No more receivers, exit the loop
-                        break;
+                    tracing::info!("SSE stream connected successfully");
+                    
+                    // Process the SSE stream
+                    if let Err(e) = Self::process_sse_stream(&config, &sender).await {
+                        tracing::warn!("SSE stream processing error: {}", e);
+                        consecutive_errors += 1;
                     }
                 }
                 Err(e) => {
                     consecutive_errors += 1;
-                    eprintln!("Event polling error ({}): {}", consecutive_errors, e);
+                    tracing::error!("SSE connection error ({}): {}", consecutive_errors, e);
 
                     if consecutive_errors >= MAX_CONSECUTIVE_ERRORS {
-                        eprintln!("Too many consecutive errors, stopping event stream");
+                        tracing::error!("Too many consecutive errors, stopping event stream");
                         break;
                     }
+                }
+            }
 
-                    // Exponential backoff on errors
-                    let backoff_duration =
-                        Duration::from_millis(100 * (2_u64.pow(consecutive_errors.min(6))));
-                    tokio::time::sleep(backoff_duration).await;
+            if consecutive_errors > 0 {
+                // Exponential backoff on errors
+                let backoff_duration =
+                    Duration::from_millis(1000 * (2_u64.pow(consecutive_errors.min(6))));
+                tracing::debug!("Backing off for {:?} before retry", backoff_duration);
+                tokio::time::sleep(backoff_duration).await;
+            }
+        }
+    }
+    
+    /// Connect to SSE stream and verify connection
+    async fn connect_sse_stream(config: &Configuration) -> Result<()> {
+        let event_url = format!("{}/event", config.base_path);
+        let client = &config.client;
+        
+        // Test connection first
+        let response = client.get(&event_url).send().await
+            .map_err(|e| OpenCodeError::event_stream_error(format!("Failed to connect to SSE stream: {}", e)))?;
+            
+        if !response.status().is_success() {
+            return Err(OpenCodeError::event_stream_error(format!("SSE endpoint returned status: {}", response.status())));
+        }
+        
+        // Verify it's actually a SSE stream
+        let content_type = response.headers().get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+            
+        if !content_type.contains("text/event-stream") {
+            return Err(OpenCodeError::event_stream_error(format!("Expected text/event-stream, got: {}", content_type)));
+        }
+        
+        Ok(())
+    }
+    
+    /// Process the SSE stream and parse events
+    async fn process_sse_stream(config: &Configuration, sender: &broadcast::Sender<Event>) -> Result<()> {
+        let event_url = format!("{}/event", config.base_path);
+        let client = &config.client;
+        
+        let mut response = client.get(&event_url).send().await
+            .map_err(|e| OpenCodeError::event_stream_error(format!("Failed to get SSE stream: {}", e)))?;
+            
+        // Process the streaming response
+        while let Some(chunk) = response.chunk().await
+            .map_err(|e| OpenCodeError::event_stream_error(format!("Failed to read SSE chunk: {}", e)))? {
+            
+            // Parse SSE format: "data: {JSON}\n"
+            let chunk_str = std::str::from_utf8(&chunk)
+                .map_err(|e| OpenCodeError::event_stream_error(format!("Invalid UTF-8 in SSE stream: {}", e)))?;
+                
+            for line in chunk_str.lines() {
+                if let Some(event) = Self::parse_sse_line(line)? {
+                    tracing::debug!("Parsed SSE event: {:?}", event);
+                    
+                    // Send event to all subscribers
+                    if sender.send(event).is_err() {
+                        tracing::debug!("No more receivers, stopping SSE stream");
+                        return Ok(());
+                    }
                 }
             }
         }
+        
+        tracing::debug!("SSE stream ended");
+        Ok(())
+    }
+    
+    /// Parse a single SSE line and extract JSON event if present
+    fn parse_sse_line(line: &str) -> Result<Option<Event>> {
+        let trimmed = line.trim();
+        
+        // SSE format: "data: {JSON}"
+        if let Some(data) = trimmed.strip_prefix("data: ") {
+            if !data.trim().is_empty() {
+                let event: Event = serde_json::from_str(data)
+                    .map_err(|e| OpenCodeError::event_stream_error(format!("Failed to parse SSE JSON: {}", e)))?;
+                return Ok(Some(event));
+            }
+        }
+        
+        // Ignore other SSE lines (comments, event types, etc.)
+        Ok(None)
     }
 }
 

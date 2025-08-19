@@ -5,7 +5,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
-    widgets::{Widget},
+    widgets::Widget,
 };
 
 #[derive(Debug, Clone)]
@@ -32,11 +32,11 @@ impl<'a> MessagePart<'a> {
         let tool_name = &tool_part.tool;
         let call_id = &tool_part.call_id;
         
-        let status_text = match &*tool_part.state {
-            ToolState::Pending(_) => "⏳ Pending",
-            ToolState::Running(_) => "🔄 Running",
-            ToolState::Completed(_) => "✅ Completed", 
-            ToolState::Error(_) => "❌ Error",
+        let (status_text, status_icon) = match &*tool_part.state {
+            ToolState::Pending(pending) => (pending.status.as_str(), "⏳"),
+            ToolState::Running(running) => (running.status.as_str(), "🔄"),
+            ToolState::Completed(completed) => (completed.status.as_str(), "✅"),
+            ToolState::Error(error) => (error.status.as_str(), "❌"),
         };
 
         let lines = vec![
@@ -50,7 +50,7 @@ impl<'a> MessagePart<'a> {
             ]),
             Line::from(vec![
                 Span::styled("   Status: ", Style::default().fg(Color::Gray)),
-                Span::styled(status_text, Style::default().fg(self.get_status_color(&*tool_part.state))),
+                Span::styled(format!("{} {}", status_icon, status_text), Style::default().fg(self.get_status_color(&*tool_part.state))),
             ]),
         ];
 

@@ -1,9 +1,10 @@
 use crate::app::{
     ui_components::{Block, MessagePart, Paragraph, message_part::{MessageRenderer, MessageContext}},
     view_model_context::ViewModelContext,
+    message_state::MessageContainer,
 };
 use opencode_sdk::models::{
-    GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
+    Message, Part, TextPart, UserMessage,
 };
 use ratatui::{
     buffer::Buffer,
@@ -17,7 +18,7 @@ use ratatui::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MessageLog {
-    messages: Vec<GetSessionByIdMessage200ResponseInner>,
+    message_containers: Vec<MessageContainer>,
     pub vertical_scroll_state: ScrollbarState,
     pub horizontal_scroll_state: ScrollbarState,
     vertical_scroll: usize,
@@ -34,7 +35,7 @@ pub struct MessageLog {
 impl MessageLog {
     pub fn new() -> Self {
         Self {
-            messages: Vec::new(),
+            message_containers: Vec::new(),
             vertical_scroll_state: ScrollbarState::default(),
             horizontal_scroll_state: ScrollbarState::default(),
             vertical_scroll: 0,
@@ -46,7 +47,7 @@ impl MessageLog {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.messages.is_empty()
+        self.message_containers.is_empty()
     }
 
     pub fn scroll_vertical(&mut self, direction: &i16) {
@@ -156,16 +157,16 @@ impl MessageLog {
         self.refresh_scrollbar_states();
     }
 
-    pub fn set_messages(&mut self, messages: Vec<GetSessionByIdMessage200ResponseInner>) {
-        self.messages = messages;
+    pub fn set_message_containers(&mut self, containers: Vec<MessageContainer>) {
+        self.message_containers = containers;
         self.mark_content_dirty();
 
         // Auto-scroll to bottom when new message is added
         self.touch_scroll();
     }
 
-    pub fn add_message(&mut self, message: GetSessionByIdMessage200ResponseInner) {
-        self.messages.push(message);
+    pub fn add_message_container(&mut self, container: MessageContainer) {
+        self.message_containers.push(container);
         self.mark_content_dirty();
 
         // Auto-scroll to bottom when new message is added
@@ -175,8 +176,8 @@ impl MessageLog {
     fn render_message_content(&self) -> Text<'static> {
         let mut lines = Vec::new();
 
-        for msg_container in &self.messages {
-            let role = match msg_container.info.as_ref() {
+        for container in &self.message_containers {
+            let role = match &container.info {
                 Message::User(_) => "You",
                 Message::Assistant(_) => "Assistant",
             };
@@ -189,8 +190,8 @@ impl MessageLog {
                 )]));
 
                 // Render user message content directly
-                for part in &msg_container.parts {
-                    if let Part::Text(text_part) = part {
+                for part_id in &container.part_order {
+                    if let Some(Part::Text(text_part)) = container.parts.get(part_id) {
                         for line in text_part.text.lines() {
                             lines.push(Line::from(vec![
                                 Span::styled("> ", Style::default().fg(Color::Gray)),
@@ -201,7 +202,7 @@ impl MessageLog {
                 }
             } else {
                 // Use MessageRenderer for assistant messages
-                let renderer = MessageRenderer::from_message(msg_container, MessageContext::Fullscreen);
+                let renderer = MessageRenderer::from_message_container(container, MessageContext::Fullscreen);
                 let rendered_text = renderer.render();
                 lines.extend(rendered_text.lines);
             }

@@ -76,13 +76,13 @@ fn calculate_wrapped_lines(text: &str, width: u16) -> u16 {
 }
 
 fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
-    let messages = model.messages_for_rendering();
+    let message_containers = model.message_containers_for_rendering();
     let (terminal_width, _) = crossterm::terminal::size()?;
     let _effective_width = terminal_width.saturating_sub(2); // Account for "> " prefix
 
-    for message in &messages {
+    for container in &message_containers {
         // Use new MessageRenderer for proper formatting
-        let renderer = MessageRenderer::from_message(message, MessageContext::Inline);
+        let renderer = MessageRenderer::from_message_container(container, MessageContext::Inline);
         let rendered_text = renderer.render();
         
         // Calculate total lines for scrolling

@@ -175,23 +175,10 @@ impl MessageState {
         }
     }
 
-    pub fn to_display_messages(&self) -> Vec<GetSessionByIdMessage200ResponseInner> {
+    pub fn get_all_message_containers(&self) -> Vec<&MessageContainer> {
         self.message_order
             .iter()
-            .filter_map(|message_id| {
-                self.messages.get(message_id).map(|container| {
-                    let parts: Vec<Part> = container
-                        .part_order
-                        .iter()
-                        .filter_map(|part_id| container.parts.get(part_id).cloned())
-                        .collect();
-                    
-                    GetSessionByIdMessage200ResponseInner {
-                        info: Box::new(container.info.clone()),
-                        parts,
-                    }
-                })
-            })
+            .filter_map(|message_id| self.messages.get(message_id))
             .collect()
     }
 
@@ -261,28 +248,13 @@ impl MessageState {
         })
     }
 
-    pub fn get_messages_for_rendering(&self) -> Vec<GetSessionByIdMessage200ResponseInner> {
-        let mut messages_to_render = Vec::new();
-        
-        for message_id in &self.message_order {
-            if let Some(container) = self.messages.get(message_id) {
-                if !container.printed_to_stdout {
-                    // Convert internal MessageContainer to API format
-                    let parts: Vec<Part> = container.part_order.iter()
-                        .filter_map(|part_id| container.parts.get(part_id).cloned())
-                        .collect();
-                    
-                    let message = GetSessionByIdMessage200ResponseInner {
-                        info: Box::new(container.info.clone()),
-                        parts,
-                    };
-                    
-                    messages_to_render.push(message);
-                }
-            }
-        }
-        
-        messages_to_render
+    pub fn get_message_containers_for_rendering(&self) -> Vec<&MessageContainer> {
+        self.message_order
+            .iter()
+            .filter_map(|message_id| {
+                self.messages.get(message_id).filter(|container| !container.printed_to_stdout)
+            })
+            .collect()
     }
 
     // Helper methods to extract IDs from different message types

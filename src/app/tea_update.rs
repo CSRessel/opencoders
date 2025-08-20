@@ -526,7 +526,8 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             // Log debug output for fetched messages
             tracing::debug!("Fetched {} session messages", messages.len());
             model.message_state.load_messages(messages.clone());
-            model.message_log.set_messages(messages);
+            let message_containers = model.message_state.get_all_message_containers().into_iter().cloned().collect();
+            model.message_log.set_message_containers(message_containers);
             (model, Cmd::None)
         }
 
@@ -635,8 +636,8 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
 
     if updated {
         // Update the message log with the new state
-        let display_messages = model.message_state.to_display_messages();
-        model.message_log.set_messages(display_messages);
+        let message_containers = model.message_state.get_all_message_containers().into_iter().cloned().collect();
+        model.message_log.set_message_containers(message_containers);
     }
 
     Cmd::None

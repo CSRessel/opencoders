@@ -186,8 +186,8 @@ impl Model {
         self.message_state.get_messages_needing_stdout_print()
     }
 
-    pub fn messages_for_rendering(&self) -> Vec<opencode_sdk::models::GetSessionByIdMessage200ResponseInner> {
-        self.message_state.get_messages_for_rendering()
+    pub fn message_containers_for_rendering(&self) -> Vec<&crate::app::message_state::MessageContainer> {
+        self.message_state.get_message_containers_for_rendering()
     }
 
     // State transition helpers
@@ -253,7 +253,7 @@ impl Model {
     }
 
     pub fn change_session_by_index(&mut self, index: Option<usize>) {
-        self.message_log.set_messages(vec![]);
+        self.message_log.set_message_containers(vec![]);
         self.text_input.set_session_id(None); // This will be handled in the Cmd callback
         self.session_selector.set_current_session_index(index);
         self.session_selector

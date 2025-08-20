@@ -1,5 +1,8 @@
 use crate::app::ui_components::Paragraph;
-use opencode_sdk::models::{Part, TextPart, ToolPart, FilePart, StepStartPart, StepFinishPart, SnapshotPart, ToolState, GetSessionByIdMessage200ResponseInner};
+use opencode_sdk::models::{
+    FilePart, GetSessionByIdMessage200ResponseInner, Part, SnapshotPart, StepFinishPart,
+    StepStartPart, TextPart, ToolPart, ToolState,
+};
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
@@ -11,8 +14,8 @@ use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MessageContext {
-    Inline,      // For tea_view.rs manual printing  
-    Fullscreen,  // For message_log.rs
+    Inline,     // For tea_view.rs manual printing
+    Fullscreen, // For message_log.rs
 }
 
 #[derive(Debug, Clone)]
@@ -38,17 +41,39 @@ impl MessageRenderer {
         }
     }
 
-    pub fn from_message(message: &GetSessionByIdMessage200ResponseInner, context: MessageContext) -> Self {
+    pub fn from_message(
+        message: &GetSessionByIdMessage200ResponseInner,
+        context: MessageContext,
+    ) -> Self {
         Self::new(message.parts.clone(), context)
+    }
+
+    pub fn from_message_container(
+        container: &crate::app::message_state::MessageContainer,
+        context: MessageContext,
+    ) -> Self {
+        let parts: Vec<Part> = container
+            .part_order
+            .iter()
+            .filter_map(|part_id| container.parts.get(part_id).cloned())
+            .collect();
+        Self::new(parts, context)
     }
 
     fn get_tool_status_color(&self, state: &ToolState) -> Color {
         // TODO: Make this configurable via theme/config system
-        match state {
-            ToolState::Pending(_) => Color::Yellow,
-            ToolState::Running(_) => Color::Blue, 
-            ToolState::Completed(_) => Color::Green,
-            ToolState::Error(_) => Color::Red,
+        let tool_state = match state {
+            ToolState::Pending(s) => s.status.clone(),
+            ToolState::Running(s) => s.status.clone(),
+            ToolState::Completed(s) => s.status.clone(),
+            ToolState::Error(s) => s.status.clone(),
+        };
+        match tool_state.as_str() {
+            "pending" => Color::Yellow,
+            "running" => Color::Blue,
+            "completed" => Color::Green,
+            "error" => Color::Red,
+            _ => Color::default(),
         }
     }
 
@@ -73,26 +98,26 @@ impl MessageRenderer {
                     "todowrite" => {
                         // TODO: Parse todo list from output and show checkbox summary
                         "Updated todo list".to_string()
-                    },
+                    }
                     "glob" => {
                         // TODO: Parse file count from output
                         "Found 100 files".to_string()
-                    },
+                    }
                     "grep" => {
                         // TODO: Parse match count from output
                         "Found 1 file".to_string()
-                    },
+                    }
                     "read" => {
                         // TODO: Parse line count from output
                         "Read 290 lines".to_string()
-                    },
+                    }
                     "bash" => {
                         if output.contains("error") {
                             "Build failed".to_string()
                         } else {
                             "Checking opencoders".to_string()
                         }
-                    },
+                    }
                     _ => {
                         // Generic truncated output
                         if output.len() > 50 {
@@ -102,7 +127,7 @@ impl MessageRenderer {
                         }
                     }
                 }
-            },
+            }
             ToolState::Running(_) => "Running...".to_string(),
             ToolState::Pending(_) => "Pending...".to_string(),
             ToolState::Error(error) => format!("Error: {}", error.error),
@@ -113,20 +138,36 @@ impl MessageRenderer {
         // TODO: Parse actual todo list from tool output
         // For now, return placeholder todo items
         let mut lines = Vec::new();
-        
+
         // Example todo items - these should be parsed from actual tool output
         let todo_items = vec![
             ("☒", "Glob for all files mentioning 'ui' in the path"),
-            ("☐", "Grep for the specific file that defines `pub const TEXT_INPUT_HEIGHT`"),
+            (
+                "☐",
+                "Grep for the specific file that defines `pub const TEXT_INPUT_HEIGHT`",
+            ),
             ("☐", "Read the contents of that file"),
-            ("☐", "Edit the file to add a comment at the top with the list of public functions"),
-            ("☐", "Run `cargo check` to confirm the project still compiles"),
+            (
+                "☐",
+                "Edit the file to add a comment at the top with the list of public functions",
+            ),
+            (
+                "☐",
+                "Run `cargo check` to confirm the project still compiles",
+            ),
         ];
 
         for (checkbox, text) in todo_items {
             lines.push(Line::from(vec![
                 Span::styled("     ", Style::default()), // 5-space indent for todo items
-                Span::styled(checkbox, Style::default().fg(if checkbox == "☒" { Color::Green } else { Color::Gray })),
+                Span::styled(
+                    checkbox,
+                    Style::default().fg(if checkbox == "☒" {
+                        Color::Green
+                    } else {
+                        Color::Gray
+                    }),
+                ),
                 Span::styled(" ", Style::default()),
                 Span::styled(text, Style::default().fg(Color::White)),
             ]));
@@ -141,7 +182,7 @@ impl MessageRenderer {
         // Status-based bullet point color
         let bullet_color = self.get_tool_status_color(&*tool_part.state);
         let tool_args = self.format_tool_args(&tool_part.tool, &tool_part.call_id);
-        
+
         // Tool call header
         let tool_header = if tool_args.is_empty() {
             format!("● {}", tool_part.tool)
@@ -149,16 +190,17 @@ impl MessageRenderer {
             format!("● {}({})", tool_part.tool, tool_args)
         };
 
-        lines.push(Line::from(vec![
-            Span::styled(tool_header, Style::default().fg(bullet_color)),
-        ]));
+        lines.push(Line::from(vec![Span::styled(
+            tool_header,
+            Style::default().fg(bullet_color),
+        )]));
 
         // Result summary with tree connector
         let result_summary = self.format_tool_result_summary(tool_part);
         let summary_line = match self.context {
             MessageContext::Inline => {
                 format!("  ⎿  {}", result_summary)
-            },
+            }
             MessageContext::Fullscreen => {
                 // Only show expand option in fullscreen mode
                 if self.expanded_tools.contains(&tool_part.call_id) {
@@ -169,9 +211,10 @@ impl MessageRenderer {
             }
         };
 
-        lines.push(Line::from(vec![
-            Span::styled(summary_line, Style::default().fg(Color::Gray)),
-        ]));
+        lines.push(Line::from(vec![Span::styled(
+            summary_line,
+            Style::default().fg(Color::Gray),
+        )]));
 
         // Special handling for todowrite tool - show todo list
         if tool_part.tool == "todowrite" {
@@ -179,12 +222,15 @@ impl MessageRenderer {
         }
 
         // In fullscreen mode, show expanded output if requested
-        if self.context == MessageContext::Fullscreen && self.expanded_tools.contains(&tool_part.call_id) {
+        if self.context == MessageContext::Fullscreen
+            && self.expanded_tools.contains(&tool_part.call_id)
+        {
             if let ToolState::Completed(_completed) = &*tool_part.state {
                 // TODO: Implement expanded tool output rendering
-                lines.push(Line::from(vec![
-                    Span::styled("    [Expanded output would go here]", Style::default().fg(Color::DarkGray)),
-                ]));
+                lines.push(Line::from(vec![Span::styled(
+                    "    [Expanded output would go here]",
+                    Style::default().fg(Color::DarkGray),
+                )]));
             }
         }
 
@@ -193,7 +239,7 @@ impl MessageRenderer {
 
     fn render_text_part(&self, text_part: &TextPart, is_grouped: bool) -> Vec<Line<'static>> {
         let mut lines = Vec::new();
-        
+
         // Skip synthetic text parts
         if text_part.synthetic.unwrap_or(false) {
             return lines;
@@ -227,7 +273,7 @@ impl MessageRenderer {
         let mut groups = Vec::new();
         let mut current_group = StepGroup {
             text_parts: Vec::new(),
-            tool_parts: Vec::new(), 
+            tool_parts: Vec::new(),
             file_parts: Vec::new(),
         };
         let mut in_step = false;
@@ -238,7 +284,10 @@ impl MessageRenderer {
                     // Start a new step group
                     if in_step {
                         // Finish previous group
-                        if !current_group.text_parts.is_empty() || !current_group.tool_parts.is_empty() || !current_group.file_parts.is_empty() {
+                        if !current_group.text_parts.is_empty()
+                            || !current_group.tool_parts.is_empty()
+                            || !current_group.file_parts.is_empty()
+                        {
                             groups.push(current_group);
                         }
                     }
@@ -248,11 +297,14 @@ impl MessageRenderer {
                         file_parts: Vec::new(),
                     };
                     in_step = true;
-                },
+                }
                 Part::StepFinish(_) => {
                     // Finish current step group
                     if in_step {
-                        if !current_group.text_parts.is_empty() || !current_group.tool_parts.is_empty() || !current_group.file_parts.is_empty() {
+                        if !current_group.text_parts.is_empty()
+                            || !current_group.tool_parts.is_empty()
+                            || !current_group.file_parts.is_empty()
+                        {
                             groups.push(current_group);
                         }
                         current_group = StepGroup {
@@ -262,16 +314,16 @@ impl MessageRenderer {
                         };
                     }
                     in_step = false;
-                },
+                }
                 Part::Text(text_part) => {
                     current_group.text_parts.push((**text_part).clone());
-                },
+                }
                 Part::Tool(tool_part) => {
                     current_group.tool_parts.push((**tool_part).clone());
-                },
+                }
                 Part::File(file_part) => {
                     current_group.file_parts.push((**file_part).clone());
-                },
+                }
                 Part::Snapshot(_) => {
                     // Skip snapshot parts for now
                 }
@@ -279,7 +331,11 @@ impl MessageRenderer {
         }
 
         // Don't forget the last group if we're still in a step
-        if in_step && (!current_group.text_parts.is_empty() || !current_group.tool_parts.is_empty() || !current_group.file_parts.is_empty()) {
+        if in_step
+            && (!current_group.text_parts.is_empty()
+                || !current_group.tool_parts.is_empty()
+                || !current_group.file_parts.is_empty())
+        {
             groups.push(current_group);
         }
 
@@ -297,10 +353,10 @@ impl MessageRenderer {
                 match part {
                     Part::Text(text_part) => {
                         lines.extend(self.render_text_part(text_part, false));
-                    },
+                    }
                     Part::Tool(tool_part) => {
                         lines.extend(self.render_tool_part(tool_part));
-                    },
+                    }
                     _ => {} // Skip other part types when ungrouped
                 }
             }
@@ -361,3 +417,4 @@ impl<'a> Widget for MessagePart<'a> {
         paragraph.render(area, buf);
     }
 }
+

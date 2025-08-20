@@ -374,7 +374,15 @@ impl Program {
                 });
             }
 
-            Cmd::AsyncSendUserMessage(client, session_id, text, provider_id, model_id, mode) => {
+            Cmd::AsyncSendUserMessage(
+                client,
+                session_id,
+                message_id,
+                text,
+                provider_id,
+                model_id,
+                mode,
+            ) => {
                 // Spawn async user message sending task
                 self.task_manager.spawn_task(async move {
                     // Convert Mode object to string for API call
@@ -382,6 +390,7 @@ impl Program {
                     match client
                         .send_user_message(
                             &session_id,
+                            &message_id,
                             &text,
                             &provider_id,
                             &model_id,
@@ -446,7 +455,7 @@ impl Program {
                         | Cmd::AsyncLoadSessions(_)
                         | Cmd::AsyncLoadModes(_)
                         | Cmd::AsyncLoadSessionMessages(_, _)
-                        | Cmd::AsyncSendUserMessage(_, _, _, _, _, _)
+                        | Cmd::AsyncSendUserMessage(_, _, _, _, _, _, _)
                         | Cmd::AsyncCancelTask(_)
                         | Cmd::AsyncSessionAbort
                         | Cmd::AsyncStartEventStream(_)

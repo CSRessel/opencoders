@@ -273,6 +273,7 @@ impl OpenCodeClient {
     pub async fn send_user_message(
         &self,
         session_id: &str,
+        message_id: &str,
         text: &str,
         provider_id: &str,
         model_id: &str,
@@ -289,10 +290,8 @@ impl OpenCodeClient {
         };
 
         let part = PostSessionByIdMessageRequestPartsInner::Text(Box::new(text_part));
-
-        let random_message_id = uuid::Uuid::new_v4().to_string();
         let request = PostSessionByIdMessageRequest {
-            message_id: Some(INPUT_PREFIX_MESSAGE.to_string() + &random_message_id),
+            message_id: Some(message_id.to_string()),
             provider_id: provider_id.to_string(),
             model_id: model_id.to_string(),
             mode: mode.map(|m| m.to_string()),

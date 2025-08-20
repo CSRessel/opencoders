@@ -46,7 +46,7 @@ pub enum Msg {
     // Session messages
     SessionMessagesLoaded(Vec<GetSessionByIdMessage200ResponseInner>),
     SessionMessagesLoadFailed(OpenCodeError),
-    
+
     // User message sending
     UserMessageSent(String), // The text that was sent
     UserMessageSendFailed(OpenCodeError),
@@ -100,7 +100,15 @@ pub enum Cmd {
     AsyncLoadSessions(OpenCodeClient),
     AsyncLoadModes(OpenCodeClient),
     AsyncLoadSessionMessages(OpenCodeClient, String),
-    AsyncSendUserMessage(OpenCodeClient, String, String, String, String, Option<Mode>), // client, session_id, text, provider_id, model_id, mode
+    AsyncSendUserMessage(
+        OpenCodeClient,
+        String,
+        String,
+        String,
+        String,
+        String,
+        Option<Mode>,
+    ), // client, session_id, message_id, text, provider_id, model_id, mode
     AsyncCancelTask(TaskId),
     AsyncSessionAbort,
 

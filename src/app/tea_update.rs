@@ -1,15 +1,48 @@
-use crate::{
-    app::{
-        event_msg::*,
-        tea_model::*,
-        tracing_macros::{debug_hot_path, trace_hot_path},
-        ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
-    },
+use crate::app::{
+    event_msg::*,
+    tea_model::*,
+    tracing_macros::{debug_hot_path, trace_hot_path},
+    ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
 };
 use opencode_sdk::models::{
     GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
 };
-use std::time::SystemTime;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+static COUNTER: AtomicU32 = AtomicU32::new(0);
+
+fn generate_message_id() -> String {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+
+    let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let timestamp_with_counter = (now << 12) + (counter as u64 & 0xFFF);
+
+    // Convert to hex manually
+    let time_bytes = timestamp_with_counter.to_be_bytes();
+    let time_hex = time_bytes[2..8]
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<String>();
+
+    // Generate random base62 string using system entropy
+    let random_part = (0..14)
+        .map(|i| {
+            let entropy = (now
+                .wrapping_add(i as u64)
+                .wrapping_mul(1103515245)
+                .wrapping_add(12345))
+                >> 16;
+            let chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            chars.chars().nth((entropy % 62) as usize).unwrap()
+        })
+        .collect::<String>();
+
+    format!("msg_{}{}", time_hex, random_part)
+}
 
 pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
     match msg {
@@ -64,11 +97,13 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                             tracing::debug!("No mode selected, using fallback provider/model");
                             (model.sdk_provider.clone(), model.sdk_model.clone(), None)
                         };
+                    let message_id = generate_message_id();
                     return (
                         model,
                         Cmd::AsyncSendUserMessage(
                             client,
                             session_id,
+                            message_id,
                             submitted_text,
                             provider_id,
                             model_id,
@@ -201,6 +236,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                         );
                         (model.sdk_provider.clone(), model.sdk_model.clone(), None)
                     };
+                let message_id = generate_message_id();
                 (
                     model,
                     Cmd::Batch(vec![
@@ -209,6 +245,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                         Cmd::AsyncSendUserMessage(
                             client.clone(),
                             session_id.clone(),
+                            message_id.clone(),
                             first_message.clone(),
                             provider_id.clone(),
                             model_id.clone(),

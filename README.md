@@ -23,6 +23,7 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 >     1. shell commands
 >     1. other tools?
 > - TODO: fix the scroll flickering
+> - TODO: fix how the session list opens in text entry mode
 >
 > **First Release:**
 > - prettier printing

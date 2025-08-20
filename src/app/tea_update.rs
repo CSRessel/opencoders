@@ -363,6 +363,11 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
 
         // Session selector messages
         Msg::ShowSessionSelector => {
+            let prefix_cmd = match model.state {
+                AppState::TextEntry => Cmd::TerminalScrollPastHeight,
+                _ => Cmd::None,
+            };
+
             model.state = AppState::SelectSession;
             model
                 .session_selector
@@ -395,6 +400,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 (
                     model,
                     Cmd::Batch(vec![
+                        prefix_cmd,
                         Cmd::AsyncLoadSessions(client.clone()),
                         Cmd::AsyncLoadModes(client),
                     ]),
@@ -406,7 +412,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                     .handle_event(PopoverSelectorEvent::SetError(Some(
                         "No client connection".to_string(),
                     )));
-                (model, Cmd::None)
+                (model, prefix_cmd)
             }
         }
 

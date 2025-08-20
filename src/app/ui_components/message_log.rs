@@ -1,5 +1,5 @@
 use crate::app::{
-    ui_components::{Block, MessagePart, Paragraph},
+    ui_components::{Block, MessagePart, Paragraph, message_part::{MessageRenderer, MessageContext}},
     view_model_context::ViewModelContext,
 };
 use opencode_sdk::models::{
@@ -176,34 +176,34 @@ impl MessageLog {
         let mut lines = Vec::new();
 
         for msg_container in &self.messages {
-            let role = match *msg_container.info {
+            let role = match msg_container.info.as_ref() {
                 Message::User(_) => "You",
                 Message::Assistant(_) => "Assistant",
             };
 
-            // Add role header
-            lines.push(Line::from(vec![Span::styled(
-                format!("{}: ", role),
-                Style::default()
-                    .fg(if role == "You" {
-                        Color::Cyan
-                    } else {
-                        Color::Green
-                    })
-                    .bold(),
-            )]));
+            // Add role header for user messages (simple format)
+            if role == "You" {
+                lines.push(Line::from(vec![Span::styled(
+                    "> ",
+                    Style::default().fg(Color::Gray),
+                )]));
 
-            // Render each part using MessagePart component
-            for part in &msg_container.parts {
-                let message_part = MessagePart::new(part);
-                let part_text = message_part.to_text();
-
-                // Add each line from the part with proper indentation
-                for line in part_text.lines {
-                    let mut indented_spans = vec![Span::raw("  ")]; // 2-space indent
-                    indented_spans.extend(line.spans);
-                    lines.push(Line::from(indented_spans));
+                // Render user message content directly
+                for part in &msg_container.parts {
+                    if let Part::Text(text_part) = part {
+                        for line in text_part.text.lines() {
+                            lines.push(Line::from(vec![
+                                Span::styled("> ", Style::default().fg(Color::Gray)),
+                                Span::styled(line.to_string(), Style::default().fg(Color::White)),
+                            ]));
+                        }
+                    }
                 }
+            } else {
+                // Use MessageRenderer for assistant messages
+                let renderer = MessageRenderer::from_message(msg_container, MessageContext::Fullscreen);
+                let rendered_text = renderer.render();
+                lines.extend(rendered_text.lines);
             }
 
             // Add empty line between messages

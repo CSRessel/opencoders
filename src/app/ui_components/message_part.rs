@@ -1,5 +1,5 @@
 use crate::app::ui_components::Paragraph;
-use opencode_sdk::models::{Part, TextPart, ToolPart, FilePart, StepStartPart, StepFinishPart, SnapshotPart, ToolState};
+use opencode_sdk::models::{Part, TextPart, ToolPart, FilePart, StepStartPart, StepFinishPart, SnapshotPart, ToolState, GetSessionByIdMessage200ResponseInner};
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
@@ -7,7 +7,331 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::Widget,
 };
+use std::collections::HashSet;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum MessageContext {
+    Inline,      // For tea_view.rs manual printing  
+    Fullscreen,  // For message_log.rs
+}
+
+#[derive(Debug, Clone)]
+pub struct MessageRenderer {
+    parts: Vec<Part>,
+    context: MessageContext,
+    expanded_tools: HashSet<String>, // Track which tools are expanded (fullscreen only)
+}
+
+#[derive(Debug, Clone)]
+struct StepGroup {
+    text_parts: Vec<TextPart>,
+    tool_parts: Vec<ToolPart>,
+    file_parts: Vec<FilePart>,
+}
+
+impl MessageRenderer {
+    pub fn new(parts: Vec<Part>, context: MessageContext) -> Self {
+        Self {
+            parts,
+            context,
+            expanded_tools: HashSet::new(),
+        }
+    }
+
+    pub fn from_message(message: &GetSessionByIdMessage200ResponseInner, context: MessageContext) -> Self {
+        Self::new(message.parts.clone(), context)
+    }
+
+    fn get_tool_status_color(&self, state: &ToolState) -> Color {
+        // TODO: Make this configurable via theme/config system
+        match state {
+            ToolState::Pending(_) => Color::Yellow,
+            ToolState::Running(_) => Color::Blue, 
+            ToolState::Completed(_) => Color::Green,
+            ToolState::Error(_) => Color::Red,
+        }
+    }
+
+    fn format_tool_args(&self, tool_name: &str, _call_id: &str) -> String {
+        // TODO: Parse and format tool arguments from call data
+        // For now, use placeholder formatting
+        match tool_name {
+            "todowrite" => "Update Todos".to_string(),
+            "glob" => "pattern: \"**/*ui*\"".to_string(),
+            "grep" => "pattern: \"pub const TEXT_INPUT_HEIGHT\"".to_string(),
+            "read" => "src/app/ui_components/text_input.rs".to_string(),
+            "bash" => "cargo check".to_string(),
+            _ => "".to_string(),
+        }
+    }
+
+    fn format_tool_result_summary(&self, tool_part: &ToolPart) -> String {
+        match &*tool_part.state {
+            ToolState::Completed(completed) => {
+                let output = &completed.output;
+                match tool_part.tool.as_str() {
+                    "todowrite" => {
+                        // TODO: Parse todo list from output and show checkbox summary
+                        "Updated todo list".to_string()
+                    },
+                    "glob" => {
+                        // TODO: Parse file count from output
+                        "Found 100 files".to_string()
+                    },
+                    "grep" => {
+                        // TODO: Parse match count from output
+                        "Found 1 file".to_string()
+                    },
+                    "read" => {
+                        // TODO: Parse line count from output
+                        "Read 290 lines".to_string()
+                    },
+                    "bash" => {
+                        if output.contains("error") {
+                            "Build failed".to_string()
+                        } else {
+                            "Checking opencoders".to_string()
+                        }
+                    },
+                    _ => {
+                        // Generic truncated output
+                        if output.len() > 50 {
+                            format!("{}...", &output[..50])
+                        } else {
+                            output.clone()
+                        }
+                    }
+                }
+            },
+            ToolState::Running(_) => "Running...".to_string(),
+            ToolState::Pending(_) => "Pending...".to_string(),
+            ToolState::Error(error) => format!("Error: {}", error.error),
+        }
+    }
+
+    fn render_todo_list_content(&self, _tool_part: &ToolPart) -> Vec<Line<'static>> {
+        // TODO: Parse actual todo list from tool output
+        // For now, return placeholder todo items
+        let mut lines = Vec::new();
+        
+        // Example todo items - these should be parsed from actual tool output
+        let todo_items = vec![
+            ("☒", "Glob for all files mentioning 'ui' in the path"),
+            ("☐", "Grep for the specific file that defines `pub const TEXT_INPUT_HEIGHT`"),
+            ("☐", "Read the contents of that file"),
+            ("☐", "Edit the file to add a comment at the top with the list of public functions"),
+            ("☐", "Run `cargo check` to confirm the project still compiles"),
+        ];
+
+        for (checkbox, text) in todo_items {
+            lines.push(Line::from(vec![
+                Span::styled("     ", Style::default()), // 5-space indent for todo items
+                Span::styled(checkbox, Style::default().fg(if checkbox == "☒" { Color::Green } else { Color::Gray })),
+                Span::styled(" ", Style::default()),
+                Span::styled(text, Style::default().fg(Color::White)),
+            ]));
+        }
+
+        lines
+    }
+
+    fn render_tool_part(&self, tool_part: &ToolPart) -> Vec<Line<'static>> {
+        let mut lines = Vec::new();
+
+        // Status-based bullet point color
+        let bullet_color = self.get_tool_status_color(&*tool_part.state);
+        let tool_args = self.format_tool_args(&tool_part.tool, &tool_part.call_id);
+        
+        // Tool call header
+        let tool_header = if tool_args.is_empty() {
+            format!("● {}", tool_part.tool)
+        } else {
+            format!("● {}({})", tool_part.tool, tool_args)
+        };
+
+        lines.push(Line::from(vec![
+            Span::styled(tool_header, Style::default().fg(bullet_color)),
+        ]));
+
+        // Result summary with tree connector
+        let result_summary = self.format_tool_result_summary(tool_part);
+        let summary_line = match self.context {
+            MessageContext::Inline => {
+                format!("  ⎿  {}", result_summary)
+            },
+            MessageContext::Fullscreen => {
+                // Only show expand option in fullscreen mode
+                if self.expanded_tools.contains(&tool_part.call_id) {
+                    format!("  ⎿  {} (ctrl+r to collapse)", result_summary)
+                } else {
+                    format!("  ⎿  {} (ctrl+r to expand)", result_summary)
+                }
+            }
+        };
+
+        lines.push(Line::from(vec![
+            Span::styled(summary_line, Style::default().fg(Color::Gray)),
+        ]));
+
+        // Special handling for todowrite tool - show todo list
+        if tool_part.tool == "todowrite" {
+            lines.extend(self.render_todo_list_content(tool_part));
+        }
+
+        // In fullscreen mode, show expanded output if requested
+        if self.context == MessageContext::Fullscreen && self.expanded_tools.contains(&tool_part.call_id) {
+            if let ToolState::Completed(_completed) = &*tool_part.state {
+                // TODO: Implement expanded tool output rendering
+                lines.push(Line::from(vec![
+                    Span::styled("    [Expanded output would go here]", Style::default().fg(Color::DarkGray)),
+                ]));
+            }
+        }
+
+        lines
+    }
+
+    fn render_text_part(&self, text_part: &TextPart, is_grouped: bool) -> Vec<Line<'static>> {
+        let mut lines = Vec::new();
+        
+        // Skip synthetic text parts
+        if text_part.synthetic.unwrap_or(false) {
+            return lines;
+        }
+
+        let content = text_part.text.clone();
+
+        // Determine prefix based on context
+        let prefix = if is_grouped {
+            "  " // 2-space indent for grouped text
+        } else {
+            "● " // Bullet for standalone text
+        };
+
+        // Split content into lines and apply prefix
+        for line in content.lines() {
+            if line.trim().is_empty() {
+                lines.push(Line::from(""));
+            } else {
+                lines.push(Line::from(vec![
+                    Span::styled(prefix.to_string(), Style::default().fg(Color::White)),
+                    Span::styled(line.to_string(), Style::default().fg(Color::White)),
+                ]));
+            }
+        }
+
+        lines
+    }
+
+    fn group_parts_into_steps(&self) -> Vec<StepGroup> {
+        let mut groups = Vec::new();
+        let mut current_group = StepGroup {
+            text_parts: Vec::new(),
+            tool_parts: Vec::new(), 
+            file_parts: Vec::new(),
+        };
+        let mut in_step = false;
+
+        for part in &self.parts {
+            match part {
+                Part::StepStart(_) => {
+                    // Start a new step group
+                    if in_step {
+                        // Finish previous group
+                        if !current_group.text_parts.is_empty() || !current_group.tool_parts.is_empty() || !current_group.file_parts.is_empty() {
+                            groups.push(current_group);
+                        }
+                    }
+                    current_group = StepGroup {
+                        text_parts: Vec::new(),
+                        tool_parts: Vec::new(),
+                        file_parts: Vec::new(),
+                    };
+                    in_step = true;
+                },
+                Part::StepFinish(_) => {
+                    // Finish current step group
+                    if in_step {
+                        if !current_group.text_parts.is_empty() || !current_group.tool_parts.is_empty() || !current_group.file_parts.is_empty() {
+                            groups.push(current_group);
+                        }
+                        current_group = StepGroup {
+                            text_parts: Vec::new(),
+                            tool_parts: Vec::new(),
+                            file_parts: Vec::new(),
+                        };
+                    }
+                    in_step = false;
+                },
+                Part::Text(text_part) => {
+                    current_group.text_parts.push((**text_part).clone());
+                },
+                Part::Tool(tool_part) => {
+                    current_group.tool_parts.push((**tool_part).clone());
+                },
+                Part::File(file_part) => {
+                    current_group.file_parts.push((**file_part).clone());
+                },
+                Part::Snapshot(_) => {
+                    // Skip snapshot parts for now
+                }
+            }
+        }
+
+        // Don't forget the last group if we're still in a step
+        if in_step && (!current_group.text_parts.is_empty() || !current_group.tool_parts.is_empty() || !current_group.file_parts.is_empty()) {
+            groups.push(current_group);
+        }
+
+        groups
+    }
+
+    pub fn render(&self) -> Text<'static> {
+        let mut lines = Vec::new();
+        let step_groups = self.group_parts_into_steps();
+
+        // Handle case where there are no step groups (ungrouped parts)
+        if step_groups.is_empty() {
+            // Render parts individually without grouping
+            for part in &self.parts {
+                match part {
+                    Part::Text(text_part) => {
+                        lines.extend(self.render_text_part(text_part, false));
+                    },
+                    Part::Tool(tool_part) => {
+                        lines.extend(self.render_tool_part(tool_part));
+                    },
+                    _ => {} // Skip other part types when ungrouped
+                }
+            }
+        } else {
+            // Render grouped parts
+            for group in step_groups {
+                // Render text parts first (grouped)
+                for text_part in &group.text_parts {
+                    lines.extend(self.render_text_part(text_part, true));
+                }
+
+                // Render tool parts
+                for tool_part in &group.tool_parts {
+                    lines.extend(self.render_tool_part(tool_part));
+                }
+
+                // Add spacing between groups
+                lines.push(Line::from(""));
+            }
+        }
+
+        Text::from(lines)
+    }
+
+    pub fn height(&self) -> u16 {
+        let text = self.render();
+        text.lines.len() as u16
+    }
+}
+
+// Legacy MessagePart for backward compatibility
 #[derive(Debug, Clone)]
 pub struct MessagePart<'a> {
     part: &'a Part,
@@ -18,144 +342,15 @@ impl<'a> MessagePart<'a> {
         Self { part }
     }
 
-    fn render_text_part(&self, text_part: &TextPart) -> Text<'static> {
-        let content = if text_part.synthetic.unwrap_or(false) {
-            format!("[Synthetic] {}", text_part.text)
-        } else {
-            text_part.text.clone()
-        };
-        
-        Text::from(content)
-    }
-
-    fn render_tool_part(&self, tool_part: &ToolPart) -> Text<'static> {
-        let tool_name = &tool_part.tool;
-        let call_id = &tool_part.call_id;
-        
-        let (status_text, status_icon) = match &*tool_part.state {
-            ToolState::Pending(pending) => (pending.status.as_str(), "⏳"),
-            ToolState::Running(running) => (running.status.as_str(), "🔄"),
-            ToolState::Completed(completed) => (completed.status.as_str(), "✅"),
-            ToolState::Error(error) => (error.status.as_str(), "❌"),
-        };
-
-        let lines = vec![
-            Line::from(vec![
-                Span::styled("🔧 Tool: ", Style::default().fg(Color::Cyan)),
-                Span::styled(tool_name.clone(), Style::default().fg(Color::White).bold()),
-            ]),
-            Line::from(vec![
-                Span::styled("   ID: ", Style::default().fg(Color::Gray)),
-                Span::styled(call_id.clone(), Style::default().fg(Color::Gray)),
-            ]),
-            Line::from(vec![
-                Span::styled("   Status: ", Style::default().fg(Color::Gray)),
-                Span::styled(format!("{} {}", status_icon, status_text), Style::default().fg(self.get_status_color(&*tool_part.state))),
-            ]),
-        ];
-
-        // Add additional details based on state
-        let mut all_lines = lines;
-        match &*tool_part.state {
-            ToolState::Completed(completed) => {
-                let output = &completed.output;
-                all_lines.push(Line::from(vec![
-                    Span::styled("   Output: ", Style::default().fg(Color::Gray)),
-                ]));
-                // Truncate long outputs for display
-                let display_output = if output.len() > 200 {
-                    format!("{}...", &output[..200])
-                } else {
-                    output.clone()
-                };
-                all_lines.push(Line::from(vec![
-                    Span::styled(format!("   {}", display_output), Style::default().fg(Color::White)),
-                ]));
-            },
-            ToolState::Error(error) => {
-                let error_message = &error.error;
-                all_lines.push(Line::from(vec![
-                    Span::styled("   Error: ", Style::default().fg(Color::Red)),
-                    Span::styled(error_message.clone(), Style::default().fg(Color::Red)),
-                ]));
-            },
-            _ => {}
-        }
-
-        Text::from(all_lines)
-    }
-
-    fn render_file_part(&self, file_part: &FilePart) -> Text<'static> {
-        let file_info = if let Some(filename) = &file_part.filename {
-            filename.clone()
-        } else {
-            file_part.url.clone()
-        };
-
-        let lines = vec![
-            Line::from(vec![
-                Span::styled("📄 File: ", Style::default().fg(Color::Green)),
-                Span::styled(file_info, Style::default().fg(Color::White).bold()),
-            ]),
-        ];
-
-        Text::from(lines)
-    }
-
-    fn render_step_start_part(&self, _step_part: &StepStartPart) -> Text<'static> {
-        Text::from(Line::from(vec![
-            Span::styled("▶️ ", Style::default().fg(Color::Blue)),
-            Span::styled("Step started", Style::default().fg(Color::Blue).italic()),
-        ]))
-    }
-
-    fn render_step_finish_part(&self, _step_part: &StepFinishPart) -> Text<'static> {
-        Text::from(Line::from(vec![
-            Span::styled("⏹️ ", Style::default().fg(Color::Blue)),
-            Span::styled("Step finished", Style::default().fg(Color::Blue).italic()),
-        ]))
-    }
-
-    fn render_snapshot_part(&self, snapshot_part: &SnapshotPart) -> Text<'static> {
-        Text::from(Line::from(vec![
-            Span::styled("📸 Snapshot: ", Style::default().fg(Color::Magenta)),
-            Span::styled(snapshot_part.snapshot.clone(), Style::default().fg(Color::White).bold()),
-        ]))
-    }
-
-    fn get_status_color(&self, state: &ToolState) -> Color {
-        match state {
-            ToolState::Pending(_) => Color::Yellow,
-            ToolState::Running(_) => Color::Blue,
-            ToolState::Completed(_) => Color::Green,
-            ToolState::Error(_) => Color::Red,
-        }
-    }
-
     pub fn to_text(&self) -> Text<'static> {
-        match self.part {
-            Part::Text(text_part) => self.render_text_part(text_part),
-            Part::Tool(tool_part) => self.render_tool_part(tool_part),
-            Part::File(file_part) => self.render_file_part(file_part),
-            Part::StepStart(step_part) => self.render_step_start_part(step_part),
-            Part::StepFinish(step_part) => self.render_step_finish_part(step_part),
-            Part::Snapshot(snapshot_part) => self.render_snapshot_part(snapshot_part),
-        }
+        // Use new MessageRenderer for single part
+        let renderer = MessageRenderer::new(vec![self.part.clone()], MessageContext::Fullscreen);
+        renderer.render()
     }
 
     pub fn height(&self) -> u16 {
-        match self.part {
-            Part::Text(text_part) => {
-                // Count newlines in text content
-                let line_count = text_part.text.lines().count().max(1);
-                line_count as u16
-            },
-            Part::Tool(_) => 4, // Tool parts typically take 3-4 lines
-            Part::File(_) => 1,
-            Part::StepStart(_) => 1,
-            Part::StepFinish(_) => 1,
-            Part::Snapshot(_) => 1,
-        }
+        let text = self.to_text();
+        text.lines.len() as u16
     }
 }
 

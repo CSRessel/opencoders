@@ -186,6 +186,10 @@ impl Model {
         self.message_state.get_messages_needing_stdout_print()
     }
 
+    pub fn messages_for_rendering(&self) -> Vec<opencode_sdk::models::GetSessionByIdMessage200ResponseInner> {
+        self.message_state.get_messages_for_rendering()
+    }
+
     // State transition helpers
     pub fn transition_to_connecting(&mut self) {
         self.state = AppState::ConnectingToServer;

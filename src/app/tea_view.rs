@@ -2,6 +2,7 @@ use crate::app::{
     tea_model::{AppState, ConnectionStatus, Model},
     ui_components::{
         banner::welcome_text_height, create_welcome_text, text_input::TEXT_INPUT_HEIGHT,
+        message_part::{MessageRenderer, MessageContext},
     },
     view_model_context::ViewModelContext,
 };
@@ -75,23 +76,30 @@ fn calculate_wrapped_lines(text: &str, width: u16) -> u16 {
 }
 
 fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
-    let messages = model.messages_needing_stdout_print();
+    let messages = model.messages_for_rendering();
     let (terminal_width, _) = crossterm::terminal::size()?;
-    let effective_width = terminal_width.saturating_sub(2); // Account for "> " prefix
+    let _effective_width = terminal_width.saturating_sub(2); // Account for "> " prefix
 
     for message in &messages {
-        // Count explicit newlines
-        let newline_count = message.matches('\n').count() as u16;
-
-        // Calculate wrapped lines based on terminal width
-        let wrapped_lines = calculate_wrapped_lines(message, effective_width);
-
-        // Total lines = max of explicit newlines vs wrapped lines
-        let total_lines = wrapped_lines.max(newline_count + 1);
+        // Use new MessageRenderer for proper formatting
+        let renderer = MessageRenderer::from_message(message, MessageContext::Inline);
+        let rendered_text = renderer.render();
+        
+        // Calculate total lines for scrolling
+        let total_lines = rendered_text.lines.len() as u16;
 
         // Go to start of line
         crossterm::execute!(io::stdout(), crossterm::cursor::MoveToColumn(0))?;
-        print!("> {}\n", message);
+        
+        // Print each line of the rendered message
+        for line in &rendered_text.lines {
+            // Convert ratatui Line to plain text string
+            let line_text: String = line.spans.iter()
+                .map(|span| span.content.as_ref())
+                .collect();
+            println!("{}", line_text);
+        }
+        
         // Scroll up by the total number of lines this message will occupy
         crossterm::execute!(
             io::stdout(),

@@ -20,7 +20,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // Hardcoded session ID for testing
-    let session_id = "ses_73c208b19ffeJuppPVZMiFVdBb";
+
+    // small debugging session:
+    // let session_id = "ses_73c208b19ffeJuppPVZMiFVdBb";
+
+    // multiple types of tool calls:
+    let session_id = "ses_7372bba2cffejwScF7qXSbOaXc";
+
     println!("Testing session ID: {}", session_id);
     println!();
 
@@ -88,6 +94,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn analyze_messages_for_sync_issues(
     messages: &[opencode_sdk::models::GetSessionByIdMessage200ResponseInner],
 ) {
+    println!(
+        "raw:\n{}\n\n",
+        serde_json::to_string_pretty(messages).unwrap()
+    );
+
     println!("🔍 Analyzing messages for synchronization issues...");
     println!();
 
@@ -114,16 +125,13 @@ fn analyze_messages_for_sync_issues(
                         "  Part {}: Tool '{}' (ID: {})",
                         part_idx + 1,
                         tool_part.tool,
-                        tool_part.id
+                        tool_part.id,
                     );
 
                     match tool_part.state.as_ref() {
                         ToolState::Pending(pending) => {
                             pending_tools += 1;
                             println!("    Status: PENDING ({})", pending.status);
-                            println!(
-                                "    ⚠️  WARNING: This tool may be stuck or events are lagging"
-                            );
                         }
                         ToolState::Running(running) => {
                             running_tools += 1;
@@ -142,23 +150,36 @@ fn analyze_messages_for_sync_issues(
                 }
                 Part::Text(text_part) => {
                     println!(
-                        "  Part {}: Text ({} chars)",
+                        "  Part {}: Text (chars {})",
                         part_idx + 1,
                         text_part.text.len()
                     );
                 }
-                Part::File(_file_part) => {
-                    println!("  Part {}: File", part_idx + 1);
+                Part::File(file_part) => {
+                    println!(
+                        "  Part {}: File (name {})",
+                        part_idx + 1,
+                        file_part.filename.clone().unwrap_or("-".to_string()),
+                    );
                 }
-                Part::StepStart(_step_part) => {
-                    println!("  Part {}: Step Start", part_idx + 1);
+                // Part::StepStart(step_part) => {
+                //     println!(
+                //         "  Part {}: Step Start (preview {})",
+                //         part_idx + 1,
+                //         serde_json::to_string(step_part).unwrap(),
+                //     );
+                // }
+                // Part::StepFinish(_step_part) => {
+                //     println!("  Part {}: Step Finish", part_idx + 1);
+                // }
+                Part::Snapshot(snapshot_part) => {
+                    println!(
+                        "  Part {}: Snapshot (snap {})",
+                        part_idx + 1,
+                        snapshot_part.snapshot,
+                    );
                 }
-                Part::StepFinish(_step_part) => {
-                    println!("  Part {}: Step Finish", part_idx + 1);
-                }
-                Part::Snapshot(_snapshot_part) => {
-                    println!("  Part {}: Snapshot", part_idx + 1);
-                }
+                _ => (),
             }
         }
         println!();
@@ -191,17 +212,7 @@ fn analyze_messages_for_sync_issues(
             error_tools,
             (error_tools as f64 / tool_parts as f64) * 100.0
         );
-
-        if pending_tools > 0 {
-            println!();
-            println!("🚨 POTENTIAL SYNC ISSUE DETECTED:");
-            println!("   {} tools are in PENDING state", pending_tools);
-            println!("   This could indicate:");
-            println!("   - Event polling is lagging behind server state");
-            println!("   - Tools are genuinely still executing");
-            println!("   - Event stream missed completion events");
-            println!("   - Server-side processing delays");
-        }
+        println!("   {} tools are in PENDING state", pending_tools);
     }
 }
 
@@ -211,7 +222,7 @@ async fn test_new_sse_implementation(
     println!("🧪 Testing NEW SSE implementation from events.rs...");
     println!();
 
-    // Create EventStream instance  
+    // Create EventStream instance
     let event_stream = EventStream::new(client.configuration().clone()).await?;
     let mut event_handle = event_stream.handle();
 
@@ -267,15 +278,8 @@ async fn test_new_sse_implementation(
 
     if event_count > 0 {
         println!("🎉 SUCCESS: New SSE implementation is working!");
-        println!("  - Events are being received and parsed correctly");
-        println!("  - This should fix the tool state synchronization bug");
-        println!("  - Next step: Test with actual TUI application");
     } else {
         println!("⚠️  WARNING: No events received");
-        println!("  - Server might not be sending events");
-        println!("  - Session might be idle");
-        println!("  - Network connectivity issues");
-        println!("  - SSE implementation might need debugging");
     }
 
     Ok(())

@@ -61,19 +61,12 @@ impl MessageRenderer {
     }
 
     fn get_tool_status_color(&self, state: &ToolState) -> Color {
-        // TODO: Make this configurable via theme/config system
-        let tool_state = match state {
-            ToolState::Pending(s) => s.status.clone(),
-            ToolState::Running(s) => s.status.clone(),
-            ToolState::Completed(s) => s.status.clone(),
-            ToolState::Error(s) => s.status.clone(),
-        };
-        match tool_state.as_str() {
-            "pending" => Color::Yellow,
-            "running" => Color::Blue,
-            "completed" => Color::Green,
-            "error" => Color::Red,
-            _ => Color::default(),
+        // Check the actual status string from the API response
+        match state {
+            ToolState::Pending(_) => Color::Yellow,
+            ToolState::Running(_) => Color::Blue,
+            ToolState::Completed(_) => Color::Green,
+            ToolState::Error(_) => Color::Red,
         }
     }
 
@@ -305,8 +298,16 @@ impl MessageRenderer {
                 let output = &completed.output;
                 match tool_part.tool.as_str() {
                     "todowrite" => {
-                        // Parse todo count from output
-                        if let Ok(todos) = serde_json::from_str::<serde_json::Value>(output) {
+                        // Try to get todos from metadata first (cleaner structure)
+                        if let Some(metadata_todos) = completed.metadata.get("todos") {
+                            if let Some(array) = metadata_todos.as_array() {
+                                format!("{} todos", array.len())
+                            } else {
+                                "Updated todo list".to_string()
+                            }
+                        } else if let Ok(todos) = serde_json::from_str::<serde_json::Value>(output)
+                        {
+                            // Fallback to parsing from output
                             if let Some(array) = todos.as_array() {
                                 format!("{} todos", array.len())
                             } else {
@@ -317,27 +318,61 @@ impl MessageRenderer {
                         }
                     }
                     "glob" => {
-                        // Parse file list from output and count
-                        let lines = output
-                            .lines()
-                            .filter(|line| !line.trim().is_empty())
-                            .count();
-                        if lines > 0 {
-                            format!("Found {} files", lines)
+                        // Try to get count from metadata first, fallback to counting lines
+                        if let Some(metadata) = completed.metadata.get("count") {
+                            if let Some(count) = metadata.as_u64() {
+                                format!("Found {} files", count)
+                            } else {
+                                let lines = output
+                                    .lines()
+                                    .filter(|line| !line.trim().is_empty())
+                                    .count();
+                                format!("Found {} files", lines)
+                            }
                         } else {
-                            "No files found".to_string()
+                            let lines = output
+                                .lines()
+                                .filter(|line| !line.trim().is_empty())
+                                .count();
+                            if lines > 0 {
+                                format!("Found {} files", lines)
+                            } else {
+                                "No files found".to_string()
+                            }
                         }
                     }
                     "grep" => {
-                        // Parse grep output for file matches
-                        let lines = output
-                            .lines()
-                            .filter(|line| !line.trim().is_empty())
-                            .count();
-                        if lines > 0 {
-                            format!("Found {} matches", lines)
+                        // Try to get matches count from metadata first
+                        if let Some(metadata) = completed.metadata.get("matches") {
+                            if let Some(matches) = metadata.as_u64() {
+                                if matches > 0 {
+                                    format!("Found {} matches", matches)
+                                } else {
+                                    "No matches found".to_string()
+                                }
+                            } else {
+                                "Search completed".to_string()
+                            }
                         } else {
-                            "No matches found".to_string()
+                            // Fallback to parsing output
+                            if output.contains("Found") && output.contains("matches") {
+                                // Extract from "Found X matches" format
+                                if let Some(first_line) = output.lines().next() {
+                                    first_line.to_string()
+                                } else {
+                                    "Search completed".to_string()
+                                }
+                            } else {
+                                let lines = output
+                                    .lines()
+                                    .filter(|line| !line.trim().is_empty())
+                                    .count();
+                                if lines > 0 {
+                                    format!("Found {} matches", lines)
+                                } else {
+                                    "No matches found".to_string()
+                                }
+                            }
                         }
                     }
                     "read" => {
@@ -376,24 +411,50 @@ impl MessageRenderer {
                         format!("Found {} items", lines)
                     }
                     "bash" => {
-                        // Parse bash output for common patterns
-                        if output.contains("error")
-                            || output.contains("Error")
-                            || output.contains("ERROR")
-                        {
-                            "Command failed".to_string()
-                        } else if output.contains("warning") || output.contains("Warning") {
-                            "Command completed with warnings".to_string()
-                        } else if output.trim().is_empty() {
-                            "Command completed".to_string()
-                        } else {
-                            // Show first meaningful line
-                            if let Some(first_line) =
-                                output.lines().find(|line| !line.trim().is_empty())
-                            {
-                                self.truncate_output(first_line, 40)
+                        // Check metadata for exit code first
+                        if let Some(exit_code) = completed.metadata.get("exit") {
+                            if let Some(code) = exit_code.as_u64() {
+                                if code == 0 {
+                                    if output.contains("warning") || output.contains("Warning") {
+                                        "Command completed with warnings".to_string()
+                                    } else if output.trim().is_empty() {
+                                        "Command completed successfully".to_string()
+                                    } else {
+                                        // Show first meaningful line for successful commands
+                                        if let Some(first_line) = output.lines().find(|line| {
+                                            !line.trim().is_empty() && !line.trim().starts_with(' ')
+                                        }) {
+                                            self.truncate_output(first_line.trim(), 40)
+                                        } else {
+                                            "Command completed successfully".to_string()
+                                        }
+                                    }
+                                } else {
+                                    format!("Command failed (exit {})", code)
+                                }
                             } else {
                                 "Command completed".to_string()
+                            }
+                        } else {
+                            // Fallback to output parsing
+                            if output.contains("error")
+                                || output.contains("Error")
+                                || output.contains("ERROR")
+                            {
+                                "Command failed".to_string()
+                            } else if output.contains("warning") || output.contains("Warning") {
+                                "Command completed with warnings".to_string()
+                            } else if output.trim().is_empty() {
+                                "Command completed".to_string()
+                            } else {
+                                // Show first meaningful line
+                                if let Some(first_line) =
+                                    output.lines().find(|line| !line.trim().is_empty())
+                                {
+                                    self.truncate_output(first_line, 40)
+                                } else {
+                                    "Command completed".to_string()
+                                }
                             }
                         }
                     }
@@ -427,9 +488,20 @@ impl MessageRenderer {
     fn render_todo_list_content(&self, tool_part: &ToolPart) -> Vec<Line<'static>> {
         let mut lines = Vec::new();
 
-        // Parse actual todo list from tool output
+        // Parse actual todo list from tool output or metadata
         if let ToolState::Completed(completed) = &*tool_part.state {
-            if let Ok(todos) = serde_json::from_str::<serde_json::Value>(&completed.output) {
+            // Try metadata first (cleaner structure)
+            let todos_source = if let Some(metadata_todos) = completed.metadata.get("todos") {
+                Some(metadata_todos.clone())
+            } else if let Ok(output_todos) =
+                serde_json::from_str::<serde_json::Value>(&completed.output)
+            {
+                Some(output_todos)
+            } else {
+                None
+            };
+
+            if let Some(todos) = todos_source {
                 if let Some(array) = todos.as_array() {
                     for todo in array {
                         if let (Some(content), Some(status)) = (

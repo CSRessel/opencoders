@@ -1,4 +1,5 @@
 #[cfg(debug_assertions)]
+#[allow(unused_macros)]
 macro_rules! trace_hot_path {
     ($($arg:tt)*) => {
         tracing::trace!($($arg)*);
@@ -22,5 +23,6 @@ macro_rules! debug_hot_path {
     ($($arg:tt)*) => {};
 }
 
-pub(crate) use trace_hot_path;
 pub(crate) use debug_hot_path;
+pub(crate) use trace_hot_path;
+

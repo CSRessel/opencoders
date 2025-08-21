@@ -576,6 +576,7 @@ impl MessageRenderer {
 
     fn render_tool_part(&self, tool_part: &ToolPart) -> Vec<Line<'static>> {
         let mut lines = Vec::new();
+        lines.push(Line::from(" "));
 
         // Status-based bullet point color
         let bullet_color = self.get_tool_status_color(&*tool_part.state);
@@ -637,6 +638,7 @@ impl MessageRenderer {
 
     fn render_text_part(&self, text_part: &TextPart, is_grouped: bool) -> Vec<Line<'static>> {
         let mut lines = Vec::new();
+        lines.push(Line::from(" "));
 
         // Skip synthetic text parts
         if text_part.synthetic.unwrap_or(false) {
@@ -655,7 +657,7 @@ impl MessageRenderer {
         // Split content into lines and apply prefix
         for line in content.lines() {
             if line.trim().is_empty() {
-                lines.push(Line::from(""));
+                lines.push(Line::from(" "));
             } else {
                 lines.push(Line::from(vec![
                     Span::styled(prefix.to_string(), Style::default().fg(Color::White)),
@@ -783,6 +785,7 @@ impl MessageRenderer {
 
         // Handle case where there are no step groups (ungrouped parts)
         if step_groups.is_empty() {
+            // lines.push(Line::from(" "));
             // Render parts individually without grouping
             for part in &self.parts {
                 match part {
@@ -798,6 +801,7 @@ impl MessageRenderer {
         } else {
             // Render grouped parts
             for group in step_groups {
+                // lines.push(Line::from(" "));
                 // Render text parts first (grouped)
                 for text_part in &group.text_parts {
                     lines.extend(self.render_text_part(text_part, true));
@@ -806,12 +810,7 @@ impl MessageRenderer {
                 // Render tool parts
                 for tool_part in &group.tool_parts {
                     lines.extend(self.render_tool_part(tool_part));
-                    lines.push(Line::from(""));
                 }
-
-                // Add spacing between groups
-                lines.push(Line::from(""));
-                lines.push(Line::from(""));
             }
         }
 

@@ -2,8 +2,10 @@ use crate::app::{
     tea_model::{AppState, ConnectionStatus, Model},
     text_wrapper::TextWrapper,
     ui_components::{
-        banner::welcome_text_height, create_welcome_text, text_input::TEXT_INPUT_HEIGHT,
-        message_part::{MessageRenderer, MessageContext},
+        banner::welcome_text_height,
+        create_welcome_text,
+        message_part::{MessageContext, MessageRenderer},
+        text_input::TEXT_INPUT_HEIGHT,
     },
     view_model_context::ViewModelContext,
 };
@@ -60,27 +62,11 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn calculate_wrapped_lines(text: &str, width: u16) -> u16 {
-    if width == 0 {
-        return 1;
-    }
-
-    text.lines()
-        .map(|line| {
-            if line.is_empty() {
-                1u16
-            } else {
-                ((line.len() as u16 + width - 1) / width).max(1) // Ceiling division, minimum 1
-            }
-        })
-        .sum()
-}
-
 fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     let message_containers = model.message_containers_for_rendering();
     let (terminal_width, _) = crossterm::terminal::size()?;
     let effective_width = terminal_width.saturating_sub(2); // Account for "> " prefix
-    
+
     // Create wrapper with reasonable tolerance (10% of width or minimum 5)
     let tolerance = (effective_width as usize / 10).max(5);
     let wrapper = TextWrapper::new(effective_width, Some(tolerance));
@@ -88,22 +74,22 @@ fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>
     for container in &message_containers {
         let renderer = MessageRenderer::from_message_container(container, MessageContext::Inline);
         let rendered_text = renderer.render();
-        
+
         // Wrap each ratatui line and accumulate total lines
         let mut total_wrapped_lines = 0u16;
-        
+
         crossterm::execute!(io::stdout(), crossterm::cursor::MoveToColumn(0))?;
-        
+
         for line in &rendered_text.lines {
             let wrapped_lines = wrapper.wrap_ratatui_line(line);
             total_wrapped_lines += wrapped_lines.len() as u16;
-            
+
             // Print each wrapped line
             for wrapped_line in &wrapped_lines {
                 println!("{}", wrapped_line);
             }
         }
-        
+
         // Scroll up by the actual number of wrapped lines
         crossterm::execute!(
             io::stdout(),

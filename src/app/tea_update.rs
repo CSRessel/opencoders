@@ -5,7 +5,7 @@ use crate::app::{
     ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
 };
 use opencode_sdk::models::{
-    GetSessionByIdMessage200ResponseInner, Message, Part, TextPart, UserMessage,
+    Message, Part, SessionByIdMessage200ResponseInner, TextPart, UserMessage,
 };
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -526,7 +526,12 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             // Log debug output for fetched messages
             tracing::debug!("Fetched {} session messages", messages.len());
             model.message_state.load_messages(messages.clone());
-            let message_containers = model.message_state.get_all_message_containers().into_iter().cloned().collect();
+            let message_containers = model
+                .message_state
+                .get_all_message_containers()
+                .into_iter()
+                .cloned()
+                .collect();
             model.message_log.set_message_containers(message_containers);
             (model, Cmd::None)
         }
@@ -636,7 +641,12 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
 
     if updated {
         // Update the message log with the new state
-        let message_containers = model.message_state.get_all_message_containers().into_iter().cloned().collect();
+        let message_containers = model
+            .message_state
+            .get_all_message_containers()
+            .into_iter()
+            .cloned()
+            .collect();
         model.message_log.set_message_containers(message_containers);
     }
 

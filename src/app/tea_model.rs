@@ -5,7 +5,7 @@ use crate::{
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
-use opencode_sdk::models::{Mode, Session};
+use opencode_sdk::models::{Model as SdkModel, Session};
 use std::time::SystemTime;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,7 +65,7 @@ pub struct Model {
     pub client: Option<OpenCodeClient>,
     pub session_state: SessionState,
     pub sessions: Vec<Session>,
-    pub modes: Vec<Mode>,
+    pub modes: Vec<SdkModel>,
     pub mode_state: Option<usize>,
     pub connection_status: ConnectionStatus,
     pub pending_first_message: Option<String>,
@@ -361,7 +361,7 @@ impl Model {
         self.mode_state = index;
     }
 
-    pub fn get_current_mode(&self) -> Option<&Mode> {
+    pub fn get_current_mode(&self) -> Option<&SdkModel> {
         self.mode_state.and_then(|index| self.modes.get(index))
     }
 
@@ -369,7 +369,7 @@ impl Model {
         self.get_current_mode().map(|mode| mode.name.as_str())
     }
 
-    pub fn set_modes(&mut self, modes: Vec<Mode>) {
+    pub fn set_modes(&mut self, modes: Vec<SdkModel>) {
         self.modes = modes;
         self.mode_state = Some(0);
     }

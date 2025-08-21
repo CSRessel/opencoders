@@ -8,7 +8,7 @@ use crate::sdk::{
 };
 use opencode_sdk::{
     apis::{configuration::Configuration, default_api},
-    models::{post_log_request, *},
+    models::{AppLogRequest, ConfigAgent, FileRead200Response, FindText200ResponseInner, SessionChatRequest, SessionChatRequestPartsInner, SessionMessages200ResponseInner, *},
 };
 use reqwest::Client;
 use std::sync::Arc;
@@ -105,14 +105,14 @@ impl OpenCodeClient {
 
     /// Get application information
     pub async fn get_app_info(&self) -> Result<App> {
-        default_api::get_app(&self.config)
+        default_api::app_period_get(&self.config)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Initialize the application
     pub async fn initialize_app(&self) -> Result<bool> {
-        default_api::post_app_init(&self.config)
+        default_api::app_period_init(&self.config)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -121,47 +121,49 @@ impl OpenCodeClient {
 
     /// Get configuration information
     pub async fn get_config(&self) -> Result<Config> {
-        default_api::get_config(&self.config)
+        default_api::config_period_get(&self.config)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Get available providers
-    pub async fn get_providers(&self) -> Result<GetConfigProviders200Response> {
-        default_api::get_config_providers(&self.config)
+    pub async fn get_providers(&self) -> Result<ConfigProviders200Response> {
+        default_api::config_period_providers(&self.config)
             .await
             .map_err(OpenCodeError::from)
     }
 
-    /// Get available modes
-    pub async fn get_modes(&self) -> Result<Vec<Mode>> {
-        default_api::get_mode(&self.config)
-            .await
-            .map_err(OpenCodeError::from)
+    /// Get available agent configurations (formerly modes)
+    pub async fn get_agent_configs(&self) -> Result<ConfigAgent> {
+        let config = self.get_config().await?;
+        Ok(config.agent.unwrap_or_default())
     }
 
     // Session operations
 
     /// Create a new session
     pub async fn create_session(&self) -> Result<Session> {
-        default_api::post_session(&self.config)
+        let params = default_api::SessionPeriodCreateParams {
+            session_create_request: None,
+        };
+        default_api::session_period_create(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// List all sessions
     pub async fn list_sessions(&self) -> Result<Vec<Session>> {
-        default_api::get_session(&self.config)
+        default_api::session_period_list(&self.config)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Delete a session
     pub async fn delete_session(&self, session_id: &str) -> Result<bool> {
-        let params = default_api::DeleteSessionByIdParams {
+        let params = default_api::SessionPeriodDeleteParams {
             id: session_id.to_string(),
         };
-        default_api::delete_session_by_id(&self.config, params)
+        default_api::session_period_delete(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -174,48 +176,48 @@ impl OpenCodeClient {
         provider_id: &str,
         model_id: &str,
     ) -> Result<bool> {
-        let request = PostSessionByIdInitRequest {
+        let request = SessionInitRequest {
             message_id: message_id.to_string(),
             provider_id: provider_id.to_string(),
             model_id: model_id.to_string(),
         };
 
-        let params = default_api::PostSessionByIdInitParams {
+        let params = default_api::SessionPeriodInitParams {
             id: session_id.to_string(),
-            post_session_by_id_init_request: Some(request),
+            session_init_request: Some(request),
         };
 
-        default_api::post_session_by_id_init(&self.config, params)
+        default_api::session_period_init(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Abort a session
     pub async fn abort_session(&self, session_id: &str) -> Result<bool> {
-        let params = default_api::PostSessionByIdAbortParams {
+        let params = default_api::SessionPeriodAbortParams {
             id: session_id.to_string(),
         };
-        default_api::post_session_by_id_abort(&self.config, params)
+        default_api::session_period_abort(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Share a session
     pub async fn share_session(&self, session_id: &str) -> Result<Session> {
-        let params = default_api::PostSessionByIdShareParams {
+        let params = default_api::SessionPeriodShareParams {
             id: session_id.to_string(),
         };
-        default_api::post_session_by_id_share(&self.config, params)
+        default_api::session_period_share(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Unshare a session
     pub async fn unshare_session(&self, session_id: &str) -> Result<Session> {
-        let params = default_api::DeleteSessionByIdShareParams {
+        let params = default_api::SessionPeriodUnshareParams {
             id: session_id.to_string(),
         };
-        default_api::delete_session_by_id_share(&self.config, params)
+        default_api::session_period_unshare(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -227,17 +229,17 @@ impl OpenCodeClient {
         provider_id: &str,
         model_id: &str,
     ) -> Result<bool> {
-        let request = PostSessionByIdSummarizeRequest {
+        let request = SessionSummarizeRequest {
             provider_id: provider_id.to_string(),
             model_id: model_id.to_string(),
         };
 
-        let params = default_api::PostSessionByIdSummarizeParams {
+        let params = default_api::SessionPeriodSummarizeParams {
             id: session_id.to_string(),
-            post_session_by_id_summarize_request: Some(request),
+            session_summarize_request: Some(request),
         };
 
-        default_api::post_session_by_id_summarize(&self.config, params)
+        default_api::session_period_summarize(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -248,12 +250,12 @@ impl OpenCodeClient {
     pub async fn get_messages(
         &self,
         session_id: &str,
-    ) -> Result<Vec<GetSessionByIdMessage200ResponseInner>> {
-        let params = default_api::GetSessionByIdMessageParams {
+    ) -> Result<Vec<SessionMessages200ResponseInner>> {
+        let params = default_api::SessionPeriodMessagesParams {
             id: session_id.to_string(),
         };
 
-        match default_api::get_session_by_id_message(&self.config, params).await {
+        match default_api::session_period_messages(&self.config, params).await {
             Ok(messages) => {
                 tracing::info!(
                     "Retrieved {} messages for session {}",
@@ -288,22 +290,23 @@ impl OpenCodeClient {
             time: None,
         };
 
-        let part = PostSessionByIdMessageRequestPartsInner::Text(Box::new(text_part));
-        let request = PostSessionByIdMessageRequest {
+        let part = SessionChatRequestPartsInner::Text(Box::new(text_part));
+        let request = SessionChatRequest {
             message_id: Some(message_id.to_string()),
             provider_id: provider_id.to_string(),
             model_id: model_id.to_string(),
-            mode: mode.map(|m| m.to_string()),
+            agent: mode.map(|m| m.to_string()),
+            system: None,
             tools: None,
             parts: vec![part],
         };
 
-        let params = default_api::PostSessionByIdMessageParams {
+        let params = default_api::SessionPeriodChatParams {
             id: session_id.to_string(),
-            post_session_by_id_message_request: Some(request),
+            session_chat_request: Some(request),
         };
 
-        match default_api::post_session_by_id_message(&self.config, params).await {
+        match default_api::session_period_chat(&self.config, params).await {
             Ok(message) => {
                 tracing::info!("Message sent successfully");
                 Ok(message)
@@ -323,18 +326,18 @@ impl OpenCodeClient {
     // File operations
 
     /// Read a file
-    pub async fn read_file(&self, path: &str) -> Result<GetFile200Response> {
-        let params = default_api::GetFileParams {
+    pub async fn read_file(&self, path: &str) -> Result<FileRead200Response> {
+        let params = default_api::FilePeriodReadParams {
             path: path.to_string(),
         };
-        default_api::get_file(&self.config, params)
+        default_api::file_period_read(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Get file status
     pub async fn get_file_status(&self) -> Result<Vec<File>> {
-        default_api::get_file_status(&self.config)
+        default_api::file_period_status(&self.config)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -342,31 +345,31 @@ impl OpenCodeClient {
     // Search operations
 
     /// Find text in files
-    pub async fn find_text(&self, pattern: &str) -> Result<Vec<Match>> {
-        let params = default_api::GetFindParams {
+    pub async fn find_text(&self, pattern: &str) -> Result<Vec<FindText200ResponseInner>> {
+        let params = default_api::FindPeriodTextParams {
             pattern: pattern.to_string(),
         };
-        default_api::get_find(&self.config, params)
+        default_api::find_period_text(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Find files
     pub async fn find_files(&self, query: &str) -> Result<Vec<String>> {
-        let params = default_api::GetFindFileParams {
+        let params = default_api::FindPeriodFilesParams {
             query: query.to_string(),
         };
-        default_api::get_find_file(&self.config, params)
+        default_api::find_period_files(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
 
     /// Find symbols
     pub async fn find_symbols(&self, query: &str) -> Result<Vec<Symbol>> {
-        let params = default_api::GetFindSymbolParams {
+        let params = default_api::FindPeriodSymbolsParams {
             query: query.to_string(),
         };
-        default_api::get_find_symbol(&self.config, params)
+        default_api::find_period_symbols(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -381,26 +384,26 @@ impl OpenCodeClient {
         message: &str,
         extra: Option<std::collections::HashMap<String, serde_json::Value>>,
     ) -> Result<bool> {
-        // Convert LogLevel to the Level enum expected by PostLogRequest
-        let post_log_level = match level {
-            LogLevel::Debug => post_log_request::Level::Debug,
-            LogLevel::Info => post_log_request::Level::Info,
-            LogLevel::Warn => post_log_request::Level::Warn,
-            LogLevel::Error => post_log_request::Level::Error,
+        // Convert LogLevel to the Level enum expected by AppLogRequest
+        let app_log_level = match level {
+            LogLevel::Debug => app_log_request::Level::Debug,
+            LogLevel::Info => app_log_request::Level::Info,
+            LogLevel::Warn => app_log_request::Level::Warn,
+            LogLevel::Error => app_log_request::Level::Error,
         };
 
-        let request = PostLogRequest {
+        let request = AppLogRequest {
             service: service.to_string(),
-            level: post_log_level,
+            level: app_log_level,
             message: message.to_string(),
             extra,
         };
 
-        let params = default_api::PostLogParams {
-            post_log_request: Some(request),
+        let params = default_api::AppPeriodLogParams {
+            app_log_request: Some(request),
         };
 
-        default_api::post_log(&self.config, params)
+        default_api::app_period_log(&self.config, params)
             .await
             .map_err(OpenCodeError::from)
     }
@@ -430,7 +433,7 @@ pub struct MessageBuilder {
     provider_id: Option<String>,
     model_id: Option<String>,
     mode: Option<String>,
-    parts: Vec<PostSessionByIdMessageRequestPartsInner>,
+    parts: Vec<SessionChatRequestPartsInner>,
 }
 
 impl MessageBuilder {
@@ -477,7 +480,7 @@ impl MessageBuilder {
             synthetic: None,
             time: None,
         };
-        let part = PostSessionByIdMessageRequestPartsInner::Text(Box::new(text_part));
+        let part = SessionChatRequestPartsInner::Text(Box::new(text_part));
         self.parts.push(part);
         self
     }
@@ -491,14 +494,14 @@ impl MessageBuilder {
             url: url.to_string(),
             source: None,
         };
-        let part = PostSessionByIdMessageRequestPartsInner::File(Box::new(file_part));
+        let part = SessionChatRequestPartsInner::File(Box::new(file_part));
         self.parts.push(part);
         self
     }
 
     /// Send the message
     pub async fn send(self, config: &Configuration) -> Result<AssistantMessage> {
-        let request = PostSessionByIdMessageRequest {
+        let request = SessionChatRequest {
             message_id: Some(
                 self.message_id
                     .ok_or_else(|| OpenCodeError::invalid_request("message_id is required"))?,
@@ -509,20 +512,18 @@ impl MessageBuilder {
             model_id: self
                 .model_id
                 .ok_or_else(|| OpenCodeError::invalid_request("model_id is required"))?,
-            mode: Some(
-                self.mode
-                    .ok_or_else(|| OpenCodeError::invalid_request("mode is required"))?,
-            ),
+            agent: self.mode,
+            system: None,
             tools: None,
             parts: self.parts,
         };
 
-        let params = default_api::PostSessionByIdMessageParams {
+        let params = default_api::SessionPeriodChatParams {
             id: self.session_id,
-            post_session_by_id_message_request: Some(request),
+            session_chat_request: Some(request),
         };
 
-        default_api::post_session_by_id_message(config, params)
+        default_api::session_period_chat(config, params)
             .await
             .map_err(OpenCodeError::from)
     }

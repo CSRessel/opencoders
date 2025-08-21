@@ -6,7 +6,7 @@ use crate::{
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
-use opencode_sdk::models::{Event, GetSessionByIdMessage200ResponseInner, Mode, Session};
+use opencode_sdk::models::{Event, SessionMessages200ResponseInner, Model, Session};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Msg {
@@ -39,12 +39,12 @@ pub enum Msg {
     SessionsLoadFailed(OpenCodeError),
 
     // Modes messages
-    ModesLoaded(Vec<Mode>),
+    ModesLoaded(Vec<Model>),
     ModesLoadFailed(OpenCodeError),
     CycleModeState,
 
     // Session messages
-    SessionMessagesLoaded(Vec<GetSessionByIdMessage200ResponseInner>),
+    SessionMessagesLoaded(Vec<SessionMessages200ResponseInner>),
     SessionMessagesLoadFailed(OpenCodeError),
 
     // User message sending
@@ -107,7 +107,7 @@ pub enum Cmd {
         String,
         String,
         String,
-        Option<Mode>,
+        Option<Model>,
     ), // client, session_id, message_id, text, provider_id, model_id, mode
     AsyncCancelTask(TaskId),
     AsyncSessionAbort,

@@ -1,4 +1,4 @@
-use opencode_sdk::models::{GetSessionByIdMessage200ResponseInner, Message, Part};
+use opencode_sdk::models::{SessionMessages200ResponseInner, Message, Part};
 use std::collections::{HashMap, HashSet};
 use std::time::SystemTime;
 

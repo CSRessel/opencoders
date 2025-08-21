@@ -12,22 +12,22 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Match {
+pub struct FindText200ResponseInner {
     #[serde(rename = "path")]
-    pub path: Box<models::PostTuiAppendPromptRequest>,
+    pub path: Box<models::FindText200ResponseInnerPath>,
     #[serde(rename = "lines")]
-    pub lines: Box<models::PostTuiAppendPromptRequest>,
+    pub lines: Box<models::FindText200ResponseInnerPath>,
     #[serde(rename = "line_number")]
     pub line_number: f64,
     #[serde(rename = "absolute_offset")]
     pub absolute_offset: f64,
     #[serde(rename = "submatches")]
-    pub submatches: Vec<models::MatchSubmatchesInner>,
+    pub submatches: Vec<models::FindText200ResponseInnerSubmatchesInner>,
 }
 
-impl Match {
-    pub fn new(path: models::PostTuiAppendPromptRequest, lines: models::PostTuiAppendPromptRequest, line_number: f64, absolute_offset: f64, submatches: Vec<models::MatchSubmatchesInner>) -> Match {
-        Match {
+impl FindText200ResponseInner {
+    pub fn new(path: models::FindText200ResponseInnerPath, lines: models::FindText200ResponseInnerPath, line_number: f64, absolute_offset: f64, submatches: Vec<models::FindText200ResponseInnerSubmatchesInner>) -> FindText200ResponseInner {
+        FindText200ResponseInner {
             path: Box::new(path),
             lines: Box::new(lines),
             line_number,

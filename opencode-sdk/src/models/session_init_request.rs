@@ -12,18 +12,21 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ModeModel {
-    #[serde(rename = "modelID")]
-    pub model_id: String,
+pub struct SessionInitRequest {
+    #[serde(rename = "messageID")]
+    pub message_id: String,
     #[serde(rename = "providerID")]
     pub provider_id: String,
+    #[serde(rename = "modelID")]
+    pub model_id: String,
 }
 
-impl ModeModel {
-    pub fn new(model_id: String, provider_id: String) -> ModeModel {
-        ModeModel {
-            model_id,
+impl SessionInitRequest {
+    pub fn new(message_id: String, provider_id: String, model_id: String) -> SessionInitRequest {
+        SessionInitRequest {
+            message_id,
             provider_id,
+            model_id,
         }
     }
 }

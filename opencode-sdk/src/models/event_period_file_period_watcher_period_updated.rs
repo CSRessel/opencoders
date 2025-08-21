@@ -14,17 +14,29 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EventPeriodFilePeriodWatcherPeriodUpdated {
     #[serde(rename = "type")]
-    pub r#type: String,
+    pub r#type: Type,
     #[serde(rename = "properties")]
     pub properties: Box<models::EventFileWatcherUpdatedProperties>,
 }
 
 impl EventPeriodFilePeriodWatcherPeriodUpdated {
-    pub fn new(r#type: String, properties: models::EventFileWatcherUpdatedProperties) -> EventPeriodFilePeriodWatcherPeriodUpdated {
+    pub fn new(r#type: Type, properties: models::EventFileWatcherUpdatedProperties) -> EventPeriodFilePeriodWatcherPeriodUpdated {
         EventPeriodFilePeriodWatcherPeriodUpdated {
             r#type,
             properties: Box::new(properties),
         }
+    }
+}
+/// 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum Type {
+    #[serde(rename = "file.watcher.updated")]
+    FilePeriodWatcherPeriodUpdated,
+}
+
+impl Default for Type {
+    fn default() -> Type {
+        Self::FilePeriodWatcherPeriodUpdated
     }
 }
 

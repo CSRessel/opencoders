@@ -28,15 +28,15 @@ pub struct Model {
     #[serde(rename = "tool_call")]
     pub tool_call: bool,
     #[serde(rename = "cost")]
-    pub cost: Box<models::ConfigProviderValueModelsValueCost>,
+    pub cost: Box<models::ModelCost>,
     #[serde(rename = "limit")]
-    pub limit: Box<models::ConfigProviderValueModelsValueLimit>,
+    pub limit: Box<models::ModelLimit>,
     #[serde(rename = "options")]
     pub options: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl Model {
-    pub fn new(id: String, name: String, release_date: String, attachment: bool, reasoning: bool, temperature: bool, tool_call: bool, cost: models::ConfigProviderValueModelsValueCost, limit: models::ConfigProviderValueModelsValueLimit, options: std::collections::HashMap<String, serde_json::Value>) -> Model {
+    pub fn new(id: String, name: String, release_date: String, attachment: bool, reasoning: bool, temperature: bool, tool_call: bool, cost: models::ModelCost, limit: models::ModelLimit, options: std::collections::HashMap<String, serde_json::Value>) -> Model {
         Model {
             id,
             name,

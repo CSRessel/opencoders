@@ -14,17 +14,29 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EventPeriodInstallationPeriodUpdated {
     #[serde(rename = "type")]
-    pub r#type: String,
+    pub r#type: Type,
     #[serde(rename = "properties")]
     pub properties: Box<models::EventInstallationUpdatedProperties>,
 }
 
 impl EventPeriodInstallationPeriodUpdated {
-    pub fn new(r#type: String, properties: models::EventInstallationUpdatedProperties) -> EventPeriodInstallationPeriodUpdated {
+    pub fn new(r#type: Type, properties: models::EventInstallationUpdatedProperties) -> EventPeriodInstallationPeriodUpdated {
         EventPeriodInstallationPeriodUpdated {
             r#type,
             properties: Box::new(properties),
         }
+    }
+}
+/// 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum Type {
+    #[serde(rename = "installation.updated")]
+    InstallationPeriodUpdated,
+}
+
+impl Default for Type {
+    fn default() -> Type {
+        Self::InstallationPeriodUpdated
     }
 }
 

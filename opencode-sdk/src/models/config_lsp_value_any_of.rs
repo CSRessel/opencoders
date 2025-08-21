@@ -12,15 +12,15 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PostTuiAppendPromptRequest {
-    #[serde(rename = "text")]
-    pub text: String,
+pub struct ConfigLspValueAnyOf {
+    #[serde(rename = "disabled")]
+    pub disabled: bool,
 }
 
-impl PostTuiAppendPromptRequest {
-    pub fn new(text: String) -> PostTuiAppendPromptRequest {
-        PostTuiAppendPromptRequest {
-            text,
+impl ConfigLspValueAnyOf {
+    pub fn new(disabled: bool) -> ConfigLspValueAnyOf {
+        ConfigLspValueAnyOf {
+            disabled,
         }
     }
 }

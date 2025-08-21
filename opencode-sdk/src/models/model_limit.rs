@@ -12,15 +12,18 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PermissionInfoTime {
-    #[serde(rename = "created")]
-    pub created: f64,
+pub struct ModelLimit {
+    #[serde(rename = "context")]
+    pub context: f64,
+    #[serde(rename = "output")]
+    pub output: f64,
 }
 
-impl PermissionInfoTime {
-    pub fn new(created: f64) -> PermissionInfoTime {
-        PermissionInfoTime {
-            created,
+impl ModelLimit {
+    pub fn new(context: f64, output: f64) -> ModelLimit {
+        ModelLimit {
+            context,
+            output,
         }
     }
 }

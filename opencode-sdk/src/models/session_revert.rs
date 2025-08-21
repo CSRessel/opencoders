@@ -15,18 +15,21 @@ use serde::{Deserialize, Serialize};
 pub struct SessionRevert {
     #[serde(rename = "messageID")]
     pub message_id: String,
-    #[serde(rename = "part")]
-    pub part: f64,
+    #[serde(rename = "partID", skip_serializing_if = "Option::is_none")]
+    pub part_id: Option<String>,
     #[serde(rename = "snapshot", skip_serializing_if = "Option::is_none")]
     pub snapshot: Option<String>,
+    #[serde(rename = "diff", skip_serializing_if = "Option::is_none")]
+    pub diff: Option<String>,
 }
 
 impl SessionRevert {
-    pub fn new(message_id: String, part: f64) -> SessionRevert {
+    pub fn new(message_id: String) -> SessionRevert {
         SessionRevert {
             message_id,
-            part,
+            part_id: None,
             snapshot: None,
+            diff: None,
         }
     }
 }

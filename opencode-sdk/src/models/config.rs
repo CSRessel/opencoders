@@ -19,8 +19,15 @@ pub struct Config {
     /// Theme name to use for the interface
     #[serde(rename = "theme", skip_serializing_if = "Option::is_none")]
     pub theme: Option<String>,
+    /// Custom keybind configurations
     #[serde(rename = "keybinds", skip_serializing_if = "Option::is_none")]
-    pub keybinds: Option<Box<models::KeybindsConfig>>,
+    pub keybinds: Option<models::KeybindsConfig>,
+    #[serde(rename = "tui", skip_serializing_if = "Option::is_none")]
+    pub tui: Option<Box<models::ConfigTui>>,
+    #[serde(rename = "plugin", skip_serializing_if = "Option::is_none")]
+    pub plugin: Option<Vec<String>>,
+    #[serde(rename = "snapshot", skip_serializing_if = "Option::is_none")]
+    pub snapshot: Option<bool>,
     /// Control sharing behavior:'manual' allows manual sharing via commands, 'auto' enables automatic sharing, 'disabled' disables all sharing
     #[serde(rename = "share", skip_serializing_if = "Option::is_none")]
     pub share: Option<Share>,
@@ -36,7 +43,7 @@ pub struct Config {
     /// Model to use in the format of provider/model, eg anthropic/claude-2
     #[serde(rename = "model", skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
-    /// Small model to use for tasks like summarization and title generation in the format of provider/model
+    /// Small model to use for tasks like title generation in the format of provider/model
     #[serde(rename = "small_model", skip_serializing_if = "Option::is_none")]
     pub small_model: Option<String>,
     /// Custom username to display in conversations instead of system username
@@ -44,17 +51,28 @@ pub struct Config {
     pub username: Option<String>,
     #[serde(rename = "mode", skip_serializing_if = "Option::is_none")]
     pub mode: Option<models::ConfigMode>,
+    #[serde(rename = "agent", skip_serializing_if = "Option::is_none")]
+    pub agent: Option<models::ConfigAgent>,
     /// Custom provider configurations and model overrides
     #[serde(rename = "provider", skip_serializing_if = "Option::is_none")]
     pub provider: Option<std::collections::HashMap<String, models::ConfigProviderValue>>,
     /// MCP (Model Context Protocol) server configurations
     #[serde(rename = "mcp", skip_serializing_if = "Option::is_none")]
     pub mcp: Option<std::collections::HashMap<String, models::ConfigMcpValue>>,
+    #[serde(rename = "formatter", skip_serializing_if = "Option::is_none")]
+    pub formatter: Option<std::collections::HashMap<String, models::ConfigFormatterValue>>,
+    #[serde(rename = "lsp", skip_serializing_if = "Option::is_none")]
+    pub lsp: Option<std::collections::HashMap<String, models::ConfigLspValue>>,
     /// Additional instruction files or patterns to include
     #[serde(rename = "instructions", skip_serializing_if = "Option::is_none")]
     pub instructions: Option<Vec<String>>,
+    /// @deprecated Always uses stretch layout.
     #[serde(rename = "layout", skip_serializing_if = "Option::is_none")]
     pub layout: Option<models::LayoutConfig>,
+    #[serde(rename = "permission", skip_serializing_if = "Option::is_none")]
+    pub permission: Option<Box<models::ConfigPermission>>,
+    #[serde(rename = "tools", skip_serializing_if = "Option::is_none")]
+    pub tools: Option<std::collections::HashMap<String, bool>>,
     #[serde(rename = "experimental", skip_serializing_if = "Option::is_none")]
     pub experimental: Option<Box<models::ConfigExperimental>>,
 }
@@ -65,6 +83,9 @@ impl Config {
             dollar_schema: None,
             theme: None,
             keybinds: None,
+            tui: None,
+            plugin: None,
+            snapshot: None,
             share: None,
             autoshare: None,
             autoupdate: None,
@@ -73,10 +94,15 @@ impl Config {
             small_model: None,
             username: None,
             mode: None,
+            agent: None,
             provider: None,
             mcp: None,
+            formatter: None,
+            lsp: None,
             instructions: None,
             layout: None,
+            permission: None,
+            tools: None,
             experimental: None,
         }
     }

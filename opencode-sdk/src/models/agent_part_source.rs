@@ -12,19 +12,19 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct MatchSubmatchesInner {
-    #[serde(rename = "match")]
-    pub r#match: Box<models::PostTuiAppendPromptRequest>,
+pub struct AgentPartSource {
+    #[serde(rename = "value")]
+    pub value: String,
     #[serde(rename = "start")]
-    pub start: f64,
+    pub start: i32,
     #[serde(rename = "end")]
-    pub end: f64,
+    pub end: i32,
 }
 
-impl MatchSubmatchesInner {
-    pub fn new(r#match: models::PostTuiAppendPromptRequest, start: f64, end: f64) -> MatchSubmatchesInner {
-        MatchSubmatchesInner {
-            r#match: Box::new(r#match),
+impl AgentPartSource {
+    pub fn new(value: String, start: i32, end: i32) -> AgentPartSource {
+        AgentPartSource {
+            value,
             start,
             end,
         }

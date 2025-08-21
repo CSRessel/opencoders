@@ -12,16 +12,16 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct GetSessionByIdMessage200ResponseInner {
+pub struct SessionMessages200ResponseInner {
     #[serde(rename = "info")]
     pub info: Box<models::Message>,
     #[serde(rename = "parts")]
     pub parts: Vec<models::Part>,
 }
 
-impl GetSessionByIdMessage200ResponseInner {
-    pub fn new(info: models::Message, parts: Vec<models::Part>) -> GetSessionByIdMessage200ResponseInner {
-        GetSessionByIdMessage200ResponseInner {
+impl SessionMessages200ResponseInner {
+    pub fn new(info: models::Message, parts: Vec<models::Part>) -> SessionMessages200ResponseInner {
+        SessionMessages200ResponseInner {
             info: Box::new(info),
             parts,
         }

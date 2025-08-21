@@ -12,16 +12,16 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PostSessionByIdSummarizeRequest {
+pub struct SessionSummarizeRequest {
     #[serde(rename = "providerID")]
     pub provider_id: String,
     #[serde(rename = "modelID")]
     pub model_id: String,
 }
 
-impl PostSessionByIdSummarizeRequest {
-    pub fn new(provider_id: String, model_id: String) -> PostSessionByIdSummarizeRequest {
-        PostSessionByIdSummarizeRequest {
+impl SessionSummarizeRequest {
+    pub fn new(provider_id: String, model_id: String) -> SessionSummarizeRequest {
+        SessionSummarizeRequest {
             provider_id,
             model_id,
         }

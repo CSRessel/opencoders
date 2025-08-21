@@ -14,17 +14,29 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EventPeriodLspPeriodClientPeriodDiagnostics {
     #[serde(rename = "type")]
-    pub r#type: String,
+    pub r#type: Type,
     #[serde(rename = "properties")]
     pub properties: Box<models::EventLspClientDiagnosticsProperties>,
 }
 
 impl EventPeriodLspPeriodClientPeriodDiagnostics {
-    pub fn new(r#type: String, properties: models::EventLspClientDiagnosticsProperties) -> EventPeriodLspPeriodClientPeriodDiagnostics {
+    pub fn new(r#type: Type, properties: models::EventLspClientDiagnosticsProperties) -> EventPeriodLspPeriodClientPeriodDiagnostics {
         EventPeriodLspPeriodClientPeriodDiagnostics {
             r#type,
             properties: Box::new(properties),
         }
+    }
+}
+/// 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum Type {
+    #[serde(rename = "lsp.client.diagnostics")]
+    LspPeriodClientPeriodDiagnostics,
+}
+
+impl Default for Type {
+    fn default() -> Type {
+        Self::LspPeriodClientPeriodDiagnostics
     }
 }
 

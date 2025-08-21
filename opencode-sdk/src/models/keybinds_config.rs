@@ -19,15 +19,24 @@ pub struct KeybindsConfig {
     /// Show help dialog
     #[serde(rename = "app_help")]
     pub app_help: String,
-    /// Next mode
-    #[serde(rename = "switch_mode")]
-    pub switch_mode: String,
-    /// Previous Mode
-    #[serde(rename = "switch_mode_reverse")]
-    pub switch_mode_reverse: String,
+    /// Exit the application
+    #[serde(rename = "app_exit")]
+    pub app_exit: String,
     /// Open external editor
     #[serde(rename = "editor_open")]
     pub editor_open: String,
+    /// List available themes
+    #[serde(rename = "theme_list")]
+    pub theme_list: String,
+    /// Create/update AGENTS.md
+    #[serde(rename = "project_init")]
+    pub project_init: String,
+    /// Toggle tool details
+    #[serde(rename = "tool_details")]
+    pub tool_details: String,
+    /// Toggle thinking blocks
+    #[serde(rename = "thinking_blocks")]
+    pub thinking_blocks: String,
     /// Export session to editor
     #[serde(rename = "session_export")]
     pub session_export: String,
@@ -37,6 +46,9 @@ pub struct KeybindsConfig {
     /// List all sessions
     #[serde(rename = "session_list")]
     pub session_list: String,
+    /// Show session timeline
+    #[serde(rename = "session_timeline")]
+    pub session_timeline: String,
     /// Share current session
     #[serde(rename = "session_share")]
     pub session_share: String,
@@ -49,42 +61,12 @@ pub struct KeybindsConfig {
     /// Compact the session
     #[serde(rename = "session_compact")]
     pub session_compact: String,
-    /// Toggle tool details
-    #[serde(rename = "tool_details")]
-    pub tool_details: String,
-    /// List available models
-    #[serde(rename = "model_list")]
-    pub model_list: String,
-    /// List available themes
-    #[serde(rename = "theme_list")]
-    pub theme_list: String,
-    /// List files
-    #[serde(rename = "file_list")]
-    pub file_list: String,
-    /// Close file
-    #[serde(rename = "file_close")]
-    pub file_close: String,
-    /// Search file
-    #[serde(rename = "file_search")]
-    pub file_search: String,
-    /// Split/unified diff
-    #[serde(rename = "file_diff_toggle")]
-    pub file_diff_toggle: String,
-    /// Create/update AGENTS.md
-    #[serde(rename = "project_init")]
-    pub project_init: String,
-    /// Clear input field
-    #[serde(rename = "input_clear")]
-    pub input_clear: String,
-    /// Paste from clipboard
-    #[serde(rename = "input_paste")]
-    pub input_paste: String,
-    /// Submit input
-    #[serde(rename = "input_submit")]
-    pub input_submit: String,
-    /// Insert newline in input
-    #[serde(rename = "input_newline")]
-    pub input_newline: String,
+    /// Cycle to next child session
+    #[serde(rename = "session_child_cycle")]
+    pub session_child_cycle: String,
+    /// Cycle to previous child session
+    #[serde(rename = "session_child_cycle_reverse")]
+    pub session_child_cycle_reverse: String,
     /// Scroll messages up by one page
     #[serde(rename = "messages_page_up")]
     pub messages_page_up: String,
@@ -97,71 +79,141 @@ pub struct KeybindsConfig {
     /// Scroll messages down by half page
     #[serde(rename = "messages_half_page_down")]
     pub messages_half_page_down: String,
-    /// Navigate to previous message
-    #[serde(rename = "messages_previous")]
-    pub messages_previous: String,
-    /// Navigate to next message
-    #[serde(rename = "messages_next")]
-    pub messages_next: String,
     /// Navigate to first message
     #[serde(rename = "messages_first")]
     pub messages_first: String,
     /// Navigate to last message
     #[serde(rename = "messages_last")]
     pub messages_last: String,
-    /// Toggle layout
-    #[serde(rename = "messages_layout_toggle")]
-    pub messages_layout_toggle: String,
     /// Copy message
     #[serde(rename = "messages_copy")]
     pub messages_copy: String,
-    /// Revert message
+    /// Undo message
+    #[serde(rename = "messages_undo")]
+    pub messages_undo: String,
+    /// Redo message
+    #[serde(rename = "messages_redo")]
+    pub messages_redo: String,
+    /// List available models
+    #[serde(rename = "model_list")]
+    pub model_list: String,
+    /// Next recent model
+    #[serde(rename = "model_cycle_recent")]
+    pub model_cycle_recent: String,
+    /// Previous recent model
+    #[serde(rename = "model_cycle_recent_reverse")]
+    pub model_cycle_recent_reverse: String,
+    /// List agents
+    #[serde(rename = "agent_list")]
+    pub agent_list: String,
+    /// Next agent
+    #[serde(rename = "agent_cycle")]
+    pub agent_cycle: String,
+    /// Previous agent
+    #[serde(rename = "agent_cycle_reverse")]
+    pub agent_cycle_reverse: String,
+    /// Clear input field
+    #[serde(rename = "input_clear")]
+    pub input_clear: String,
+    /// Paste from clipboard
+    #[serde(rename = "input_paste")]
+    pub input_paste: String,
+    /// Submit input
+    #[serde(rename = "input_submit")]
+    pub input_submit: String,
+    /// Insert newline in input
+    #[serde(rename = "input_newline")]
+    pub input_newline: String,
+    /// @deprecated use agent_cycle. Next mode
+    #[serde(rename = "switch_mode")]
+    pub switch_mode: String,
+    /// @deprecated use agent_cycle_reverse. Previous mode
+    #[serde(rename = "switch_mode_reverse")]
+    pub switch_mode_reverse: String,
+    /// @deprecated use agent_cycle. Next agent
+    #[serde(rename = "switch_agent")]
+    pub switch_agent: String,
+    /// @deprecated use agent_cycle_reverse. Previous agent
+    #[serde(rename = "switch_agent_reverse")]
+    pub switch_agent_reverse: String,
+    /// @deprecated Currently not available. List files
+    #[serde(rename = "file_list")]
+    pub file_list: String,
+    /// @deprecated Close file
+    #[serde(rename = "file_close")]
+    pub file_close: String,
+    /// @deprecated Search file
+    #[serde(rename = "file_search")]
+    pub file_search: String,
+    /// @deprecated Split/unified diff
+    #[serde(rename = "file_diff_toggle")]
+    pub file_diff_toggle: String,
+    /// @deprecated Navigate to previous message
+    #[serde(rename = "messages_previous")]
+    pub messages_previous: String,
+    /// @deprecated Navigate to next message
+    #[serde(rename = "messages_next")]
+    pub messages_next: String,
+    /// @deprecated Toggle layout
+    #[serde(rename = "messages_layout_toggle")]
+    pub messages_layout_toggle: String,
+    /// @deprecated use messages_undo. Revert message
     #[serde(rename = "messages_revert")]
     pub messages_revert: String,
-    /// Exit the application
-    #[serde(rename = "app_exit")]
-    pub app_exit: String,
 }
 
 impl KeybindsConfig {
-    pub fn new(leader: String, app_help: String, switch_mode: String, switch_mode_reverse: String, editor_open: String, session_export: String, session_new: String, session_list: String, session_share: String, session_unshare: String, session_interrupt: String, session_compact: String, tool_details: String, model_list: String, theme_list: String, file_list: String, file_close: String, file_search: String, file_diff_toggle: String, project_init: String, input_clear: String, input_paste: String, input_submit: String, input_newline: String, messages_page_up: String, messages_page_down: String, messages_half_page_up: String, messages_half_page_down: String, messages_previous: String, messages_next: String, messages_first: String, messages_last: String, messages_layout_toggle: String, messages_copy: String, messages_revert: String, app_exit: String) -> KeybindsConfig {
+    pub fn new(leader: String, app_help: String, app_exit: String, editor_open: String, theme_list: String, project_init: String, tool_details: String, thinking_blocks: String, session_export: String, session_new: String, session_list: String, session_timeline: String, session_share: String, session_unshare: String, session_interrupt: String, session_compact: String, session_child_cycle: String, session_child_cycle_reverse: String, messages_page_up: String, messages_page_down: String, messages_half_page_up: String, messages_half_page_down: String, messages_first: String, messages_last: String, messages_copy: String, messages_undo: String, messages_redo: String, model_list: String, model_cycle_recent: String, model_cycle_recent_reverse: String, agent_list: String, agent_cycle: String, agent_cycle_reverse: String, input_clear: String, input_paste: String, input_submit: String, input_newline: String, switch_mode: String, switch_mode_reverse: String, switch_agent: String, switch_agent_reverse: String, file_list: String, file_close: String, file_search: String, file_diff_toggle: String, messages_previous: String, messages_next: String, messages_layout_toggle: String, messages_revert: String) -> KeybindsConfig {
         KeybindsConfig {
             leader,
             app_help,
-            switch_mode,
-            switch_mode_reverse,
+            app_exit,
             editor_open,
+            theme_list,
+            project_init,
+            tool_details,
+            thinking_blocks,
             session_export,
             session_new,
             session_list,
+            session_timeline,
             session_share,
             session_unshare,
             session_interrupt,
             session_compact,
-            tool_details,
-            model_list,
-            theme_list,
-            file_list,
-            file_close,
-            file_search,
-            file_diff_toggle,
-            project_init,
-            input_clear,
-            input_paste,
-            input_submit,
-            input_newline,
+            session_child_cycle,
+            session_child_cycle_reverse,
             messages_page_up,
             messages_page_down,
             messages_half_page_up,
             messages_half_page_down,
-            messages_previous,
-            messages_next,
             messages_first,
             messages_last,
-            messages_layout_toggle,
             messages_copy,
+            messages_undo,
+            messages_redo,
+            model_list,
+            model_cycle_recent,
+            model_cycle_recent_reverse,
+            agent_list,
+            agent_cycle,
+            agent_cycle_reverse,
+            input_clear,
+            input_paste,
+            input_submit,
+            input_newline,
+            switch_mode,
+            switch_mode_reverse,
+            switch_agent,
+            switch_agent_reverse,
+            file_list,
+            file_close,
+            file_search,
+            file_diff_toggle,
+            messages_previous,
+            messages_next,
+            messages_layout_toggle,
             messages_revert,
-            app_exit,
         }
     }
 }

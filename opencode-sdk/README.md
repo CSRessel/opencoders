@@ -26,35 +26,61 @@ All URIs are relative to *http://localhost*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*DefaultApi* | [**delete_session_by_id**](docs/DefaultApi.md#delete_session_by_id) | **DELETE** /session/{id} | 
-*DefaultApi* | [**delete_session_by_id_share**](docs/DefaultApi.md#delete_session_by_id_share) | **DELETE** /session/{id}/share | 
-*DefaultApi* | [**get_app**](docs/DefaultApi.md#get_app) | **GET** /app | 
-*DefaultApi* | [**get_config**](docs/DefaultApi.md#get_config) | **GET** /config | 
-*DefaultApi* | [**get_config_providers**](docs/DefaultApi.md#get_config_providers) | **GET** /config/providers | 
-*DefaultApi* | [**get_event**](docs/DefaultApi.md#get_event) | **GET** /event | 
-*DefaultApi* | [**get_file**](docs/DefaultApi.md#get_file) | **GET** /file | 
-*DefaultApi* | [**get_file_status**](docs/DefaultApi.md#get_file_status) | **GET** /file/status | 
-*DefaultApi* | [**get_find**](docs/DefaultApi.md#get_find) | **GET** /find | 
-*DefaultApi* | [**get_find_file**](docs/DefaultApi.md#get_find_file) | **GET** /find/file | 
-*DefaultApi* | [**get_find_symbol**](docs/DefaultApi.md#get_find_symbol) | **GET** /find/symbol | 
-*DefaultApi* | [**get_mode**](docs/DefaultApi.md#get_mode) | **GET** /mode | 
-*DefaultApi* | [**get_session**](docs/DefaultApi.md#get_session) | **GET** /session | 
-*DefaultApi* | [**get_session_by_id_message**](docs/DefaultApi.md#get_session_by_id_message) | **GET** /session/{id}/message | 
-*DefaultApi* | [**post_app_init**](docs/DefaultApi.md#post_app_init) | **POST** /app/init | 
-*DefaultApi* | [**post_log**](docs/DefaultApi.md#post_log) | **POST** /log | 
-*DefaultApi* | [**post_session**](docs/DefaultApi.md#post_session) | **POST** /session | 
-*DefaultApi* | [**post_session_by_id_abort**](docs/DefaultApi.md#post_session_by_id_abort) | **POST** /session/{id}/abort | 
-*DefaultApi* | [**post_session_by_id_init**](docs/DefaultApi.md#post_session_by_id_init) | **POST** /session/{id}/init | 
-*DefaultApi* | [**post_session_by_id_message**](docs/DefaultApi.md#post_session_by_id_message) | **POST** /session/{id}/message | 
-*DefaultApi* | [**post_session_by_id_share**](docs/DefaultApi.md#post_session_by_id_share) | **POST** /session/{id}/share | 
-*DefaultApi* | [**post_session_by_id_summarize**](docs/DefaultApi.md#post_session_by_id_summarize) | **POST** /session/{id}/summarize | 
-*DefaultApi* | [**post_tui_append_prompt**](docs/DefaultApi.md#post_tui_append_prompt) | **POST** /tui/append-prompt | 
-*DefaultApi* | [**post_tui_open_help**](docs/DefaultApi.md#post_tui_open_help) | **POST** /tui/open-help | 
+*DefaultApi* | [**app_period_agents**](docs/DefaultApi.md#app_period_agents) | **GET** /agent | 
+*DefaultApi* | [**app_period_get**](docs/DefaultApi.md#app_period_get) | **GET** /app | 
+*DefaultApi* | [**app_period_init**](docs/DefaultApi.md#app_period_init) | **POST** /app/init | 
+*DefaultApi* | [**app_period_log**](docs/DefaultApi.md#app_period_log) | **POST** /log | 
+*DefaultApi* | [**auth_period_set**](docs/DefaultApi.md#auth_period_set) | **PUT** /auth/{id} | 
+*DefaultApi* | [**config_period_get**](docs/DefaultApi.md#config_period_get) | **GET** /config | 
+*DefaultApi* | [**config_period_providers**](docs/DefaultApi.md#config_period_providers) | **GET** /config/providers | 
+*DefaultApi* | [**event_period_subscribe**](docs/DefaultApi.md#event_period_subscribe) | **GET** /event | 
+*DefaultApi* | [**file_period_read**](docs/DefaultApi.md#file_period_read) | **GET** /file | 
+*DefaultApi* | [**file_period_status**](docs/DefaultApi.md#file_period_status) | **GET** /file/status | 
+*DefaultApi* | [**find_period_files**](docs/DefaultApi.md#find_period_files) | **GET** /find/file | 
+*DefaultApi* | [**find_period_symbols**](docs/DefaultApi.md#find_period_symbols) | **GET** /find/symbol | 
+*DefaultApi* | [**find_period_text**](docs/DefaultApi.md#find_period_text) | **GET** /find | 
+*DefaultApi* | [**post_session_by_id_permissions_by_permission_id**](docs/DefaultApi.md#post_session_by_id_permissions_by_permission_id) | **POST** /session/{id}/permissions/{permissionID} | 
+*DefaultApi* | [**session_period_abort**](docs/DefaultApi.md#session_period_abort) | **POST** /session/{id}/abort | 
+*DefaultApi* | [**session_period_chat**](docs/DefaultApi.md#session_period_chat) | **POST** /session/{id}/message | 
+*DefaultApi* | [**session_period_children**](docs/DefaultApi.md#session_period_children) | **GET** /session/{id}/children | 
+*DefaultApi* | [**session_period_create**](docs/DefaultApi.md#session_period_create) | **POST** /session | 
+*DefaultApi* | [**session_period_delete**](docs/DefaultApi.md#session_period_delete) | **DELETE** /session/{id} | 
+*DefaultApi* | [**session_period_get**](docs/DefaultApi.md#session_period_get) | **GET** /session/{id} | 
+*DefaultApi* | [**session_period_init**](docs/DefaultApi.md#session_period_init) | **POST** /session/{id}/init | 
+*DefaultApi* | [**session_period_list**](docs/DefaultApi.md#session_period_list) | **GET** /session | 
+*DefaultApi* | [**session_period_message**](docs/DefaultApi.md#session_period_message) | **GET** /session/{id}/message/{messageID} | 
+*DefaultApi* | [**session_period_messages**](docs/DefaultApi.md#session_period_messages) | **GET** /session/{id}/message | 
+*DefaultApi* | [**session_period_revert**](docs/DefaultApi.md#session_period_revert) | **POST** /session/{id}/revert | 
+*DefaultApi* | [**session_period_share**](docs/DefaultApi.md#session_period_share) | **POST** /session/{id}/share | 
+*DefaultApi* | [**session_period_shell**](docs/DefaultApi.md#session_period_shell) | **POST** /session/{id}/shell | 
+*DefaultApi* | [**session_period_summarize**](docs/DefaultApi.md#session_period_summarize) | **POST** /session/{id}/summarize | 
+*DefaultApi* | [**session_period_unrevert**](docs/DefaultApi.md#session_period_unrevert) | **POST** /session/{id}/unrevert | 
+*DefaultApi* | [**session_period_unshare**](docs/DefaultApi.md#session_period_unshare) | **DELETE** /session/{id}/share | 
+*DefaultApi* | [**session_period_update**](docs/DefaultApi.md#session_period_update) | **PATCH** /session/{id} | 
+*DefaultApi* | [**tui_period_append_prompt**](docs/DefaultApi.md#tui_period_append_prompt) | **POST** /tui/append-prompt | 
+*DefaultApi* | [**tui_period_clear_prompt**](docs/DefaultApi.md#tui_period_clear_prompt) | **POST** /tui/clear-prompt | 
+*DefaultApi* | [**tui_period_execute_command**](docs/DefaultApi.md#tui_period_execute_command) | **POST** /tui/execute-command | 
+*DefaultApi* | [**tui_period_open_help**](docs/DefaultApi.md#tui_period_open_help) | **POST** /tui/open-help | 
+*DefaultApi* | [**tui_period_open_models**](docs/DefaultApi.md#tui_period_open_models) | **POST** /tui/open-models | 
+*DefaultApi* | [**tui_period_open_sessions**](docs/DefaultApi.md#tui_period_open_sessions) | **POST** /tui/open-sessions | 
+*DefaultApi* | [**tui_period_open_themes**](docs/DefaultApi.md#tui_period_open_themes) | **POST** /tui/open-themes | 
+*DefaultApi* | [**tui_period_show_toast**](docs/DefaultApi.md#tui_period_show_toast) | **POST** /tui/show-toast | 
+*DefaultApi* | [**tui_period_submit_prompt**](docs/DefaultApi.md#tui_period_submit_prompt) | **POST** /tui/submit-prompt | 
 
 
 ## Documentation For Models
 
+ - [Agent](docs/Agent.md)
+ - [AgentConfig](docs/AgentConfig.md)
+ - [AgentMode](docs/AgentMode.md)
+ - [AgentPart](docs/AgentPart.md)
+ - [AgentPartInput](docs/AgentPartInput.md)
+ - [AgentPartSource](docs/AgentPartSource.md)
+ - [AgentPermission](docs/AgentPermission.md)
+ - [AgentPermissionEdit](docs/AgentPermissionEdit.md)
+ - [ApiAuth](docs/ApiAuth.md)
  - [App](docs/App.md)
+ - [AppLogRequest](docs/AppLogRequest.md)
  - [AppPath](docs/AppPath.md)
  - [AppTime](docs/AppTime.md)
  - [AssistantMessage](docs/AssistantMessage.md)
@@ -63,17 +89,28 @@ Class | Method | HTTP request | Description
  - [AssistantMessageTime](docs/AssistantMessageTime.md)
  - [AssistantMessageTokens](docs/AssistantMessageTokens.md)
  - [AssistantMessageTokensCache](docs/AssistantMessageTokensCache.md)
+ - [Auth](docs/Auth.md)
  - [Config](docs/Config.md)
+ - [ConfigAgent](docs/ConfigAgent.md)
  - [ConfigExperimental](docs/ConfigExperimental.md)
  - [ConfigExperimentalHook](docs/ConfigExperimentalHook.md)
  - [ConfigExperimentalHookFileEditedValueInner](docs/ConfigExperimentalHookFileEditedValueInner.md)
+ - [ConfigFormatterValue](docs/ConfigFormatterValue.md)
+ - [ConfigLspValue](docs/ConfigLspValue.md)
+ - [ConfigLspValueAnyOf](docs/ConfigLspValueAnyOf.md)
+ - [ConfigLspValueAnyOf1](docs/ConfigLspValueAnyOf1.md)
  - [ConfigMcpValue](docs/ConfigMcpValue.md)
  - [ConfigMode](docs/ConfigMode.md)
+ - [ConfigPermission](docs/ConfigPermission.md)
+ - [ConfigPermissionBash](docs/ConfigPermissionBash.md)
+ - [ConfigPermissionEdit](docs/ConfigPermissionEdit.md)
  - [ConfigProviderValue](docs/ConfigProviderValue.md)
  - [ConfigProviderValueModelsValue](docs/ConfigProviderValueModelsValue.md)
  - [ConfigProviderValueModelsValueCost](docs/ConfigProviderValueModelsValueCost.md)
  - [ConfigProviderValueModelsValueLimit](docs/ConfigProviderValueModelsValueLimit.md)
  - [ConfigProviderValueOptions](docs/ConfigProviderValueOptions.md)
+ - [ConfigProviders200Response](docs/ConfigProviders200Response.md)
+ - [ConfigTui](docs/ConfigTui.md)
  - [Error](docs/Error.md)
  - [Event](docs/Event.md)
  - [EventFileEditedProperties](docs/EventFileEditedProperties.md)
@@ -82,6 +119,7 @@ Class | Method | HTTP request | Description
  - [EventIdeInstalledProperties](docs/EventIdeInstalledProperties.md)
  - [EventInstallationUpdatedProperties](docs/EventInstallationUpdatedProperties.md)
  - [EventLspClientDiagnosticsProperties](docs/EventLspClientDiagnosticsProperties.md)
+ - [EventMessagePartRemovedProperties](docs/EventMessagePartRemovedProperties.md)
  - [EventMessagePartUpdatedProperties](docs/EventMessagePartUpdatedProperties.md)
  - [EventMessageRemovedProperties](docs/EventMessageRemovedProperties.md)
  - [EventMessageUpdatedProperties](docs/EventMessageUpdatedProperties.md)
@@ -90,15 +128,19 @@ Class | Method | HTTP request | Description
  - [EventPeriodIdePeriodInstalled](docs/EventPeriodIdePeriodInstalled.md)
  - [EventPeriodInstallationPeriodUpdated](docs/EventPeriodInstallationPeriodUpdated.md)
  - [EventPeriodLspPeriodClientPeriodDiagnostics](docs/EventPeriodLspPeriodClientPeriodDiagnostics.md)
+ - [EventPeriodMessagePeriodPartPeriodRemoved](docs/EventPeriodMessagePeriodPartPeriodRemoved.md)
  - [EventPeriodMessagePeriodPartPeriodUpdated](docs/EventPeriodMessagePeriodPartPeriodUpdated.md)
  - [EventPeriodMessagePeriodRemoved](docs/EventPeriodMessagePeriodRemoved.md)
  - [EventPeriodMessagePeriodUpdated](docs/EventPeriodMessagePeriodUpdated.md)
+ - [EventPeriodPermissionPeriodReplied](docs/EventPeriodPermissionPeriodReplied.md)
  - [EventPeriodPermissionPeriodUpdated](docs/EventPeriodPermissionPeriodUpdated.md)
+ - [EventPeriodServerPeriodConnected](docs/EventPeriodServerPeriodConnected.md)
  - [EventPeriodSessionPeriodDeleted](docs/EventPeriodSessionPeriodDeleted.md)
  - [EventPeriodSessionPeriodError](docs/EventPeriodSessionPeriodError.md)
  - [EventPeriodSessionPeriodIdle](docs/EventPeriodSessionPeriodIdle.md)
  - [EventPeriodSessionPeriodUpdated](docs/EventPeriodSessionPeriodUpdated.md)
  - [EventPeriodStoragePeriodWrite](docs/EventPeriodStoragePeriodWrite.md)
+ - [EventPermissionRepliedProperties](docs/EventPermissionRepliedProperties.md)
  - [EventSessionErrorProperties](docs/EventSessionErrorProperties.md)
  - [EventSessionIdleProperties](docs/EventSessionIdleProperties.md)
  - [EventSessionUpdatedProperties](docs/EventSessionUpdatedProperties.md)
@@ -108,41 +150,45 @@ Class | Method | HTTP request | Description
  - [FilePartInput](docs/FilePartInput.md)
  - [FilePartSource](docs/FilePartSource.md)
  - [FilePartSourceText](docs/FilePartSourceText.md)
+ - [FileRead200Response](docs/FileRead200Response.md)
  - [FileSource](docs/FileSource.md)
- - [GetConfigProviders200Response](docs/GetConfigProviders200Response.md)
- - [GetFile200Response](docs/GetFile200Response.md)
- - [GetSessionByIdMessage200ResponseInner](docs/GetSessionByIdMessage200ResponseInner.md)
+ - [FindText200ResponseInner](docs/FindText200ResponseInner.md)
+ - [FindText200ResponseInnerPath](docs/FindText200ResponseInnerPath.md)
+ - [FindText200ResponseInnerSubmatchesInner](docs/FindText200ResponseInnerSubmatchesInner.md)
  - [KeybindsConfig](docs/KeybindsConfig.md)
  - [LayoutConfig](docs/LayoutConfig.md)
- - [Match](docs/Match.md)
- - [MatchSubmatchesInner](docs/MatchSubmatchesInner.md)
  - [McpLocalConfig](docs/McpLocalConfig.md)
  - [McpRemoteConfig](docs/McpRemoteConfig.md)
  - [Message](docs/Message.md)
  - [MessageAbortedError](docs/MessageAbortedError.md)
  - [MessageOutputLengthError](docs/MessageOutputLengthError.md)
- - [Mode](docs/Mode.md)
- - [ModeConfig](docs/ModeConfig.md)
- - [ModeModel](docs/ModeModel.md)
  - [Model](docs/Model.md)
+ - [ModelCost](docs/ModelCost.md)
+ - [ModelLimit](docs/ModelLimit.md)
+ - [OAuth](docs/OAuth.md)
  - [Part](docs/Part.md)
- - [PermissionInfoTime](docs/PermissionInfoTime.md)
- - [PermissionPeriodInfo](docs/PermissionPeriodInfo.md)
- - [PostLogRequest](docs/PostLogRequest.md)
- - [PostSessionByIdInitRequest](docs/PostSessionByIdInitRequest.md)
- - [PostSessionByIdMessageRequest](docs/PostSessionByIdMessageRequest.md)
- - [PostSessionByIdMessageRequestPartsInner](docs/PostSessionByIdMessageRequestPartsInner.md)
- - [PostSessionByIdSummarizeRequest](docs/PostSessionByIdSummarizeRequest.md)
- - [PostTuiAppendPromptRequest](docs/PostTuiAppendPromptRequest.md)
+ - [PatchPart](docs/PatchPart.md)
+ - [Permission](docs/Permission.md)
+ - [PostSessionByIdPermissionsByPermissionIdRequest](docs/PostSessionByIdPermissionsByPermissionIdRequest.md)
  - [Provider](docs/Provider.md)
  - [ProviderAuthError](docs/ProviderAuthError.md)
  - [ProviderAuthErrorData](docs/ProviderAuthErrorData.md)
  - [Range](docs/Range.md)
  - [RangeStart](docs/RangeStart.md)
+ - [ReasoningPart](docs/ReasoningPart.md)
  - [Session](docs/Session.md)
+ - [SessionChatRequest](docs/SessionChatRequest.md)
+ - [SessionChatRequestPartsInner](docs/SessionChatRequestPartsInner.md)
+ - [SessionCreateRequest](docs/SessionCreateRequest.md)
+ - [SessionInitRequest](docs/SessionInitRequest.md)
+ - [SessionMessages200ResponseInner](docs/SessionMessages200ResponseInner.md)
  - [SessionRevert](docs/SessionRevert.md)
+ - [SessionRevertRequest](docs/SessionRevertRequest.md)
  - [SessionShare](docs/SessionShare.md)
+ - [SessionShellRequest](docs/SessionShellRequest.md)
+ - [SessionSummarizeRequest](docs/SessionSummarizeRequest.md)
  - [SessionTime](docs/SessionTime.md)
+ - [SessionUpdateRequest](docs/SessionUpdateRequest.md)
  - [SnapshotPart](docs/SnapshotPart.md)
  - [StepFinishPart](docs/StepFinishPart.md)
  - [StepStartPart](docs/StepStartPart.md)
@@ -160,9 +206,13 @@ Class | Method | HTTP request | Description
  - [ToolStatePending](docs/ToolStatePending.md)
  - [ToolStateRunning](docs/ToolStateRunning.md)
  - [ToolStateRunningTime](docs/ToolStateRunningTime.md)
+ - [TuiExecuteCommandRequest](docs/TuiExecuteCommandRequest.md)
+ - [TuiShowToastRequest](docs/TuiShowToastRequest.md)
  - [UnknownError](docs/UnknownError.md)
  - [UnknownErrorData](docs/UnknownErrorData.md)
  - [UserMessage](docs/UserMessage.md)
+ - [UserMessageTime](docs/UserMessageTime.md)
+ - [WellKnownAuth](docs/WellKnownAuth.md)
 
 
 To get access to the crate's generated documentation, use:

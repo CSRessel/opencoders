@@ -23,21 +23,21 @@ pub struct ConfigProviderValue {
     pub id: Option<String>,
     #[serde(rename = "npm", skip_serializing_if = "Option::is_none")]
     pub npm: Option<String>,
-    #[serde(rename = "models")]
-    pub models: std::collections::HashMap<String, models::ConfigProviderValueModelsValue>,
+    #[serde(rename = "models", skip_serializing_if = "Option::is_none")]
+    pub models: Option<std::collections::HashMap<String, models::ConfigProviderValueModelsValue>>,
     #[serde(rename = "options", skip_serializing_if = "Option::is_none")]
     pub options: Option<models::ConfigProviderValueOptions>,
 }
 
 impl ConfigProviderValue {
-    pub fn new(models: std::collections::HashMap<String, models::ConfigProviderValueModelsValue>) -> ConfigProviderValue {
+    pub fn new() -> ConfigProviderValue {
         ConfigProviderValue {
             api: None,
             name: None,
             env: None,
             id: None,
             npm: None,
-            models,
+            models: None,
             options: None,
         }
     }

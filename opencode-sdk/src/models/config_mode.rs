@@ -11,17 +11,17 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
-/// ConfigMode : Modes configuration, see https://opencode.ai/docs/modes
+/// ConfigMode : @deprecated Use `agent` field instead.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ConfigMode {
     #[serde(rename = "build", skip_serializing_if = "Option::is_none")]
-    pub build: Option<Box<models::ModeConfig>>,
+    pub build: Option<models::AgentConfig>,
     #[serde(rename = "plan", skip_serializing_if = "Option::is_none")]
-    pub plan: Option<Box<models::ModeConfig>>,
+    pub plan: Option<models::AgentConfig>,
 }
 
 impl ConfigMode {
-    /// Modes configuration, see https://opencode.ai/docs/modes
+    /// @deprecated Use `agent` field instead.
     pub fn new() -> ConfigMode {
         ConfigMode {
             build: None,

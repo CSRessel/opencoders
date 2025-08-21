@@ -14,17 +14,29 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EventPeriodSessionPeriodError {
     #[serde(rename = "type")]
-    pub r#type: String,
+    pub r#type: Type,
     #[serde(rename = "properties")]
     pub properties: Box<models::EventSessionErrorProperties>,
 }
 
 impl EventPeriodSessionPeriodError {
-    pub fn new(r#type: String, properties: models::EventSessionErrorProperties) -> EventPeriodSessionPeriodError {
+    pub fn new(r#type: Type, properties: models::EventSessionErrorProperties) -> EventPeriodSessionPeriodError {
         EventPeriodSessionPeriodError {
             r#type,
             properties: Box::new(properties),
         }
+    }
+}
+/// 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum Type {
+    #[serde(rename = "session.error")]
+    SessionPeriodError,
+}
+
+impl Default for Type {
+    fn default() -> Type {
+        Self::SessionPeriodError
     }
 }
 

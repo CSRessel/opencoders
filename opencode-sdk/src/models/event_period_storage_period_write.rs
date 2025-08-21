@@ -14,17 +14,29 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EventPeriodStoragePeriodWrite {
     #[serde(rename = "type")]
-    pub r#type: String,
+    pub r#type: Type,
     #[serde(rename = "properties")]
     pub properties: Box<models::EventStorageWriteProperties>,
 }
 
 impl EventPeriodStoragePeriodWrite {
-    pub fn new(r#type: String, properties: models::EventStorageWriteProperties) -> EventPeriodStoragePeriodWrite {
+    pub fn new(r#type: Type, properties: models::EventStorageWriteProperties) -> EventPeriodStoragePeriodWrite {
         EventPeriodStoragePeriodWrite {
             r#type,
             properties: Box::new(properties),
         }
+    }
+}
+/// 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum Type {
+    #[serde(rename = "storage.write")]
+    StoragePeriodWrite,
+}
+
+impl Default for Type {
+    fn default() -> Type {
+        Self::StoragePeriodWrite
     }
 }
 

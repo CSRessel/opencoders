@@ -12,33 +12,34 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct GetFile200Response {
+pub struct WellKnownAuth {
     #[serde(rename = "type")]
     pub r#type: Type,
-    #[serde(rename = "content")]
-    pub content: String,
+    #[serde(rename = "key")]
+    pub key: String,
+    #[serde(rename = "token")]
+    pub token: String,
 }
 
-impl GetFile200Response {
-    pub fn new(r#type: Type, content: String) -> GetFile200Response {
-        GetFile200Response {
+impl WellKnownAuth {
+    pub fn new(r#type: Type, key: String, token: String) -> WellKnownAuth {
+        WellKnownAuth {
             r#type,
-            content,
+            key,
+            token,
         }
     }
 }
 /// 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum Type {
-    #[serde(rename = "raw")]
-    Raw,
-    #[serde(rename = "patch")]
-    Patch,
+    #[serde(rename = "wellknown")]
+    Wellknown,
 }
 
 impl Default for Type {
     fn default() -> Type {
-        Self::Raw
+        Self::Wellknown
     }
 }
 

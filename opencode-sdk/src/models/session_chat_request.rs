@@ -12,28 +12,31 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PostSessionByIdMessageRequest {
+pub struct SessionChatRequest {
     #[serde(rename = "messageID", skip_serializing_if = "Option::is_none")]
     pub message_id: Option<String>,
     #[serde(rename = "providerID")]
     pub provider_id: String,
     #[serde(rename = "modelID")]
     pub model_id: String,
-    #[serde(rename = "mode", skip_serializing_if = "Option::is_none")]
-    pub mode: Option<String>,
+    #[serde(rename = "agent", skip_serializing_if = "Option::is_none")]
+    pub agent: Option<String>,
+    #[serde(rename = "system", skip_serializing_if = "Option::is_none")]
+    pub system: Option<String>,
     #[serde(rename = "tools", skip_serializing_if = "Option::is_none")]
     pub tools: Option<std::collections::HashMap<String, bool>>,
     #[serde(rename = "parts")]
-    pub parts: Vec<models::PostSessionByIdMessageRequestPartsInner>,
+    pub parts: Vec<models::SessionChatRequestPartsInner>,
 }
 
-impl PostSessionByIdMessageRequest {
-    pub fn new(provider_id: String, model_id: String, parts: Vec<models::PostSessionByIdMessageRequestPartsInner>) -> PostSessionByIdMessageRequest {
-        PostSessionByIdMessageRequest {
+impl SessionChatRequest {
+    pub fn new(provider_id: String, model_id: String, parts: Vec<models::SessionChatRequestPartsInner>) -> SessionChatRequest {
+        SessionChatRequest {
             message_id: None,
             provider_id,
             model_id,
-            mode: None,
+            agent: None,
+            system: None,
             tools: None,
             parts,
         }

@@ -12,7 +12,7 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PostLogRequest {
+pub struct AppLogRequest {
     /// Service name for the log entry
     #[serde(rename = "service")]
     pub service: String,
@@ -27,9 +27,9 @@ pub struct PostLogRequest {
     pub extra: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
-impl PostLogRequest {
-    pub fn new(service: String, level: Level, message: String) -> PostLogRequest {
-        PostLogRequest {
+impl AppLogRequest {
+    pub fn new(service: String, level: Level, message: String) -> AppLogRequest {
+        AppLogRequest {
             service,
             level,
             message,

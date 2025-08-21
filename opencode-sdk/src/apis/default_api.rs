@@ -14,269 +14,461 @@ use serde::{Deserialize, Serialize, de::Error as _};
 use crate::{apis::ResponseContent, models};
 use super::{Error, configuration, ContentType};
 
-/// struct for passing parameters to the method [`delete_session_by_id`]
+/// struct for passing parameters to the method [`app_period_log`]
 #[derive(Clone, Debug)]
-pub struct DeleteSessionByIdParams {
-    pub id: String
+pub struct AppPeriodLogParams {
+    pub app_log_request: Option<models::AppLogRequest>
 }
 
-/// struct for passing parameters to the method [`delete_session_by_id_share`]
+/// struct for passing parameters to the method [`auth_period_set`]
 #[derive(Clone, Debug)]
-pub struct DeleteSessionByIdShareParams {
-    pub id: String
+pub struct AuthPeriodSetParams {
+    pub id: String,
+    pub auth: Option<models::Auth>
 }
 
-/// struct for passing parameters to the method [`get_file`]
+/// struct for passing parameters to the method [`file_period_read`]
 #[derive(Clone, Debug)]
-pub struct GetFileParams {
+pub struct FilePeriodReadParams {
     pub path: String
 }
 
-/// struct for passing parameters to the method [`get_find`]
+/// struct for passing parameters to the method [`find_period_files`]
 #[derive(Clone, Debug)]
-pub struct GetFindParams {
+pub struct FindPeriodFilesParams {
+    pub query: String
+}
+
+/// struct for passing parameters to the method [`find_period_symbols`]
+#[derive(Clone, Debug)]
+pub struct FindPeriodSymbolsParams {
+    pub query: String
+}
+
+/// struct for passing parameters to the method [`find_period_text`]
+#[derive(Clone, Debug)]
+pub struct FindPeriodTextParams {
     pub pattern: String
 }
 
-/// struct for passing parameters to the method [`get_find_file`]
+/// struct for passing parameters to the method [`post_session_by_id_permissions_by_permission_id`]
 #[derive(Clone, Debug)]
-pub struct GetFindFileParams {
-    pub query: String
+pub struct PostSessionByIdPermissionsByPermissionIdParams {
+    pub id: String,
+    pub permission_id: String,
+    pub post_session_by_id_permissions_by_permission_id_request: Option<models::PostSessionByIdPermissionsByPermissionIdRequest>
 }
 
-/// struct for passing parameters to the method [`get_find_symbol`]
+/// struct for passing parameters to the method [`session_period_abort`]
 #[derive(Clone, Debug)]
-pub struct GetFindSymbolParams {
-    pub query: String
-}
-
-/// struct for passing parameters to the method [`get_session_by_id_message`]
-#[derive(Clone, Debug)]
-pub struct GetSessionByIdMessageParams {
+pub struct SessionPeriodAbortParams {
     pub id: String
 }
 
-/// struct for passing parameters to the method [`post_log`]
+/// struct for passing parameters to the method [`session_period_chat`]
 #[derive(Clone, Debug)]
-pub struct PostLogParams {
-    pub post_log_request: Option<models::PostLogRequest>
+pub struct SessionPeriodChatParams {
+    pub id: String,
+    pub session_chat_request: Option<models::SessionChatRequest>
 }
 
-/// struct for passing parameters to the method [`post_session_by_id_abort`]
+/// struct for passing parameters to the method [`session_period_children`]
 #[derive(Clone, Debug)]
-pub struct PostSessionByIdAbortParams {
+pub struct SessionPeriodChildrenParams {
     pub id: String
 }
 
-/// struct for passing parameters to the method [`post_session_by_id_init`]
+/// struct for passing parameters to the method [`session_period_create`]
 #[derive(Clone, Debug)]
-pub struct PostSessionByIdInitParams {
-    pub id: String,
-    pub post_session_by_id_init_request: Option<models::PostSessionByIdInitRequest>
+pub struct SessionPeriodCreateParams {
+    pub session_create_request: Option<models::SessionCreateRequest>
 }
 
-/// struct for passing parameters to the method [`post_session_by_id_message`]
+/// struct for passing parameters to the method [`session_period_delete`]
 #[derive(Clone, Debug)]
-pub struct PostSessionByIdMessageParams {
-    pub id: String,
-    pub post_session_by_id_message_request: Option<models::PostSessionByIdMessageRequest>
-}
-
-/// struct for passing parameters to the method [`post_session_by_id_share`]
-#[derive(Clone, Debug)]
-pub struct PostSessionByIdShareParams {
+pub struct SessionPeriodDeleteParams {
     pub id: String
 }
 
-/// struct for passing parameters to the method [`post_session_by_id_summarize`]
+/// struct for passing parameters to the method [`session_period_get`]
 #[derive(Clone, Debug)]
-pub struct PostSessionByIdSummarizeParams {
+pub struct SessionPeriodGetParams {
+    pub id: String
+}
+
+/// struct for passing parameters to the method [`session_period_init`]
+#[derive(Clone, Debug)]
+pub struct SessionPeriodInitParams {
     pub id: String,
-    pub post_session_by_id_summarize_request: Option<models::PostSessionByIdSummarizeRequest>
+    pub session_init_request: Option<models::SessionInitRequest>
 }
 
-/// struct for passing parameters to the method [`post_tui_append_prompt`]
+/// struct for passing parameters to the method [`session_period_message`]
 #[derive(Clone, Debug)]
-pub struct PostTuiAppendPromptParams {
-    pub post_tui_append_prompt_request: Option<models::PostTuiAppendPromptRequest>
+pub struct SessionPeriodMessageParams {
+    pub id: String,
+    pub message_id: String
+}
+
+/// struct for passing parameters to the method [`session_period_messages`]
+#[derive(Clone, Debug)]
+pub struct SessionPeriodMessagesParams {
+    pub id: String
+}
+
+/// struct for passing parameters to the method [`session_period_revert`]
+#[derive(Clone, Debug)]
+pub struct SessionPeriodRevertParams {
+    pub id: String,
+    pub session_revert_request: Option<models::SessionRevertRequest>
+}
+
+/// struct for passing parameters to the method [`session_period_share`]
+#[derive(Clone, Debug)]
+pub struct SessionPeriodShareParams {
+    pub id: String
+}
+
+/// struct for passing parameters to the method [`session_period_shell`]
+#[derive(Clone, Debug)]
+pub struct SessionPeriodShellParams {
+    pub id: String,
+    pub session_shell_request: Option<models::SessionShellRequest>
+}
+
+/// struct for passing parameters to the method [`session_period_summarize`]
+#[derive(Clone, Debug)]
+pub struct SessionPeriodSummarizeParams {
+    pub id: String,
+    pub session_summarize_request: Option<models::SessionSummarizeRequest>
+}
+
+/// struct for passing parameters to the method [`session_period_unrevert`]
+#[derive(Clone, Debug)]
+pub struct SessionPeriodUnrevertParams {
+    pub id: String
+}
+
+/// struct for passing parameters to the method [`session_period_unshare`]
+#[derive(Clone, Debug)]
+pub struct SessionPeriodUnshareParams {
+    pub id: String
+}
+
+/// struct for passing parameters to the method [`session_period_update`]
+#[derive(Clone, Debug)]
+pub struct SessionPeriodUpdateParams {
+    pub id: String,
+    pub session_update_request: Option<models::SessionUpdateRequest>
+}
+
+/// struct for passing parameters to the method [`tui_period_append_prompt`]
+#[derive(Clone, Debug)]
+pub struct TuiPeriodAppendPromptParams {
+    pub find_text200_response_inner_path: Option<models::FindText200ResponseInnerPath>
+}
+
+/// struct for passing parameters to the method [`tui_period_execute_command`]
+#[derive(Clone, Debug)]
+pub struct TuiPeriodExecuteCommandParams {
+    pub tui_execute_command_request: Option<models::TuiExecuteCommandRequest>
+}
+
+/// struct for passing parameters to the method [`tui_period_show_toast`]
+#[derive(Clone, Debug)]
+pub struct TuiPeriodShowToastParams {
+    pub tui_show_toast_request: Option<models::TuiShowToastRequest>
 }
 
 
-/// struct for typed errors of method [`delete_session_by_id`]
+/// struct for typed errors of method [`app_period_agents`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum DeleteSessionByIdError {
+pub enum AppPeriodAgentsError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`delete_session_by_id_share`]
+/// struct for typed errors of method [`app_period_get`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum DeleteSessionByIdShareError {
+pub enum AppPeriodGetError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`get_app`]
+/// struct for typed errors of method [`app_period_init`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum GetAppError {
+pub enum AppPeriodInitError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`get_config`]
+/// struct for typed errors of method [`app_period_log`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum GetConfigError {
+pub enum AppPeriodLogError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`get_config_providers`]
+/// struct for typed errors of method [`auth_period_set`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum GetConfigProvidersError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`get_event`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GetEventError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`get_file`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GetFileError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`get_file_status`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GetFileStatusError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`get_find`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GetFindError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`get_find_file`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GetFindFileError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`get_find_symbol`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GetFindSymbolError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`get_mode`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GetModeError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`get_session`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GetSessionError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`get_session_by_id_message`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum GetSessionByIdMessageError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`post_app_init`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum PostAppInitError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`post_log`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum PostLogError {
-    UnknownValue(serde_json::Value),
-}
-
-/// struct for typed errors of method [`post_session`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum PostSessionError {
+pub enum AuthPeriodSetError {
     Status400(models::Error),
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`post_session_by_id_abort`]
+/// struct for typed errors of method [`config_period_get`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum PostSessionByIdAbortError {
+pub enum ConfigPeriodGetError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`post_session_by_id_init`]
+/// struct for typed errors of method [`config_period_providers`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum PostSessionByIdInitError {
+pub enum ConfigPeriodProvidersError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`post_session_by_id_message`]
+/// struct for typed errors of method [`event_period_subscribe`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum PostSessionByIdMessageError {
+pub enum EventPeriodSubscribeError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`post_session_by_id_share`]
+/// struct for typed errors of method [`file_period_read`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum PostSessionByIdShareError {
+pub enum FilePeriodReadError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`post_session_by_id_summarize`]
+/// struct for typed errors of method [`file_period_status`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum PostSessionByIdSummarizeError {
+pub enum FilePeriodStatusError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`post_tui_append_prompt`]
+/// struct for typed errors of method [`find_period_files`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum PostTuiAppendPromptError {
+pub enum FindPeriodFilesError {
     UnknownValue(serde_json::Value),
 }
 
-/// struct for typed errors of method [`post_tui_open_help`]
+/// struct for typed errors of method [`find_period_symbols`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum PostTuiOpenHelpError {
+pub enum FindPeriodSymbolsError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`find_period_text`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum FindPeriodTextError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`post_session_by_id_permissions_by_permission_id`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum PostSessionByIdPermissionsByPermissionIdError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_abort`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodAbortError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_chat`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodChatError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_children`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodChildrenError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_create`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodCreateError {
+    Status400(models::Error),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_delete`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodDeleteError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_get`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodGetError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_init`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodInitError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_list`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodListError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_message`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodMessageError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_messages`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodMessagesError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_revert`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodRevertError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_share`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodShareError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_shell`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodShellError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_summarize`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodSummarizeError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_unrevert`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodUnrevertError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_unshare`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodUnshareError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`session_period_update`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionPeriodUpdateError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`tui_period_append_prompt`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TuiPeriodAppendPromptError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`tui_period_clear_prompt`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TuiPeriodClearPromptError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`tui_period_execute_command`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TuiPeriodExecuteCommandError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`tui_period_open_help`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TuiPeriodOpenHelpError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`tui_period_open_models`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TuiPeriodOpenModelsError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`tui_period_open_sessions`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TuiPeriodOpenSessionsError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`tui_period_open_themes`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TuiPeriodOpenThemesError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`tui_period_show_toast`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TuiPeriodShowToastError {
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`tui_period_submit_prompt`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TuiPeriodSubmitPromptError {
     UnknownValue(serde_json::Value),
 }
 
 
-/// Delete a session and all its data
-pub async fn delete_session_by_id(configuration: &configuration::Configuration, params: DeleteSessionByIdParams) -> Result<bool, Error<DeleteSessionByIdError>> {
+/// List all agents
+pub async fn app_period_agents(configuration: &configuration::Configuration) -> Result<Vec<models::Agent>, Error<AppPeriodAgentsError>> {
 
-    let uri_str = format!("{}/session/{id}", configuration.base_path, id=crate::apis::urlencode(params.id));
-    let mut req_builder = configuration.client.request(reqwest::Method::DELETE, &uri_str);
+    let uri_str = format!("{}/agent", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
 
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
@@ -297,53 +489,18 @@ pub async fn delete_session_by_id(configuration: &configuration::Configuration, 
         let content = resp.text().await?;
         match content_type {
             ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `Vec&lt;models::Agent&gt;`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `Vec&lt;models::Agent&gt;`")))),
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<DeleteSessionByIdError> = serde_json::from_str(&content).ok();
-        Err(Error::ResponseError(ResponseContent { status, content, entity }))
-    }
-}
-
-/// Unshare the session
-pub async fn delete_session_by_id_share(configuration: &configuration::Configuration, params: DeleteSessionByIdShareParams) -> Result<models::Session, Error<DeleteSessionByIdShareError>> {
-
-    let uri_str = format!("{}/session/{id}/share", configuration.base_path, id=crate::apis::urlencode(params.id));
-    let mut req_builder = configuration.client.request(reqwest::Method::DELETE, &uri_str);
-
-    if let Some(ref user_agent) = configuration.user_agent {
-        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
-    }
-
-    let req = req_builder.build()?;
-    let resp = configuration.client.execute(req).await?;
-
-    let status = resp.status();
-    let content_type = resp
-        .headers()
-        .get("content-type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/octet-stream");
-    let content_type = super::ContentType::from(content_type);
-
-    if !status.is_client_error() && !status.is_server_error() {
-        let content = resp.text().await?;
-        match content_type {
-            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::Session`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::Session`")))),
-        }
-    } else {
-        let content = resp.text().await?;
-        let entity: Option<DeleteSessionByIdShareError> = serde_json::from_str(&content).ok();
+        let entity: Option<AppPeriodAgentsError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Get app info
-pub async fn get_app(configuration: &configuration::Configuration) -> Result<models::App, Error<GetAppError>> {
+pub async fn app_period_get(configuration: &configuration::Configuration) -> Result<models::App, Error<AppPeriodGetError>> {
 
     let uri_str = format!("{}/app", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
@@ -372,13 +529,120 @@ pub async fn get_app(configuration: &configuration::Configuration) -> Result<mod
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<GetAppError> = serde_json::from_str(&content).ok();
+        let entity: Option<AppPeriodGetError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Initialize the app
+pub async fn app_period_init(configuration: &configuration::Configuration) -> Result<bool, Error<AppPeriodInitError>> {
+
+    let uri_str = format!("{}/app/init", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<AppPeriodInitError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Write a log entry to the server logs
+pub async fn app_period_log(configuration: &configuration::Configuration, params: AppPeriodLogParams) -> Result<bool, Error<AppPeriodLogError>> {
+
+    let uri_str = format!("{}/log", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&params.app_log_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<AppPeriodLogError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Set authentication credentials
+pub async fn auth_period_set(configuration: &configuration::Configuration, params: AuthPeriodSetParams) -> Result<bool, Error<AuthPeriodSetError>> {
+
+    let uri_str = format!("{}/auth/{id}", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::PUT, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&params.auth);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<AuthPeriodSetError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Get config info
-pub async fn get_config(configuration: &configuration::Configuration) -> Result<models::Config, Error<GetConfigError>> {
+pub async fn config_period_get(configuration: &configuration::Configuration) -> Result<models::Config, Error<ConfigPeriodGetError>> {
 
     let uri_str = format!("{}/config", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
@@ -407,13 +671,13 @@ pub async fn get_config(configuration: &configuration::Configuration) -> Result<
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<GetConfigError> = serde_json::from_str(&content).ok();
+        let entity: Option<ConfigPeriodGetError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// List all providers
-pub async fn get_config_providers(configuration: &configuration::Configuration) -> Result<models::GetConfigProviders200Response, Error<GetConfigProvidersError>> {
+pub async fn config_period_providers(configuration: &configuration::Configuration) -> Result<models::ConfigProviders200Response, Error<ConfigPeriodProvidersError>> {
 
     let uri_str = format!("{}/config/providers", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
@@ -437,18 +701,18 @@ pub async fn get_config_providers(configuration: &configuration::Configuration) 
         let content = resp.text().await?;
         match content_type {
             ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::GetConfigProviders200Response`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::GetConfigProviders200Response`")))),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::ConfigProviders200Response`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::ConfigProviders200Response`")))),
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<GetConfigProvidersError> = serde_json::from_str(&content).ok();
+        let entity: Option<ConfigPeriodProvidersError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Get events
-pub async fn get_event(configuration: &configuration::Configuration) -> Result<models::Event, Error<GetEventError>> {
+pub async fn event_period_subscribe(configuration: &configuration::Configuration) -> Result<models::Event, Error<EventPeriodSubscribeError>> {
 
     let uri_str = format!("{}/event", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
@@ -477,13 +741,13 @@ pub async fn get_event(configuration: &configuration::Configuration) -> Result<m
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<GetEventError> = serde_json::from_str(&content).ok();
+        let entity: Option<EventPeriodSubscribeError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Read a file
-pub async fn get_file(configuration: &configuration::Configuration, params: GetFileParams) -> Result<models::GetFile200Response, Error<GetFileError>> {
+pub async fn file_period_read(configuration: &configuration::Configuration, params: FilePeriodReadParams) -> Result<models::FileRead200Response, Error<FilePeriodReadError>> {
 
     let uri_str = format!("{}/file", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
@@ -508,18 +772,18 @@ pub async fn get_file(configuration: &configuration::Configuration, params: GetF
         let content = resp.text().await?;
         match content_type {
             ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::GetFile200Response`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::GetFile200Response`")))),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::FileRead200Response`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::FileRead200Response`")))),
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<GetFileError> = serde_json::from_str(&content).ok();
+        let entity: Option<FilePeriodReadError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Get file status
-pub async fn get_file_status(configuration: &configuration::Configuration) -> Result<Vec<models::File>, Error<GetFileStatusError>> {
+pub async fn file_period_status(configuration: &configuration::Configuration) -> Result<Vec<models::File>, Error<FilePeriodStatusError>> {
 
     let uri_str = format!("{}/file/status", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
@@ -548,49 +812,13 @@ pub async fn get_file_status(configuration: &configuration::Configuration) -> Re
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<GetFileStatusError> = serde_json::from_str(&content).ok();
-        Err(Error::ResponseError(ResponseContent { status, content, entity }))
-    }
-}
-
-/// Find text in files
-pub async fn get_find(configuration: &configuration::Configuration, params: GetFindParams) -> Result<Vec<models::Match>, Error<GetFindError>> {
-
-    let uri_str = format!("{}/find", configuration.base_path);
-    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
-
-    req_builder = req_builder.query(&[("pattern", &params.pattern.to_string())]);
-    if let Some(ref user_agent) = configuration.user_agent {
-        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
-    }
-
-    let req = req_builder.build()?;
-    let resp = configuration.client.execute(req).await?;
-
-    let status = resp.status();
-    let content_type = resp
-        .headers()
-        .get("content-type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/octet-stream");
-    let content_type = super::ContentType::from(content_type);
-
-    if !status.is_client_error() && !status.is_server_error() {
-        let content = resp.text().await?;
-        match content_type {
-            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `Vec&lt;models::Match&gt;`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `Vec&lt;models::Match&gt;`")))),
-        }
-    } else {
-        let content = resp.text().await?;
-        let entity: Option<GetFindError> = serde_json::from_str(&content).ok();
+        let entity: Option<FilePeriodStatusError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Find files
-pub async fn get_find_file(configuration: &configuration::Configuration, params: GetFindFileParams) -> Result<Vec<String>, Error<GetFindFileError>> {
+pub async fn find_period_files(configuration: &configuration::Configuration, params: FindPeriodFilesParams) -> Result<Vec<String>, Error<FindPeriodFilesError>> {
 
     let uri_str = format!("{}/find/file", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
@@ -620,13 +848,13 @@ pub async fn get_find_file(configuration: &configuration::Configuration, params:
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<GetFindFileError> = serde_json::from_str(&content).ok();
+        let entity: Option<FindPeriodFilesError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Find workspace symbols
-pub async fn get_find_symbol(configuration: &configuration::Configuration, params: GetFindSymbolParams) -> Result<Vec<models::Symbol>, Error<GetFindSymbolError>> {
+pub async fn find_period_symbols(configuration: &configuration::Configuration, params: FindPeriodSymbolsParams) -> Result<Vec<models::Symbol>, Error<FindPeriodSymbolsError>> {
 
     let uri_str = format!("{}/find/symbol", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
@@ -656,17 +884,18 @@ pub async fn get_find_symbol(configuration: &configuration::Configuration, param
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<GetFindSymbolError> = serde_json::from_str(&content).ok();
+        let entity: Option<FindPeriodSymbolsError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
-/// List all modes
-pub async fn get_mode(configuration: &configuration::Configuration) -> Result<Vec<models::Mode>, Error<GetModeError>> {
+/// Find text in files
+pub async fn find_period_text(configuration: &configuration::Configuration, params: FindPeriodTextParams) -> Result<Vec<models::FindText200ResponseInner>, Error<FindPeriodTextError>> {
 
-    let uri_str = format!("{}/mode", configuration.base_path);
+    let uri_str = format!("{}/find", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
 
+    req_builder = req_builder.query(&[("pattern", &params.pattern.to_string())]);
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
     }
@@ -686,95 +915,26 @@ pub async fn get_mode(configuration: &configuration::Configuration) -> Result<Ve
         let content = resp.text().await?;
         match content_type {
             ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `Vec&lt;models::Mode&gt;`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `Vec&lt;models::Mode&gt;`")))),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `Vec&lt;models::FindText200ResponseInner&gt;`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `Vec&lt;models::FindText200ResponseInner&gt;`")))),
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<GetModeError> = serde_json::from_str(&content).ok();
+        let entity: Option<FindPeriodTextError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
-/// List all sessions
-pub async fn get_session(configuration: &configuration::Configuration) -> Result<Vec<models::Session>, Error<GetSessionError>> {
+/// Respond to a permission request
+pub async fn post_session_by_id_permissions_by_permission_id(configuration: &configuration::Configuration, params: PostSessionByIdPermissionsByPermissionIdParams) -> Result<bool, Error<PostSessionByIdPermissionsByPermissionIdError>> {
 
-    let uri_str = format!("{}/session", configuration.base_path);
-    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
-
-    if let Some(ref user_agent) = configuration.user_agent {
-        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
-    }
-
-    let req = req_builder.build()?;
-    let resp = configuration.client.execute(req).await?;
-
-    let status = resp.status();
-    let content_type = resp
-        .headers()
-        .get("content-type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/octet-stream");
-    let content_type = super::ContentType::from(content_type);
-
-    if !status.is_client_error() && !status.is_server_error() {
-        let content = resp.text().await?;
-        match content_type {
-            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `Vec&lt;models::Session&gt;`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `Vec&lt;models::Session&gt;`")))),
-        }
-    } else {
-        let content = resp.text().await?;
-        let entity: Option<GetSessionError> = serde_json::from_str(&content).ok();
-        Err(Error::ResponseError(ResponseContent { status, content, entity }))
-    }
-}
-
-/// List messages for a session
-pub async fn get_session_by_id_message(configuration: &configuration::Configuration, params: GetSessionByIdMessageParams) -> Result<Vec<models::GetSessionByIdMessage200ResponseInner>, Error<GetSessionByIdMessageError>> {
-
-    let uri_str = format!("{}/session/{id}/message", configuration.base_path, id=crate::apis::urlencode(params.id));
-    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
-
-    if let Some(ref user_agent) = configuration.user_agent {
-        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
-    }
-
-    let req = req_builder.build()?;
-    let resp = configuration.client.execute(req).await?;
-
-    let status = resp.status();
-    let content_type = resp
-        .headers()
-        .get("content-type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/octet-stream");
-    let content_type = super::ContentType::from(content_type);
-
-    if !status.is_client_error() && !status.is_server_error() {
-        let content = resp.text().await?;
-        match content_type {
-            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `Vec&lt;models::GetSessionByIdMessage200ResponseInner&gt;`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `Vec&lt;models::GetSessionByIdMessage200ResponseInner&gt;`")))),
-        }
-    } else {
-        let content = resp.text().await?;
-        let entity: Option<GetSessionByIdMessageError> = serde_json::from_str(&content).ok();
-        Err(Error::ResponseError(ResponseContent { status, content, entity }))
-    }
-}
-
-/// Initialize the app
-pub async fn post_app_init(configuration: &configuration::Configuration) -> Result<bool, Error<PostAppInitError>> {
-
-    let uri_str = format!("{}/app/init", configuration.base_path);
+    let uri_str = format!("{}/session/{id}/permissions/{permissionID}", configuration.base_path, id=crate::apis::urlencode(params.id), permissionID=crate::apis::urlencode(params.permission_id));
     let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
 
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
     }
+    req_builder = req_builder.json(&params.post_session_by_id_permissions_by_permission_id_request);
 
     let req = req_builder.build()?;
     let resp = configuration.client.execute(req).await?;
@@ -796,84 +956,13 @@ pub async fn post_app_init(configuration: &configuration::Configuration) -> Resu
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<PostAppInitError> = serde_json::from_str(&content).ok();
-        Err(Error::ResponseError(ResponseContent { status, content, entity }))
-    }
-}
-
-/// Write a log entry to the server logs
-pub async fn post_log(configuration: &configuration::Configuration, params: PostLogParams) -> Result<bool, Error<PostLogError>> {
-
-    let uri_str = format!("{}/log", configuration.base_path);
-    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
-
-    if let Some(ref user_agent) = configuration.user_agent {
-        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
-    }
-    req_builder = req_builder.json(&params.post_log_request);
-
-    let req = req_builder.build()?;
-    let resp = configuration.client.execute(req).await?;
-
-    let status = resp.status();
-    let content_type = resp
-        .headers()
-        .get("content-type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/octet-stream");
-    let content_type = super::ContentType::from(content_type);
-
-    if !status.is_client_error() && !status.is_server_error() {
-        let content = resp.text().await?;
-        match content_type {
-            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
-        }
-    } else {
-        let content = resp.text().await?;
-        let entity: Option<PostLogError> = serde_json::from_str(&content).ok();
-        Err(Error::ResponseError(ResponseContent { status, content, entity }))
-    }
-}
-
-/// Create a new session
-pub async fn post_session(configuration: &configuration::Configuration) -> Result<models::Session, Error<PostSessionError>> {
-
-    let uri_str = format!("{}/session", configuration.base_path);
-    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
-
-    if let Some(ref user_agent) = configuration.user_agent {
-        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
-    }
-
-    let req = req_builder.build()?;
-    let resp = configuration.client.execute(req).await?;
-
-    let status = resp.status();
-    let content_type = resp
-        .headers()
-        .get("content-type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/octet-stream");
-    let content_type = super::ContentType::from(content_type);
-
-    if !status.is_client_error() && !status.is_server_error() {
-        let content = resp.text().await?;
-        match content_type {
-            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::Session`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::Session`")))),
-        }
-    } else {
-        let content = resp.text().await?;
-        let entity: Option<PostSessionError> = serde_json::from_str(&content).ok();
+        let entity: Option<PostSessionByIdPermissionsByPermissionIdError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Abort a session
-pub async fn post_session_by_id_abort(configuration: &configuration::Configuration, params: PostSessionByIdAbortParams) -> Result<bool, Error<PostSessionByIdAbortError>> {
+pub async fn session_period_abort(configuration: &configuration::Configuration, params: SessionPeriodAbortParams) -> Result<bool, Error<SessionPeriodAbortError>> {
 
     let uri_str = format!("{}/session/{id}/abort", configuration.base_path, id=crate::apis::urlencode(params.id));
     let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
@@ -902,49 +991,13 @@ pub async fn post_session_by_id_abort(configuration: &configuration::Configurati
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<PostSessionByIdAbortError> = serde_json::from_str(&content).ok();
-        Err(Error::ResponseError(ResponseContent { status, content, entity }))
-    }
-}
-
-/// Analyze the app and create an AGENTS.md file
-pub async fn post_session_by_id_init(configuration: &configuration::Configuration, params: PostSessionByIdInitParams) -> Result<bool, Error<PostSessionByIdInitError>> {
-
-    let uri_str = format!("{}/session/{id}/init", configuration.base_path, id=crate::apis::urlencode(params.id));
-    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
-
-    if let Some(ref user_agent) = configuration.user_agent {
-        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
-    }
-    req_builder = req_builder.json(&params.post_session_by_id_init_request);
-
-    let req = req_builder.build()?;
-    let resp = configuration.client.execute(req).await?;
-
-    let status = resp.status();
-    let content_type = resp
-        .headers()
-        .get("content-type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/octet-stream");
-    let content_type = super::ContentType::from(content_type);
-
-    if !status.is_client_error() && !status.is_server_error() {
-        let content = resp.text().await?;
-        match content_type {
-            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
-            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
-            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
-        }
-    } else {
-        let content = resp.text().await?;
-        let entity: Option<PostSessionByIdInitError> = serde_json::from_str(&content).ok();
+        let entity: Option<SessionPeriodAbortError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Create and send a new message to a session
-pub async fn post_session_by_id_message(configuration: &configuration::Configuration, params: PostSessionByIdMessageParams) -> Result<models::AssistantMessage, Error<PostSessionByIdMessageError>> {
+pub async fn session_period_chat(configuration: &configuration::Configuration, params: SessionPeriodChatParams) -> Result<models::AssistantMessage, Error<SessionPeriodChatError>> {
 
     let uri_str = format!("{}/session/{id}/message", configuration.base_path, id=crate::apis::urlencode(params.id));
     let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
@@ -952,7 +1005,7 @@ pub async fn post_session_by_id_message(configuration: &configuration::Configura
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
     }
-    req_builder = req_builder.json(&params.post_session_by_id_message_request);
+    req_builder = req_builder.json(&params.session_chat_request);
 
     let req = req_builder.build()?;
     let resp = configuration.client.execute(req).await?;
@@ -974,13 +1027,331 @@ pub async fn post_session_by_id_message(configuration: &configuration::Configura
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<PostSessionByIdMessageError> = serde_json::from_str(&content).ok();
+        let entity: Option<SessionPeriodChatError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Get a session's children
+pub async fn session_period_children(configuration: &configuration::Configuration, params: SessionPeriodChildrenParams) -> Result<Vec<models::Session>, Error<SessionPeriodChildrenError>> {
+
+    let uri_str = format!("{}/session/{id}/children", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `Vec&lt;models::Session&gt;`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `Vec&lt;models::Session&gt;`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodChildrenError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Create a new session
+pub async fn session_period_create(configuration: &configuration::Configuration, params: SessionPeriodCreateParams) -> Result<models::Session, Error<SessionPeriodCreateError>> {
+
+    let uri_str = format!("{}/session", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&params.session_create_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::Session`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::Session`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodCreateError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Delete a session and all its data
+pub async fn session_period_delete(configuration: &configuration::Configuration, params: SessionPeriodDeleteParams) -> Result<bool, Error<SessionPeriodDeleteError>> {
+
+    let uri_str = format!("{}/session/{id}", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::DELETE, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodDeleteError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Get session
+pub async fn session_period_get(configuration: &configuration::Configuration, params: SessionPeriodGetParams) -> Result<models::Session, Error<SessionPeriodGetError>> {
+
+    let uri_str = format!("{}/session/{id}", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::Session`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::Session`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodGetError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Analyze the app and create an AGENTS.md file
+pub async fn session_period_init(configuration: &configuration::Configuration, params: SessionPeriodInitParams) -> Result<bool, Error<SessionPeriodInitError>> {
+
+    let uri_str = format!("{}/session/{id}/init", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&params.session_init_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodInitError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// List all sessions
+pub async fn session_period_list(configuration: &configuration::Configuration) -> Result<Vec<models::Session>, Error<SessionPeriodListError>> {
+
+    let uri_str = format!("{}/session", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `Vec&lt;models::Session&gt;`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `Vec&lt;models::Session&gt;`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodListError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Get a message from a session
+pub async fn session_period_message(configuration: &configuration::Configuration, params: SessionPeriodMessageParams) -> Result<models::SessionMessages200ResponseInner, Error<SessionPeriodMessageError>> {
+
+    let uri_str = format!("{}/session/{id}/message/{messageID}", configuration.base_path, id=crate::apis::urlencode(params.id), messageID=crate::apis::urlencode(params.message_id));
+    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::SessionMessages200ResponseInner`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::SessionMessages200ResponseInner`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodMessageError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// List messages for a session
+pub async fn session_period_messages(configuration: &configuration::Configuration, params: SessionPeriodMessagesParams) -> Result<Vec<models::SessionMessages200ResponseInner>, Error<SessionPeriodMessagesError>> {
+
+    let uri_str = format!("{}/session/{id}/message", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::GET, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `Vec&lt;models::SessionMessages200ResponseInner&gt;`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `Vec&lt;models::SessionMessages200ResponseInner&gt;`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodMessagesError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Revert a message
+pub async fn session_period_revert(configuration: &configuration::Configuration, params: SessionPeriodRevertParams) -> Result<models::Session, Error<SessionPeriodRevertError>> {
+
+    let uri_str = format!("{}/session/{id}/revert", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&params.session_revert_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::Session`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::Session`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodRevertError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Share a session
-pub async fn post_session_by_id_share(configuration: &configuration::Configuration, params: PostSessionByIdShareParams) -> Result<models::Session, Error<PostSessionByIdShareError>> {
+pub async fn session_period_share(configuration: &configuration::Configuration, params: SessionPeriodShareParams) -> Result<models::Session, Error<SessionPeriodShareError>> {
 
     let uri_str = format!("{}/session/{id}/share", configuration.base_path, id=crate::apis::urlencode(params.id));
     let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
@@ -1009,13 +1380,49 @@ pub async fn post_session_by_id_share(configuration: &configuration::Configurati
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<PostSessionByIdShareError> = serde_json::from_str(&content).ok();
+        let entity: Option<SessionPeriodShareError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Run a shell command
+pub async fn session_period_shell(configuration: &configuration::Configuration, params: SessionPeriodShellParams) -> Result<models::AssistantMessage, Error<SessionPeriodShellError>> {
+
+    let uri_str = format!("{}/session/{id}/shell", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&params.session_shell_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AssistantMessage`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::AssistantMessage`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodShellError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Summarize the session
-pub async fn post_session_by_id_summarize(configuration: &configuration::Configuration, params: PostSessionByIdSummarizeParams) -> Result<bool, Error<PostSessionByIdSummarizeError>> {
+pub async fn session_period_summarize(configuration: &configuration::Configuration, params: SessionPeriodSummarizeParams) -> Result<bool, Error<SessionPeriodSummarizeError>> {
 
     let uri_str = format!("{}/session/{id}/summarize", configuration.base_path, id=crate::apis::urlencode(params.id));
     let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
@@ -1023,7 +1430,7 @@ pub async fn post_session_by_id_summarize(configuration: &configuration::Configu
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
     }
-    req_builder = req_builder.json(&params.post_session_by_id_summarize_request);
+    req_builder = req_builder.json(&params.session_summarize_request);
 
     let req = req_builder.build()?;
     let resp = configuration.client.execute(req).await?;
@@ -1045,13 +1452,119 @@ pub async fn post_session_by_id_summarize(configuration: &configuration::Configu
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<PostSessionByIdSummarizeError> = serde_json::from_str(&content).ok();
+        let entity: Option<SessionPeriodSummarizeError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Restore all reverted messages
+pub async fn session_period_unrevert(configuration: &configuration::Configuration, params: SessionPeriodUnrevertParams) -> Result<models::Session, Error<SessionPeriodUnrevertError>> {
+
+    let uri_str = format!("{}/session/{id}/unrevert", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::Session`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::Session`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodUnrevertError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Unshare the session
+pub async fn session_period_unshare(configuration: &configuration::Configuration, params: SessionPeriodUnshareParams) -> Result<models::Session, Error<SessionPeriodUnshareError>> {
+
+    let uri_str = format!("{}/session/{id}/share", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::DELETE, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::Session`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::Session`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodUnshareError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Update session properties
+pub async fn session_period_update(configuration: &configuration::Configuration, params: SessionPeriodUpdateParams) -> Result<models::Session, Error<SessionPeriodUpdateError>> {
+
+    let uri_str = format!("{}/session/{id}", configuration.base_path, id=crate::apis::urlencode(params.id));
+    let mut req_builder = configuration.client.request(reqwest::Method::PATCH, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&params.session_update_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::Session`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `models::Session`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<SessionPeriodUpdateError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Append prompt to the TUI
-pub async fn post_tui_append_prompt(configuration: &configuration::Configuration, params: PostTuiAppendPromptParams) -> Result<bool, Error<PostTuiAppendPromptError>> {
+pub async fn tui_period_append_prompt(configuration: &configuration::Configuration, params: TuiPeriodAppendPromptParams) -> Result<bool, Error<TuiPeriodAppendPromptError>> {
 
     let uri_str = format!("{}/tui/append-prompt", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
@@ -1059,7 +1572,7 @@ pub async fn post_tui_append_prompt(configuration: &configuration::Configuration
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
     }
-    req_builder = req_builder.json(&params.post_tui_append_prompt_request);
+    req_builder = req_builder.json(&params.find_text200_response_inner_path);
 
     let req = req_builder.build()?;
     let resp = configuration.client.execute(req).await?;
@@ -1081,13 +1594,84 @@ pub async fn post_tui_append_prompt(configuration: &configuration::Configuration
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<PostTuiAppendPromptError> = serde_json::from_str(&content).ok();
+        let entity: Option<TuiPeriodAppendPromptError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Clear the prompt
+pub async fn tui_period_clear_prompt(configuration: &configuration::Configuration) -> Result<bool, Error<TuiPeriodClearPromptError>> {
+
+    let uri_str = format!("{}/tui/clear-prompt", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<TuiPeriodClearPromptError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Execute a TUI command (e.g. agent_cycle)
+pub async fn tui_period_execute_command(configuration: &configuration::Configuration, params: TuiPeriodExecuteCommandParams) -> Result<bool, Error<TuiPeriodExecuteCommandError>> {
+
+    let uri_str = format!("{}/tui/execute-command", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&params.tui_execute_command_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<TuiPeriodExecuteCommandError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }
 
 /// Open the help dialog
-pub async fn post_tui_open_help(configuration: &configuration::Configuration) -> Result<bool, Error<PostTuiOpenHelpError>> {
+pub async fn tui_period_open_help(configuration: &configuration::Configuration) -> Result<bool, Error<TuiPeriodOpenHelpError>> {
 
     let uri_str = format!("{}/tui/open-help", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
@@ -1116,7 +1700,183 @@ pub async fn post_tui_open_help(configuration: &configuration::Configuration) ->
         }
     } else {
         let content = resp.text().await?;
-        let entity: Option<PostTuiOpenHelpError> = serde_json::from_str(&content).ok();
+        let entity: Option<TuiPeriodOpenHelpError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Open the model dialog
+pub async fn tui_period_open_models(configuration: &configuration::Configuration) -> Result<bool, Error<TuiPeriodOpenModelsError>> {
+
+    let uri_str = format!("{}/tui/open-models", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<TuiPeriodOpenModelsError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Open the session dialog
+pub async fn tui_period_open_sessions(configuration: &configuration::Configuration) -> Result<bool, Error<TuiPeriodOpenSessionsError>> {
+
+    let uri_str = format!("{}/tui/open-sessions", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<TuiPeriodOpenSessionsError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Open the theme dialog
+pub async fn tui_period_open_themes(configuration: &configuration::Configuration) -> Result<bool, Error<TuiPeriodOpenThemesError>> {
+
+    let uri_str = format!("{}/tui/open-themes", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<TuiPeriodOpenThemesError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Show a toast notification in the TUI
+pub async fn tui_period_show_toast(configuration: &configuration::Configuration, params: TuiPeriodShowToastParams) -> Result<bool, Error<TuiPeriodShowToastError>> {
+
+    let uri_str = format!("{}/tui/show-toast", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+    req_builder = req_builder.json(&params.tui_show_toast_request);
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<TuiPeriodShowToastError> = serde_json::from_str(&content).ok();
+        Err(Error::ResponseError(ResponseContent { status, content, entity }))
+    }
+}
+
+/// Submit the prompt
+pub async fn tui_period_submit_prompt(configuration: &configuration::Configuration) -> Result<bool, Error<TuiPeriodSubmitPromptError>> {
+
+    let uri_str = format!("{}/tui/submit-prompt", configuration.base_path);
+    let mut req_builder = configuration.client.request(reqwest::Method::POST, &uri_str);
+
+    if let Some(ref user_agent) = configuration.user_agent {
+        req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
+    }
+
+    let req = req_builder.build()?;
+    let resp = configuration.client.execute(req).await?;
+
+    let status = resp.status();
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let content_type = super::ContentType::from(content_type);
+
+    if !status.is_client_error() && !status.is_server_error() {
+        let content = resp.text().await?;
+        match content_type {
+            ContentType::Json => serde_json::from_str(&content).map_err(Error::from),
+            ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `bool`"))),
+            ContentType::Unsupported(unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{unknown_type}` content type response that cannot be converted to `bool`")))),
+        }
+    } else {
+        let content = resp.text().await?;
+        let entity: Option<TuiPeriodSubmitPromptError> = serde_json::from_str(&content).ok();
         Err(Error::ResponseError(ResponseContent { status, content, entity }))
     }
 }

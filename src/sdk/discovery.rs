@@ -158,11 +158,26 @@ async fn start_server_and_discover(_config: &DiscoveryConfig) -> Result<String> 
     let port = 8080u16;
     let server_url = format!("http://{}:{}", hostname, port);
     
-    // Try to start the server
-    let mut child = Command::new("opencode")
-        .args(&["serve", "--port", &port.to_string(), "--hostname", hostname])
+    // Try local repo command first
+    let mut child = if let Ok(child) = Command::new("bun")
+        .args(&[
+            "run", 
+            "--conditions=development",
+            "opencode/packages/opencode/src/index.ts",
+            "serve",
+            "--port", &port.to_string(),
+            "--hostname", hostname
+        ])
         .spawn()
-        .map_err(|e| OpenCodeError::server_start_failed(format!("Failed to spawn opencode serve: {}", e)))?;
+    {
+        child
+    } else {
+        // Fallback to general opencode executable
+        Command::new("opencode")
+            .args(&["serve", "--port", &port.to_string(), "--hostname", hostname])
+            .spawn()
+            .map_err(|e| OpenCodeError::server_start_failed(format!("Failed to spawn opencode serve: {}", e)))?
+    };
     
     // Give the server some time to start up
     tokio::time::sleep(Duration::from_millis(2000)).await;

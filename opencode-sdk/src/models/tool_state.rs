@@ -12,7 +12,7 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "status")]
 pub enum ToolState {
     #[serde(rename = "pending")]
     Pending(Box<models::ToolStatePending>),

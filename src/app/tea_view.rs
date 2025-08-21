@@ -1,5 +1,6 @@
 use crate::app::{
     tea_model::{AppState, ConnectionStatus, Model},
+    text_wrapper::TextWrapper,
     ui_components::{
         banner::welcome_text_height, create_welcome_text, text_input::TEXT_INPUT_HEIGHT,
         message_part::{MessageRenderer, MessageContext},
@@ -78,32 +79,35 @@ fn calculate_wrapped_lines(text: &str, width: u16) -> u16 {
 fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     let message_containers = model.message_containers_for_rendering();
     let (terminal_width, _) = crossterm::terminal::size()?;
-    let _effective_width = terminal_width.saturating_sub(2); // Account for "> " prefix
+    let effective_width = terminal_width.saturating_sub(2); // Account for "> " prefix
+    
+    // Create wrapper with reasonable tolerance (10% of width or minimum 5)
+    let tolerance = (effective_width as usize / 10).max(5);
+    let wrapper = TextWrapper::new(effective_width, Some(tolerance));
 
     for container in &message_containers {
-        // Use new MessageRenderer for proper formatting
         let renderer = MessageRenderer::from_message_container(container, MessageContext::Inline);
         let rendered_text = renderer.render();
         
-        // Calculate total lines for scrolling
-        let total_lines = rendered_text.lines.len() as u16;
-
-        // Go to start of line
+        // Wrap each ratatui line and accumulate total lines
+        let mut total_wrapped_lines = 0u16;
+        
         crossterm::execute!(io::stdout(), crossterm::cursor::MoveToColumn(0))?;
         
-        // Print each line of the rendered message
         for line in &rendered_text.lines {
-            // Convert ratatui Line to plain text string
-            let line_text: String = line.spans.iter()
-                .map(|span| span.content.as_ref())
-                .collect();
-            println!("{}", line_text);
+            let wrapped_lines = wrapper.wrap_ratatui_line(line);
+            total_wrapped_lines += wrapped_lines.len() as u16;
+            
+            // Print each wrapped line
+            for wrapped_line in &wrapped_lines {
+                println!("{}", wrapped_line);
+            }
         }
         
-        // Scroll up by the total number of lines this message will occupy
+        // Scroll up by the actual number of wrapped lines
         crossterm::execute!(
             io::stdout(),
-            crossterm::terminal::ScrollUp(total_lines.min(TEXT_INPUT_HEIGHT) as u16)
+            crossterm::terminal::ScrollUp(total_wrapped_lines.min(TEXT_INPUT_HEIGHT))
         )?;
     }
     print!("\n\n");

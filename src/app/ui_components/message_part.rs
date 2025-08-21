@@ -230,6 +230,17 @@ impl MessageRenderer {
                     "".to_string()
                 }
             }
+            "patch" => {
+                if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
+                    if let Some(filename) = path.split('/').last() {
+                        filename.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
             "edit" => {
                 if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
                     if let Some(filename) = path.split('/').last() {
@@ -758,9 +769,11 @@ impl MessageRenderer {
                 // Render tool parts
                 for tool_part in &group.tool_parts {
                     lines.extend(self.render_tool_part(tool_part));
+                    lines.push(Line::from(""));
                 }
 
                 // Add spacing between groups
+                lines.push(Line::from(""));
                 lines.push(Line::from(""));
             }
         }

@@ -1,6 +1,6 @@
+use crate::app::tea_model::RepeatShortcutKey;
 use crate::app::ui_components::{Block, Paragraph};
 use crate::app::view_model_context::ViewModelContext;
-use crate::app::tea_model::RepeatShortcutKey;
 use ratatui::text::Text;
 use ratatui::{
     buffer::Buffer,
@@ -203,17 +203,19 @@ impl Widget for &TextInput {
         if let Some(status_area) = status_area {
             // Get current mode info for display
             let (mode_text, mode_color) = if let Some(mode_index) = model.get().mode_state {
-                if let Some(mode) = model.get().modes.get(mode_index) {
-                    let bg_color = MODE_COLORS
-                        .get(mode_index)
-                        .copied()
-                        .unwrap_or(MODE_DEFAULT_COLOR);
-                    (mode.name.to_uppercase(), bg_color)
-                } else {
-                    ("UNKNOWN".to_string(), MODE_DEFAULT_COLOR)
-                }
+                let bg_color = MODE_COLORS
+                    .get(mode_index as usize)
+                    .copied()
+                    .unwrap_or(MODE_DEFAULT_COLOR);
+                (
+                    model
+                        .get()
+                        .get_current_mode_name()
+                        .unwrap_or("UNKNOWN".to_string()),
+                    bg_color,
+                )
             } else {
-                ("NO MODE".to_string(), MODE_DEFAULT_COLOR)
+                ("UNKNOWN".to_string(), MODE_DEFAULT_COLOR)
             };
             let mut mode_len = mode_text.len();
             let mode_padding = " ".repeat(8 - mode_len);
@@ -239,7 +241,7 @@ impl Widget for &TextInput {
                     match timeout.key {
                         RepeatShortcutKey::Leader => "Shortcut waiting...",
                         RepeatShortcutKey::CtrlC => "Ctrl+C again to confirm",
-                        RepeatShortcutKey::CtrlD => "Ctrl+D again to confirm", 
+                        RepeatShortcutKey::CtrlD => "Ctrl+D again to confirm",
                         RepeatShortcutKey::Esc => "Esc again to confirm",
                     }
                 } else {

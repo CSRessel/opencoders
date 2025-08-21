@@ -5,7 +5,7 @@ use crate::{
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
-use opencode_sdk::models::{Model as SdkModel, Session};
+use opencode_sdk::models::{AgentConfig, ConfigAgent, Model as SdkModel, Session};
 use std::time::SystemTime;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,8 +65,8 @@ pub struct Model {
     pub client: Option<OpenCodeClient>,
     pub session_state: SessionState,
     pub sessions: Vec<Session>,
-    pub modes: Vec<SdkModel>,
-    pub mode_state: Option<usize>,
+    pub modes: Option<ConfigAgent>,
+    pub mode_state: Option<u16>,
     pub connection_status: ConnectionStatus,
     pub pending_first_message: Option<String>,
     // Message state and event streaming
@@ -166,7 +166,7 @@ impl Model {
             client: None,
             session_state: SessionState::None,
             sessions: Vec::new(),
-            modes: Vec::new(),
+            modes: None,
             mode_state: None,
             connection_status: ConnectionStatus::Connecting,
             pending_first_message: None,
@@ -186,7 +186,9 @@ impl Model {
         self.message_state.get_messages_needing_stdout_print()
     }
 
-    pub fn message_containers_for_rendering(&self) -> Vec<&crate::app::message_state::MessageContainer> {
+    pub fn message_containers_for_rendering(
+        &self,
+    ) -> Vec<&crate::app::message_state::MessageContainer> {
         self.message_state.get_message_containers_for_rendering()
     }
 
@@ -357,20 +359,70 @@ impl Model {
     }
 
     // Mode management
-    pub fn set_mode_by_index(&mut self, index: Option<usize>) {
-        self.mode_state = index;
+    pub fn set_mode(&mut self, index: u16) {
+        self.mode_state = Some(index);
     }
 
-    pub fn get_current_mode(&self) -> Option<&SdkModel> {
-        self.mode_state.and_then(|index| self.modes.get(index))
+    pub fn get_current_mode(&self) -> Option<&AgentConfig> {
+        match self.mode_state {
+            Some(0u16) => self.modes.as_ref().map(|c| c.build.as_ref()).flatten(),
+            Some(1u16) => self.modes.as_ref().map(|c| c.plan.as_ref()).flatten(),
+            Some(2u16) => self.modes.as_ref().map(|c| c.general.as_ref()).flatten(),
+            _ => None,
+        }
     }
 
-    pub fn get_current_mode_name(&self) -> Option<&str> {
-        self.get_current_mode().map(|mode| mode.name.as_str())
+    pub fn get_current_mode_name(&self) -> Option<String> {
+        match self.mode_state {
+            Some(0u16) => Some("build"),
+            Some(1u16) => Some("plan"),
+            Some(2u16) => Some("general"),
+            _ => None,
+        }
+        .map(|m| m.to_string())
     }
 
-    pub fn set_modes(&mut self, modes: Vec<SdkModel>) {
-        self.modes = modes;
+    pub fn set_modes(&mut self, modes: ConfigAgent) {
+        self.modes = Some(modes);
         self.mode_state = Some(0);
+    }
+
+    pub fn increment_mode_index(&mut self) {
+        self.mode_state = match self.mode_state {
+            None => {
+                tracing::debug!("No mode selected, setting to first mode (index 0)");
+                Some(0)
+            }
+            Some(current) => {
+                if current >= 2 {
+                    tracing::debug!(
+                        "Current mode index {} out of bounds, resetting to 0",
+                        current
+                    );
+                    Some(0)
+                } else {
+                    let next = (current + 1) % 3;
+                    tracing::debug!("Cycling from mode {} to mode {}", current, next);
+                    Some(next)
+                }
+            }
+        };
+    }
+
+    pub fn get_mode_and_model_settings(&self) -> (String, String, Option<String>) {
+        if let Some(current_mode) = self.get_current_mode() {
+            // TODO fix this to be dynamic
+            let provider = &self.sdk_provider;
+            let model_name = current_mode.model.as_ref().unwrap_or(&self.sdk_model);
+            (
+                provider.clone(),
+                model_name.clone(),
+                self.get_current_mode_name(),
+            )
+        } else {
+            // Fallback to hardcoded values if no mode selected
+            tracing::debug!("No mode selected for session creation, using fallback provider/model");
+            (self.sdk_provider.clone(), self.sdk_model.clone(), None)
+        }
     }
 }

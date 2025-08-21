@@ -19,7 +19,7 @@ pub use session_manager::SessionManager;
 
 // Re-export commonly used generated types for convenience
 pub use opencode_sdk::models::{
-    App, AssistantMessage, Config, Event, FilePart, Match, Message, Mode, Provider, Session,
+    App, AssistantMessage, Config, Event, FilePart, FindText200ResponseInner as Match, Message, Model as Mode, Provider, Session,
     TextPart, ToolPart, UserMessage,
 };
 

@@ -53,7 +53,7 @@ impl MessageState {
         self.messages.is_empty()
     }
 
-    pub fn load_messages(&mut self, messages: Vec<GetSessionByIdMessage200ResponseInner>) {
+    pub fn load_messages(&mut self, messages: Vec<SessionMessages200ResponseInner>) {
         self.clear();
         
         for msg_container in messages {
@@ -280,6 +280,9 @@ impl MessageState {
             Part::StepStart(step_part) => step_part.id.clone(),
             Part::StepFinish(step_part) => step_part.id.clone(),
             Part::Snapshot(snapshot_part) => snapshot_part.id.clone(),
+            Part::Reasoning(reasoning_part) => reasoning_part.id.clone(),
+            Part::Patch(patch_part) => patch_part.id.clone(),
+            Part::Agent(agent_part) => agent_part.id.clone(),
         }
     }
 
@@ -291,6 +294,9 @@ impl MessageState {
             Part::StepStart(step_part) => step_part.message_id.clone(),
             Part::StepFinish(step_part) => step_part.message_id.clone(),
             Part::Snapshot(snapshot_part) => snapshot_part.message_id.clone(),
+            Part::Reasoning(reasoning_part) => reasoning_part.message_id.clone(),
+            Part::Patch(patch_part) => patch_part.message_id.clone(),
+            Part::Agent(agent_part) => agent_part.message_id.clone(),
         }
     }
 
@@ -302,6 +308,9 @@ impl MessageState {
             Part::StepStart(step_part) => step_part.session_id.clone(),
             Part::StepFinish(step_part) => step_part.session_id.clone(),
             Part::Snapshot(snapshot_part) => snapshot_part.session_id.clone(),
+            Part::Reasoning(reasoning_part) => reasoning_part.session_id.clone(),
+            Part::Patch(patch_part) => patch_part.session_id.clone(),
+            Part::Agent(agent_part) => agent_part.session_id.clone(),
         }
     }
 }

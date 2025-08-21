@@ -357,8 +357,8 @@ impl Program {
             Cmd::AsyncLoadModes(client) => {
                 // Spawn async modes loading task
                 self.task_manager.spawn_task(async move {
-                    match client.get_modes().await {
-                        Ok(modes) => Msg::ModesLoaded(modes),
+                    match client.get_agent_configs().await {
+                        Ok(agent_configs) => Msg::ModesLoaded(agent_configs),
                         Err(error) => Msg::ModesLoadFailed(error),
                     }
                 });
@@ -386,7 +386,6 @@ impl Program {
                 // Spawn async user message sending task
                 self.task_manager.spawn_task(async move {
                     // Convert Mode object to string for API call
-                    let mode_for_api = mode.as_ref().map(|m| m.name.as_str());
                     match client
                         .send_user_message(
                             &session_id,
@@ -394,7 +393,7 @@ impl Program {
                             &text,
                             &provider_id,
                             &model_id,
-                            mode_for_api,
+                            mode.as_deref(),
                         )
                         .await
                     {

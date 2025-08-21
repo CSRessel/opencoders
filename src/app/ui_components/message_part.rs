@@ -1,7 +1,7 @@
 use crate::app::ui_components::Paragraph;
 use opencode_sdk::models::{
-    FilePart, GetSessionByIdMessage200ResponseInner, Part, SnapshotPart, StepFinishPart,
-    StepStartPart, TextPart, ToolPart, ToolState,
+    FilePart, Part, SessionMessages200ResponseInner, SnapshotPart, StepFinishPart, StepStartPart,
+    TextPart, ToolPart, ToolState,
 };
 use ratatui::{
     buffer::Buffer,
@@ -42,7 +42,7 @@ impl MessageRenderer {
     }
 
     pub fn from_message(
-        message: &GetSessionByIdMessage200ResponseInner,
+        message: &SessionMessages200ResponseInner,
         context: MessageContext,
     ) -> Self {
         Self::new(message.parts.clone(), context)
@@ -722,9 +722,46 @@ impl MessageRenderer {
                 Part::File(file_part) => {
                     current_group.file_parts.push((**file_part).clone());
                 }
-                Part::Snapshot(_) => {
-                    // Skip snapshot parts for now
-                }
+                // Not properly implemented for now
+                Part::Snapshot(snap_part) => current_group.text_parts.push(TextPart {
+                    id: snap_part.id.clone(),
+                    session_id: snap_part.session_id.clone(),
+                    message_id: snap_part.message_id.clone(),
+                    text: format!("TODO(snapshot) {}", snap_part.snapshot),
+                    synthetic: None,
+                    time: None,
+                }),
+                Part::Reasoning(reason_part) => current_group.text_parts.push(TextPart {
+                    id: reason_part.id.clone(),
+                    session_id: reason_part.session_id.clone(),
+                    message_id: reason_part.message_id.clone(),
+                    text: format!("TODO(reasoning) {}", reason_part.text),
+                    synthetic: None,
+                    time: Some(reason_part.time.clone()),
+                }),
+                Part::Patch(patch_part) => current_group.text_parts.push(TextPart {
+                    id: patch_part.id.clone(),
+                    session_id: patch_part.session_id.clone(),
+                    message_id: patch_part.message_id.clone(),
+                    text: format!(
+                        "TODO(patch) files={}",
+                        serde_json::to_string(&patch_part.files).unwrap_or("-".to_string())
+                    ),
+                    synthetic: None,
+                    time: None,
+                }),
+                Part::Agent(agent_part) => current_group.text_parts.push(TextPart {
+                    id: agent_part.id.clone(),
+                    session_id: agent_part.session_id.clone(),
+                    message_id: agent_part.message_id.clone(),
+                    text: format!(
+                        "TODO(agent) name={} source={}",
+                        agent_part.name,
+                        serde_json::to_string(&agent_part.source).unwrap_or("-".to_string())
+                    ),
+                    synthetic: None,
+                    time: None,
+                }),
             }
         }
 

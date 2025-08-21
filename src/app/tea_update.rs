@@ -4,9 +4,7 @@ use crate::app::{
     tracing_macros::{debug_hot_path, trace_hot_path},
     ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
 };
-use opencode_sdk::models::{
-    Message, Part, SessionByIdMessage200ResponseInner, TextPart, UserMessage,
-};
+use opencode_sdk::models::{Message, Part, TextPart, UserMessage};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -78,25 +76,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 // If we have a ready session, send the message via API
                 if let (Some(client), Some(session)) = (model.client.clone(), model.session()) {
                     let session_id = session.id.clone();
-                    let (provider_id, model_id, mode) =
-                        if let Some(current_mode) = model.get_current_mode() {
-                            // Use mode's model info if available, otherwise fall back to SDK defaults
-                            let provider = current_mode
-                                .model
-                                .as_ref()
-                                .map(|m| m.provider_id.clone())
-                                .unwrap_or_else(|| model.sdk_provider.clone());
-                            let model_name = current_mode
-                                .model
-                                .as_ref()
-                                .map(|m| m.model_id.clone())
-                                .unwrap_or_else(|| model.sdk_model.clone());
-                            (provider, model_name, Some(current_mode.clone()))
-                        } else {
-                            // Fallback to hardcoded values if no mode selected
-                            tracing::debug!("No mode selected, using fallback provider/model");
-                            (model.sdk_provider.clone(), model.sdk_model.clone(), None)
-                        };
+                    let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
                     let message_id = generate_message_id();
                     return (
                         model,
@@ -215,27 +195,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             // Fetch session messages and start event stream once session is ready
             if let Some(client) = model.client.clone() {
                 let session_id = session.id.clone();
-                let (provider_id, model_id, mode) =
-                    if let Some(current_mode) = model.get_current_mode() {
-                        // Use mode's model info if available, otherwise fall back to SDK defaults
-                        let provider = current_mode
-                            .model
-                            .as_ref()
-                            .map(|m| m.provider_id.clone())
-                            .unwrap_or_else(|| model.sdk_provider.clone());
-                        let model_name = current_mode
-                            .model
-                            .as_ref()
-                            .map(|m| m.model_id.clone())
-                            .unwrap_or_else(|| model.sdk_model.clone());
-                        (provider, model_name, Some(current_mode.clone()))
-                    } else {
-                        // Fallback to hardcoded values if no mode selected
-                        tracing::debug!(
-                            "No mode selected for session creation, using fallback provider/model"
-                        );
-                        (model.sdk_provider.clone(), model.sdk_model.clone(), None)
-                    };
+                let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
                 let message_id = generate_message_id();
                 (
                     model,
@@ -247,9 +207,9 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                             session_id.clone(),
                             message_id.clone(),
                             first_message.clone(),
-                            provider_id.clone(),
-                            model_id.clone(),
-                            mode.clone(),
+                            provider_id,
+                            model_id,
+                            mode,
                         ),
                     ]),
                 )
@@ -487,7 +447,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::CycleModeState => {
-            if model.modes.is_empty() {
+            if matches!(model.modes, None) {
                 // Request modes from server if empty
                 if let Some(client) = model.client.clone() {
                     tracing::debug!("Modes array empty, requesting from server");
@@ -497,27 +457,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                     (model, Cmd::None)
                 }
             } else {
-                // Cycle through modes
-                let next_index = match model.mode_state {
-                    None => {
-                        tracing::debug!("No mode selected, setting to first mode (index 0)");
-                        Some(0)
-                    }
-                    Some(current) => {
-                        if current >= model.modes.len() {
-                            tracing::debug!(
-                                "Current mode index {} out of bounds, resetting to 0",
-                                current
-                            );
-                            Some(0)
-                        } else {
-                            let next = (current + 1) % model.modes.len();
-                            tracing::debug!("Cycling from mode {} to mode {}", current, next);
-                            Some(next)
-                        }
-                    }
-                };
-                model.set_mode_by_index(next_index);
+                model.increment_mode_index();
                 (model, Cmd::None)
             }
         }

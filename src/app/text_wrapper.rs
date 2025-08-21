@@ -18,16 +18,27 @@ impl TextWrapper {
                 continue;
             }
             
-            let mut start = 0;
-            while start < original_line.len() {
-                let end = self.find_split_point(original_line, start);
-                wrapped_lines.push(original_line[start..end].trim_end().to_string());
-                start = end;
+            let mut char_start = 0;
+            let char_count = original_line.chars().count();
+            
+            while char_start < char_count {
+                let char_end = self.find_char_split_point(original_line, char_start);
+                
+                // Convert char indices to byte indices for slicing
+                let byte_start = original_line.char_indices().nth(char_start).map(|(i, _)| i).unwrap_or(0);
+                let byte_end = if char_end < char_count {
+                    original_line.char_indices().nth(char_end).map(|(i, _)| i).unwrap_or(original_line.len())
+                } else {
+                    original_line.len()
+                };
+                
+                wrapped_lines.push(original_line[byte_start..byte_end].trim_end().to_string());
+                char_start = char_end;
                 
                 // Skip whitespace at start of next line
-                while start < original_line.len() && 
-                      original_line.chars().nth(start).map_or(false, |c| c.is_whitespace()) {
-                    start += 1;
+                while char_start < char_count && 
+                      original_line.chars().nth(char_start).map_or(false, |c| c.is_whitespace()) {
+                    char_start += 1;
                 }
             }
         }
@@ -44,25 +55,26 @@ impl TextWrapper {
         self.wrap_text(&line_text)
     }
 
-    fn find_split_point(&self, line: &str, start: usize) -> usize {
-        let remaining = &line[start..];
+    fn find_char_split_point(&self, line: &str, char_start: usize) -> usize {
+        let char_count = line.chars().count();
         let width = self.width as usize;
+        let remaining_chars = char_count - char_start;
         
-        if remaining.len() <= width {
-            return start + remaining.len(); // Fits entirely
+        if remaining_chars <= width {
+            return char_count; // Fits entirely
         }
         
-        let ideal_end = start + width;
-        let tolerance_start = ideal_end.saturating_sub(self.tolerance);
+        let ideal_char_end = char_start + width;
+        let tolerance_char_start = ideal_char_end.saturating_sub(self.tolerance);
         
         // Look for last whitespace within tolerance window
-        for i in (tolerance_start..ideal_end).rev() {
-            if line.chars().nth(i).map_or(false, |c| c.is_whitespace()) {
-                return i;
+        for char_i in (tolerance_char_start..ideal_char_end).rev() {
+            if char_i < char_count && line.chars().nth(char_i).map_or(false, |c| c.is_whitespace()) {
+                return char_i;
             }
         }
         
         // No whitespace found, split mid-word at width
-        ideal_end
+        ideal_char_end.min(char_count)
     }
 }

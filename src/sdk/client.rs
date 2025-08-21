@@ -283,7 +283,6 @@ impl OpenCodeClient {
 
         let text_part = TextPartInput {
             id: Some(uuid::Uuid::new_v4().to_string()),
-            r#type: "text".to_string(),
             text: text.to_string(),
             synthetic: None,
             time: None,
@@ -474,7 +473,6 @@ impl MessageBuilder {
     pub fn add_text_part(mut self, text: &str) -> Self {
         let text_part = TextPartInput {
             id: Some(uuid::Uuid::new_v4().to_string()),
-            r#type: "text".to_string(),
             text: text.to_string(),
             synthetic: None,
             time: None,
@@ -488,7 +486,6 @@ impl MessageBuilder {
     pub fn add_file_part(mut self, filename: &str, mime: &str, url: &str) -> Self {
         let file_part = FilePartInput {
             id: Some(uuid::Uuid::new_v4().to_string()),
-            r#type: "file".to_string(),
             mime: mime.to_string(),
             filename: Some(filename.to_string()),
             url: url.to_string(),

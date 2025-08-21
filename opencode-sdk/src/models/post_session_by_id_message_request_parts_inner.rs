@@ -12,7 +12,7 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 pub enum PostSessionByIdMessageRequestPartsInner {
     #[serde(rename = "text")]
     Text(Box<models::TextPartInput>),

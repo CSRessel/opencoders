@@ -17,8 +17,6 @@ pub struct UserMessage {
     pub id: String,
     #[serde(rename = "sessionID")]
     pub session_id: String,
-    #[serde(rename = "role")]
-    pub role: String,
     #[serde(rename = "time")]
     pub time: Box<models::PermissionInfoTime>,
 }
@@ -27,13 +25,12 @@ impl UserMessage {
     pub fn new(
         id: String,
         session_id: String,
-        role: String,
+        _role: String,
         time: models::PermissionInfoTime,
     ) -> UserMessage {
         UserMessage {
             id,
             session_id,
-            role,
             time: Box::new(time),
         }
     }

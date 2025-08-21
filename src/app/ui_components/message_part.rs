@@ -18,10 +18,17 @@ pub enum MessageContext {
     Fullscreen, // For message_log.rs
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum VerbosityLevel {
+    Summary, // Concise one-line descriptions
+    Verbose, // Full details for all content
+}
+
 #[derive(Debug, Clone)]
 pub struct MessageRenderer {
     parts: Vec<Part>,
     context: MessageContext,
+    verbosity: VerbosityLevel,
     expanded_tools: HashSet<String>, // Track which tools are expanded (fullscreen only)
 }
 
@@ -33,10 +40,11 @@ struct StepGroup {
 }
 
 impl MessageRenderer {
-    pub fn new(parts: Vec<Part>, context: MessageContext) -> Self {
+    pub fn new(parts: Vec<Part>, context: MessageContext, verbosity: VerbosityLevel) -> Self {
         Self {
             parts,
             context,
+            verbosity,
             expanded_tools: HashSet::new(),
         }
     }
@@ -44,20 +52,27 @@ impl MessageRenderer {
     pub fn from_message(
         message: &SessionMessages200ResponseInner,
         context: MessageContext,
+        verbosity: VerbosityLevel,
     ) -> Self {
-        Self::new(message.parts.clone(), context)
+        Self::new(message.parts.clone(), context, verbosity)
     }
 
     pub fn from_message_container(
         container: &crate::app::message_state::MessageContainer,
         context: MessageContext,
+        verbosity: VerbosityLevel,
     ) -> Self {
         let parts: Vec<Part> = container
             .part_order
             .iter()
             .filter_map(|part_id| container.parts.get(part_id).cloned())
             .collect();
-        Self::new(parts, context)
+        Self::new(parts, context, verbosity)
+    }
+
+    pub fn with_verbosity(mut self, verbosity: VerbosityLevel) -> Self {
+        self.verbosity = verbosity;
+        self
     }
 
     fn get_tool_status_color(&self, state: &ToolState) -> Color {
@@ -122,6 +137,17 @@ impl MessageRenderer {
                 }
             }
             "write" => {
+                if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
+                    if let Some(filename) = path.split('/').last() {
+                        filename.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            "patch" => {
                 if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
                     if let Some(filename) = path.split('/').last() {
                         filename.to_string()
@@ -403,15 +429,22 @@ impl MessageRenderer {
                             if output.contains("successfully") || output.contains("created") {
                                 "File written".to_string()
                             } else {
-                                format!("Output: {}", self.truncate_output(output, 30))
+                                format!("Output: TODO diffs! len={}", output.len())
                             }
+                        }
+                    }
+                    "patch" => {
+                        if output.trim().is_empty() {
+                            "File patched".to_string()
+                        } else {
+                            format!("Output: TODO diffs! len={}", output.len())
                         }
                     }
                     "edit" => {
                         if output.trim().is_empty() {
                             "File edited".to_string()
                         } else {
-                            format!("Output: {}", self.truncate_output(output, 30))
+                            format!("Output: TODO diffs! len={}", output.len())
                         }
                     }
                     "list" => {
@@ -596,17 +629,12 @@ impl MessageRenderer {
 
         // Result summary with tree connector
         let result_summary = self.format_tool_result_summary(tool_part);
-        let summary_line = match self.context {
-            MessageContext::Inline => {
-                format!("  ⎿  {}", result_summary)
+        let summary_line = match (&self.context, &self.verbosity) {
+            (MessageContext::Fullscreen, VerbosityLevel::Summary) => {
+                format!("  ⎿  {} (ctrl+r to expand)", result_summary)
             }
-            MessageContext::Fullscreen => {
-                // Only show expand option in fullscreen mode
-                if self.expanded_tools.contains(&tool_part.call_id) {
-                    format!("  ⎿  {} (ctrl+r to collapse)", result_summary)
-                } else {
-                    format!("  ⎿  {} (ctrl+r to expand)", result_summary)
-                }
+            (MessageContext::Inline, _) | (_, VerbosityLevel::Verbose) => {
+                format!("  ⎿  {}", result_summary)
             }
         };
 
@@ -620,16 +648,10 @@ impl MessageRenderer {
             lines.extend(self.render_todo_list_content(tool_part));
         }
 
-        // In fullscreen mode, show expanded output if requested
-        if self.context == MessageContext::Fullscreen
-            && self.expanded_tools.contains(&tool_part.call_id)
-        {
-            if let ToolState::Completed(_completed) = &*tool_part.state {
-                // TODO: Implement expanded tool output rendering
-                lines.push(Line::from(vec![Span::styled(
-                    "    [Expanded output would go here]",
-                    Style::default().fg(Color::DarkGray),
-                )]));
+        // In verbose mode, show full tool output inline
+        if self.verbosity == VerbosityLevel::Verbose {
+            if let ToolState::Completed(completed) = &*tool_part.state {
+                lines.extend(self.render_full_tool_output(&completed.output));
             }
         }
 
@@ -779,6 +801,64 @@ impl MessageRenderer {
         groups
     }
 
+    fn render_step_group(&self, group: &StepGroup) -> Vec<Line<'static>> {
+        let mut lines = Vec::new();
+
+        // Determine if this is a mixed grouping
+        let has_text_parts = !group.text_parts.is_empty();
+        let has_tool_parts = !group.tool_parts.is_empty();
+        let is_mixed_grouping = has_text_parts && has_tool_parts;
+
+        // Text parts visibility rules
+        let show_text_parts = match self.verbosity {
+            VerbosityLevel::Verbose => true,
+            VerbosityLevel::Summary => !is_mixed_grouping, // Hide in mixed groupings
+        };
+
+        if show_text_parts {
+            for text_part in &group.text_parts {
+                lines.extend(self.render_text_part(text_part, true));
+            }
+        }
+
+        // Tool parts rendering
+        for tool_part in &group.tool_parts {
+            lines.extend(self.render_tool_part(tool_part));
+        }
+
+        lines
+    }
+
+    fn render_full_tool_output(&self, output: &str) -> Vec<Line<'static>> {
+        let mut lines = Vec::new();
+
+        if output.trim().is_empty() {
+            return lines;
+        }
+
+        // Add separator line
+        lines.push(Line::from(vec![Span::styled(
+            "    ┌─ Full Output:",
+            Style::default().fg(Color::DarkGray),
+        )]));
+
+        // Render each line of output with proper indentation
+        for line in output.lines() {
+            lines.push(Line::from(vec![
+                Span::styled("    │ ".to_string(), Style::default().fg(Color::DarkGray)),
+                Span::styled(line.to_string(), Style::default().fg(Color::Gray)),
+            ]));
+        }
+
+        // Add closing line
+        lines.push(Line::from(vec![Span::styled(
+            "    └─",
+            Style::default().fg(Color::DarkGray),
+        )]));
+
+        lines
+    }
+
     pub fn render(&self) -> Text<'static> {
         let mut lines = Vec::new();
         let step_groups = self.group_parts_into_steps();
@@ -801,16 +881,7 @@ impl MessageRenderer {
         } else {
             // Render grouped parts
             for group in step_groups {
-                // lines.push(Line::from(" "));
-                // Render text parts first (grouped)
-                for text_part in &group.text_parts {
-                    lines.extend(self.render_text_part(text_part, true));
-                }
-
-                // Render tool parts
-                for tool_part in &group.tool_parts {
-                    lines.extend(self.render_tool_part(tool_part));
-                }
+                lines.extend(self.render_step_group(&group));
             }
         }
 
@@ -836,7 +907,11 @@ impl<'a> MessagePart<'a> {
 
     pub fn to_text(&self) -> Text<'static> {
         // Use new MessageRenderer for single part
-        let renderer = MessageRenderer::new(vec![self.part.clone()], MessageContext::Fullscreen);
+        let renderer = MessageRenderer::new(
+            vec![self.part.clone()],
+            MessageContext::Fullscreen,
+            VerbosityLevel::Summary,
+        );
         renderer.render()
     }
 
@@ -851,5 +926,180 @@ impl<'a> Widget for MessagePart<'a> {
         let text = self.to_text();
         let paragraph = Paragraph::new(text);
         paragraph.render(area, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use opencode_sdk::models::{ToolStateCompleted, ToolStateCompletedTime};
+    use std::collections::HashMap;
+
+    fn create_text_part(text: &str) -> Part {
+        Part::Text(Box::new(TextPart {
+            id: "text1".to_string(),
+            session_id: "session1".to_string(),
+            message_id: "msg1".to_string(),
+            text: text.to_string(),
+            synthetic: None,
+            time: None,
+        }))
+    }
+
+    fn create_tool_part(tool: &str, output: &str) -> Part {
+        Part::Tool(Box::new(ToolPart {
+            id: "tool1".to_string(),
+            session_id: "session1".to_string(),
+            message_id: "msg1".to_string(),
+            call_id: "tool1".to_string(),
+            tool: tool.to_string(),
+            state: Box::new(ToolState::Completed(Box::new(ToolStateCompleted {
+                input: HashMap::new(),
+                output: output.to_string(),
+                title: "Test Tool".to_string(),
+                metadata: HashMap::new(),
+                time: Box::new(ToolStateCompletedTime {
+                    start: 0.0,
+                    end: 1.0,
+                }),
+            }))),
+        }))
+    }
+
+    #[test]
+    fn test_summary_mode_hides_text_in_mixed_groupings() {
+        let parts = vec![
+            create_text_part("This is some text"),
+            create_tool_part("bash", "Command output"),
+        ];
+
+        // Summary mode should hide text parts in mixed groupings
+        let renderer_summary = MessageRenderer::new(
+            parts.clone(),
+            MessageContext::Fullscreen,
+            VerbosityLevel::Summary,
+        );
+        let summary_text = renderer_summary.render();
+
+        // Text should not appear in summary mode with mixed content
+        let summary_content = summary_text
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| span.content.as_ref())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(!summary_content.contains("This is some text"));
+        assert!(summary_content.contains("bash"));
+
+        // Verbose mode should show text parts in mixed groupings
+        let renderer_verbose =
+            MessageRenderer::new(parts, MessageContext::Fullscreen, VerbosityLevel::Verbose);
+        let verbose_text = renderer_verbose.render();
+
+        let verbose_content = verbose_text
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| &span.content)
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(verbose_content.contains("This is some text"));
+        assert!(verbose_content.contains("bash"));
+    }
+
+    #[test]
+    fn test_ctrl_r_hint_only_in_fullscreen_summary() {
+        let parts = vec![create_tool_part("bash", "output")];
+
+        // Fullscreen + Summary should show ctrl+r hint
+        let renderer_fs_summary = MessageRenderer::new(
+            parts.clone(),
+            MessageContext::Fullscreen,
+            VerbosityLevel::Summary,
+        );
+        let text = renderer_fs_summary.render();
+        let content = text
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| &span.content)
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(content.contains("(ctrl+r to expand)"));
+
+        // Inline + Summary should not show ctrl+r hint
+        let renderer_inline_summary = MessageRenderer::new(
+            parts.clone(),
+            MessageContext::Inline,
+            VerbosityLevel::Summary,
+        );
+        let text = renderer_inline_summary.render();
+        let content = text
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| &span.content)
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(!content.contains("(ctrl+r to expand)"));
+
+        // Fullscreen + Verbose should not show ctrl+r hint
+        let renderer_fs_verbose =
+            MessageRenderer::new(parts, MessageContext::Fullscreen, VerbosityLevel::Verbose);
+        let text = renderer_fs_verbose.render();
+        let content = text
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| &span.content)
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(!content.contains("(ctrl+r to expand)"));
+    }
+
+    #[test]
+    fn test_text_only_grouping_always_shows_text() {
+        let parts = vec![create_text_part("This is standalone text")];
+
+        // Even in summary mode, text should show when it's not mixed with tools
+        let renderer_summary = MessageRenderer::new(
+            parts.clone(),
+            MessageContext::Fullscreen,
+            VerbosityLevel::Summary,
+        );
+        let text = renderer_summary.render();
+        let content = text
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| &span.content)
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(content.contains("This is standalone text"));
     }
 }

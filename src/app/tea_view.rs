@@ -4,7 +4,7 @@ use crate::app::{
     ui_components::{
         banner::welcome_text_height,
         create_welcome_text,
-        message_part::{MessageContext, MessageRenderer},
+        message_part::{MessageContext, MessageRenderer, VerbosityLevel},
         text_input::TEXT_INPUT_HEIGHT,
     },
     view_model_context::ViewModelContext,
@@ -72,7 +72,7 @@ fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>
     let wrapper = TextWrapper::new(effective_width, Some(tolerance));
 
     for container in &message_containers {
-        let renderer = MessageRenderer::from_message_container(container, MessageContext::Inline);
+        let renderer = MessageRenderer::from_message_container(container, MessageContext::Inline, VerbosityLevel::Summary);
         let rendered_text = renderer.render();
 
         // Wrap each ratatui line and accumulate total lines

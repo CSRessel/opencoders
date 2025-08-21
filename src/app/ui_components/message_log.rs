@@ -1,5 +1,5 @@
 use crate::app::{
-    ui_components::{Block, MessagePart, Paragraph, message_part::{MessageRenderer, MessageContext}},
+    ui_components::{Block, MessagePart, Paragraph, message_part::{MessageRenderer, MessageContext, VerbosityLevel}},
     view_model_context::ViewModelContext,
     message_state::MessageContainer,
 };
@@ -202,7 +202,7 @@ impl MessageLog {
                 }
             } else {
                 // Use MessageRenderer for assistant messages
-                let renderer = MessageRenderer::from_message_container(container, MessageContext::Fullscreen);
+                let renderer = MessageRenderer::from_message_container(container, MessageContext::Fullscreen, VerbosityLevel::Summary);
                 let rendered_text = renderer.render();
                 lines.extend(rendered_text.lines);
             }

@@ -77,15 +77,224 @@ impl MessageRenderer {
         }
     }
 
-    fn format_tool_args(&self, tool_name: &str, _call_id: &str) -> String {
-        // TODO: Parse and format tool arguments from call data
-        // For now, use placeholder formatting
+    fn format_tool_args(&self, tool_part: &ToolPart) -> String {
+        // Parse tool arguments from state.input
+        match &*tool_part.state {
+            ToolState::Completed(completed) => {
+                self.parse_tool_input(&tool_part.tool, &completed.input)
+            }
+            ToolState::Running(running) => {
+                // Running state has Option<Option<Value>> input, flatten it
+                if let Some(Some(input_value)) = &running.input {
+                    if let Some(input_obj) = input_value.as_object() {
+                        self.parse_tool_input_from_value(&tool_part.tool, input_obj)
+                    } else {
+                        "".to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            ToolState::Error(error) => self.parse_tool_input(&tool_part.tool, &error.input),
+            ToolState::Pending(_) => {
+                // Pending state has no input field
+                "".to_string()
+            }
+        }
+    }
+
+    fn parse_tool_input(
+        &self,
+        tool_name: &str,
+        input: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> String {
         match tool_name {
+            "bash" => {
+                if let Some(command) = input.get("command").and_then(|v| v.as_str()) {
+                    command.to_string()
+                } else {
+                    "".to_string()
+                }
+            }
+            "read" => {
+                if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
+                    // Show just the filename, not full path
+                    if let Some(filename) = path.split('/').last() {
+                        filename.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            "write" => {
+                if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
+                    if let Some(filename) = path.split('/').last() {
+                        filename.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            "edit" => {
+                if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
+                    if let Some(filename) = path.split('/').last() {
+                        filename.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            "glob" => {
+                if let Some(pattern) = input.get("pattern").and_then(|v| v.as_str()) {
+                    format!("pattern: \"{}\"", pattern)
+                } else {
+                    "".to_string()
+                }
+            }
+            "grep" => {
+                if let Some(pattern) = input.get("pattern").and_then(|v| v.as_str()) {
+                    format!("pattern: \"{}\"", pattern)
+                } else {
+                    "".to_string()
+                }
+            }
+            "list" => {
+                if let Some(path) = input.get("path").and_then(|v| v.as_str()) {
+                    if let Some(dirname) = path.split('/').last() {
+                        dirname.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
             "todowrite" => "Update Todos".to_string(),
-            "glob" => "pattern: \"**/*ui*\"".to_string(),
-            "grep" => "pattern: \"pub const TEXT_INPUT_HEIGHT\"".to_string(),
-            "read" => "src/app/ui_components/text_input.rs".to_string(),
-            "bash" => "cargo check".to_string(),
+            "todoread" => "Read Todos".to_string(),
+            "webfetch" => {
+                if let Some(url) = input.get("url").and_then(|v| v.as_str()) {
+                    // Show just domain for brevity using simple string parsing
+                    if url.starts_with("http://") || url.starts_with("https://") {
+                        if let Some(domain_start) = url.find("://").map(|i| i + 3) {
+                            if let Some(path_start) = url[domain_start..].find('/') {
+                                url[domain_start..domain_start + path_start].to_string()
+                            } else {
+                                url[domain_start..].to_string()
+                            }
+                        } else {
+                            url.to_string()
+                        }
+                    } else {
+                        url.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            _ => "".to_string(),
+        }
+    }
+
+    fn parse_tool_input_from_value(
+        &self,
+        tool_name: &str,
+        input: &serde_json::Map<String, serde_json::Value>,
+    ) -> String {
+        match tool_name {
+            "bash" => {
+                if let Some(command) = input.get("command").and_then(|v| v.as_str()) {
+                    command.to_string()
+                } else {
+                    "".to_string()
+                }
+            }
+            "read" => {
+                if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
+                    // Show just the filename, not full path
+                    if let Some(filename) = path.split('/').last() {
+                        filename.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            "write" => {
+                if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
+                    if let Some(filename) = path.split('/').last() {
+                        filename.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            "edit" => {
+                if let Some(path) = input.get("filePath").and_then(|v| v.as_str()) {
+                    if let Some(filename) = path.split('/').last() {
+                        filename.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            "glob" => {
+                if let Some(pattern) = input.get("pattern").and_then(|v| v.as_str()) {
+                    format!("pattern: \"{}\"", pattern)
+                } else {
+                    "".to_string()
+                }
+            }
+            "grep" => {
+                if let Some(pattern) = input.get("pattern").and_then(|v| v.as_str()) {
+                    format!("pattern: \"{}\"", pattern)
+                } else {
+                    "".to_string()
+                }
+            }
+            "list" => {
+                if let Some(path) = input.get("path").and_then(|v| v.as_str()) {
+                    if let Some(dirname) = path.split('/').last() {
+                        dirname.to_string()
+                    } else {
+                        path.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
+            "todowrite" => "Update Todos".to_string(),
+            "todoread" => "Read Todos".to_string(),
+            "webfetch" => {
+                if let Some(url) = input.get("url").and_then(|v| v.as_str()) {
+                    // Show just domain for brevity using simple string parsing
+                    if url.starts_with("http://") || url.starts_with("https://") {
+                        if let Some(domain_start) = url.find("://").map(|i| i + 3) {
+                            if let Some(path_start) = url[domain_start..].find('/') {
+                                url[domain_start..domain_start + path_start].to_string()
+                            } else {
+                                url[domain_start..].to_string()
+                            }
+                        } else {
+                            url.to_string()
+                        }
+                    } else {
+                        url.to_string()
+                    }
+                } else {
+                    "".to_string()
+                }
+            }
             _ => "".to_string(),
         }
     }
@@ -96,81 +305,187 @@ impl MessageRenderer {
                 let output = &completed.output;
                 match tool_part.tool.as_str() {
                     "todowrite" => {
-                        // TODO: Parse todo list from output and show checkbox summary
-                        "Updated todo list".to_string()
+                        // Parse todo count from output
+                        if let Ok(todos) = serde_json::from_str::<serde_json::Value>(output) {
+                            if let Some(array) = todos.as_array() {
+                                format!("{} todos", array.len())
+                            } else {
+                                "Updated todo list".to_string()
+                            }
+                        } else {
+                            "Updated todo list".to_string()
+                        }
                     }
                     "glob" => {
-                        // TODO: Parse file count from output
-                        "Found 100 files".to_string()
+                        // Parse file list from output and count
+                        let lines = output
+                            .lines()
+                            .filter(|line| !line.trim().is_empty())
+                            .count();
+                        if lines > 0 {
+                            format!("Found {} files", lines)
+                        } else {
+                            "No files found".to_string()
+                        }
                     }
                     "grep" => {
-                        // TODO: Parse match count from output
-                        "Found 1 file".to_string()
+                        // Parse grep output for file matches
+                        let lines = output
+                            .lines()
+                            .filter(|line| !line.trim().is_empty())
+                            .count();
+                        if lines > 0 {
+                            format!("Found {} matches", lines)
+                        } else {
+                            "No matches found".to_string()
+                        }
                     }
                     "read" => {
-                        // TODO: Parse line count from output
-                        "Read 290 lines".to_string()
+                        // Parse line count from read output
+                        if output.starts_with("<file>") && output.contains("</file>") {
+                            let line_count = output.lines().count().saturating_sub(2); // Subtract <file> and </file>
+                            format!("Read {} lines", line_count)
+                        } else {
+                            format!("Read {} chars", output.len())
+                        }
+                    }
+                    "write" => {
+                        if output.trim().is_empty() {
+                            "File written".to_string()
+                        } else {
+                            // Check for success indicators
+                            if output.contains("successfully") || output.contains("created") {
+                                "File written".to_string()
+                            } else {
+                                format!("Output: {}", self.truncate_output(output, 30))
+                            }
+                        }
+                    }
+                    "edit" => {
+                        if output.trim().is_empty() {
+                            "File edited".to_string()
+                        } else {
+                            format!("Output: {}", self.truncate_output(output, 30))
+                        }
+                    }
+                    "list" => {
+                        let lines = output
+                            .lines()
+                            .filter(|line| !line.trim().is_empty())
+                            .count();
+                        format!("Found {} items", lines)
                     }
                     "bash" => {
-                        if output.contains("error") {
-                            "Build failed".to_string()
+                        // Parse bash output for common patterns
+                        if output.contains("error")
+                            || output.contains("Error")
+                            || output.contains("ERROR")
+                        {
+                            "Command failed".to_string()
+                        } else if output.contains("warning") || output.contains("Warning") {
+                            "Command completed with warnings".to_string()
+                        } else if output.trim().is_empty() {
+                            "Command completed".to_string()
                         } else {
-                            "Checking opencoders".to_string()
+                            // Show first meaningful line
+                            if let Some(first_line) =
+                                output.lines().find(|line| !line.trim().is_empty())
+                            {
+                                self.truncate_output(first_line, 40)
+                            } else {
+                                "Command completed".to_string()
+                            }
+                        }
+                    }
+                    "webfetch" => {
+                        if output.len() > 100 {
+                            format!("Fetched {} chars", output.len())
+                        } else {
+                            "Content fetched".to_string()
                         }
                     }
                     _ => {
                         // Generic truncated output
-                        if output.len() > 50 {
-                            format!("{}...", &output[..50])
-                        } else {
-                            output.clone()
-                        }
+                        self.truncate_output(output, 50)
                     }
                 }
             }
             ToolState::Running(_) => "Running...".to_string(),
             ToolState::Pending(_) => "Pending...".to_string(),
-            ToolState::Error(error) => format!("Error: {}", error.error),
+            ToolState::Error(error) => format!("Error: {}", self.truncate_output(&error.error, 40)),
         }
     }
 
-    fn render_todo_list_content(&self, _tool_part: &ToolPart) -> Vec<Line<'static>> {
-        // TODO: Parse actual todo list from tool output
-        // For now, return placeholder todo items
+    fn truncate_output(&self, text: &str, max_len: usize) -> String {
+        if text.len() > max_len {
+            format!("{}...", &text[..max_len])
+        } else {
+            text.to_string()
+        }
+    }
+
+    fn render_todo_list_content(&self, tool_part: &ToolPart) -> Vec<Line<'static>> {
         let mut lines = Vec::new();
 
-        // Example todo items - these should be parsed from actual tool output
-        let todo_items = vec![
-            ("☒", "Glob for all files mentioning 'ui' in the path"),
-            (
-                "☐",
-                "Grep for the specific file that defines `pub const TEXT_INPUT_HEIGHT`",
-            ),
-            ("☐", "Read the contents of that file"),
-            (
-                "☐",
-                "Edit the file to add a comment at the top with the list of public functions",
-            ),
-            (
-                "☐",
-                "Run `cargo check` to confirm the project still compiles",
-            ),
-        ];
+        // Parse actual todo list from tool output
+        if let ToolState::Completed(completed) = &*tool_part.state {
+            if let Ok(todos) = serde_json::from_str::<serde_json::Value>(&completed.output) {
+                if let Some(array) = todos.as_array() {
+                    for todo in array {
+                        if let (Some(content), Some(status)) = (
+                            todo.get("content").and_then(|v| v.as_str()),
+                            todo.get("status").and_then(|v| v.as_str()),
+                        ) {
+                            let checkbox = match status {
+                                "completed" => "☒",
+                                "in_progress" => "◐",
+                                "cancelled" => "☒",
+                                _ => "☐",
+                            };
 
-        for (checkbox, text) in todo_items {
-            lines.push(Line::from(vec![
-                Span::styled("     ", Style::default()), // 5-space indent for todo items
-                Span::styled(
-                    checkbox,
-                    Style::default().fg(if checkbox == "☒" {
-                        Color::Green
-                    } else {
-                        Color::Gray
-                    }),
-                ),
-                Span::styled(" ", Style::default()),
-                Span::styled(text, Style::default().fg(Color::White)),
-            ]));
+                            let checkbox_color = match status {
+                                "completed" => Color::Green,
+                                "in_progress" => Color::Yellow,
+                                "cancelled" => Color::Red,
+                                _ => Color::Gray,
+                            };
+
+                            lines.push(Line::from(vec![
+                                Span::styled("     ".to_string(), Style::default()), // 5-space indent for todo items
+                                Span::styled(
+                                    checkbox.to_string(),
+                                    Style::default().fg(checkbox_color),
+                                ),
+                                Span::styled(" ".to_string(), Style::default()),
+                                Span::styled(
+                                    content.to_string(),
+                                    Style::default().fg(Color::White),
+                                ),
+                            ]));
+                        }
+                    }
+                } else {
+                    // Fallback: show that todos were updated but couldn't parse
+                    lines.push(Line::from(vec![
+                        Span::styled("     ".to_string(), Style::default()),
+                        Span::styled("⎿ ".to_string(), Style::default().fg(Color::Gray)),
+                        Span::styled(
+                            "Todo list updated".to_string(),
+                            Style::default().fg(Color::Gray),
+                        ),
+                    ]));
+                }
+            } else {
+                // Fallback for non-JSON output
+                lines.push(Line::from(vec![
+                    Span::styled("     ".to_string(), Style::default()),
+                    Span::styled("⎿ ".to_string(), Style::default().fg(Color::Gray)),
+                    Span::styled(
+                        "Todo list updated".to_string(),
+                        Style::default().fg(Color::Gray),
+                    ),
+                ]));
+            }
         }
 
         lines
@@ -181,7 +496,7 @@ impl MessageRenderer {
 
         // Status-based bullet point color
         let bullet_color = self.get_tool_status_color(&*tool_part.state);
-        let tool_args = self.format_tool_args(&tool_part.tool, &tool_part.call_id);
+        let tool_args = self.format_tool_args(tool_part);
 
         // Tool call header
         let tool_header = if tool_args.is_empty() {
@@ -251,7 +566,7 @@ impl MessageRenderer {
         let prefix = if is_grouped {
             "  " // 2-space indent for grouped text
         } else {
-            "● " // Bullet for standalone text
+            "> " // Bullet for standalone text
         };
 
         // Split content into lines and apply prefix
@@ -417,4 +732,3 @@ impl<'a> Widget for MessagePart<'a> {
         paragraph.render(area, buf);
     }
 }
-

@@ -9,7 +9,7 @@ mod tea_update;
 mod tea_view;
 mod terminal;
 mod tracing_macros;
-mod ui_components;
+pub mod ui_components;
 mod view_model_context;
 
 pub use app_program::Program;

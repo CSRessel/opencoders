@@ -9,7 +9,7 @@ pub mod text_input;
 pub use banner::create_welcome_text;
 pub use block::Block;
 pub use message_log::MessageLog;
-pub use message_part::MessagePart;
+pub use message_part::{MessagePart, MessageRenderer, MessageContext};
 pub use paragraph::Paragraph;
 pub use popover_selector::{PopoverSelector, PopoverSelectorEvent};
 pub use text_input::TextInput;

@@ -60,6 +60,9 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (_, KeyCode::Char('x'), KeyModifiers::CONTROL, _) => {
                     Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Leader))
                 }
+                (AppState::TextEntry, KeyCode::Char('r'), KeyModifiers::CONTROL, _) => {
+                    Some(Msg::ToggleVerbosity)
+                }
                 // Leader shortcuts:
                 // /new                      new session               ctrl+x n                ┃
                 // /help                     show help                 ctrl+x h                ┃

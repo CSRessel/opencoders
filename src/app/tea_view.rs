@@ -72,7 +72,11 @@ fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>
     let wrapper = TextWrapper::new(effective_width, Some(tolerance));
 
     for container in &message_containers {
-        let renderer = MessageRenderer::from_message_container(container, MessageContext::Inline, VerbosityLevel::Summary);
+        let renderer = MessageRenderer::from_message_container(
+            container,
+            MessageContext::Inline,
+            model.verbosity_level,
+        );
         let rendered_text = renderer.render();
 
         // Wrap each ratatui line and accumulate total lines

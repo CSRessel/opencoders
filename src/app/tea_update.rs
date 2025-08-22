@@ -538,6 +538,12 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
         }
 
         Msg::SessionAbort => (model, Cmd::AsyncSessionAbort),
+
+        Msg::ToggleVerbosity => {
+            let mut new_model = model;
+            new_model.toggle_verbosity();
+            (new_model, Cmd::None)
+        }
     }
 }
 

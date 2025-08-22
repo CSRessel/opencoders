@@ -18,7 +18,7 @@ pub enum MessageContext {
     Fullscreen, // For message_log.rs
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum VerbosityLevel {
     Summary, // Concise one-line descriptions
     Verbose, // Full details for all content

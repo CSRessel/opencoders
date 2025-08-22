@@ -1,7 +1,7 @@
 use crate::{
     app::{
         message_state::MessageState,
-        ui_components::{MessageLog, PopoverSelector, PopoverSelectorEvent, TextInput},
+        ui_components::{MessageLog, PopoverSelector, PopoverSelectorEvent, TextInput, message_part::VerbosityLevel},
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
@@ -57,6 +57,8 @@ pub struct Model {
     pub sdk_mode: String,
     pub sdk_provider: String,
     pub sdk_model: String,
+    // UI state
+    pub verbosity_level: VerbosityLevel,
     // Stateful components:
     pub message_log: MessageLog,
     pub text_input: TextInput,
@@ -160,6 +162,7 @@ impl Model {
             sdk_mode: "chat".to_string(),
             sdk_provider: "anthropic".to_string(),
             sdk_model: "claude-sonnet-4-20250514".to_string(),
+            verbosity_level: VerbosityLevel::Summary,
             message_log,
             text_input,
             session_selector,
@@ -424,5 +427,13 @@ impl Model {
             tracing::debug!("No mode selected for session creation, using fallback provider/model");
             (self.sdk_provider.clone(), self.sdk_model.clone(), None)
         }
+    }
+
+    // Verbosity management
+    pub fn toggle_verbosity(&mut self) {
+        self.verbosity_level = match self.verbosity_level {
+            VerbosityLevel::Summary => VerbosityLevel::Verbose,
+            VerbosityLevel::Verbose => VerbosityLevel::Summary,
+        };
     }
 }

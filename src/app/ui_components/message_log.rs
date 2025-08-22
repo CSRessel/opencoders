@@ -1,11 +1,12 @@
 use crate::app::{
-    ui_components::{Block, MessagePart, Paragraph, message_part::{MessageRenderer, MessageContext, VerbosityLevel}},
-    view_model_context::ViewModelContext,
     message_state::MessageContainer,
+    ui_components::{
+        message_part::{MessageContext, MessageRenderer, VerbosityLevel},
+        Block, MessagePart, Paragraph,
+    },
+    view_model_context::ViewModelContext,
 };
-use opencode_sdk::models::{
-    Message, Part, TextPart, UserMessage,
-};
+use opencode_sdk::models::{Message, Part, TextPart, UserMessage};
 use ratatui::{
     buffer::Buffer,
     layout::{Margin, Rect},
@@ -173,7 +174,7 @@ impl MessageLog {
         self.touch_scroll();
     }
 
-    fn render_message_content(&self) -> Text<'static> {
+    fn render_message_content(&self, verbosity: VerbosityLevel) -> Text<'static> {
         let mut lines = Vec::new();
 
         for container in &self.message_containers {
@@ -202,7 +203,11 @@ impl MessageLog {
                 }
             } else {
                 // Use MessageRenderer for assistant messages
-                let renderer = MessageRenderer::from_message_container(container, MessageContext::Fullscreen, VerbosityLevel::Summary);
+                let renderer = MessageRenderer::from_message_container(
+                    container,
+                    MessageContext::Fullscreen,
+                    verbosity,
+                );
                 let rendered_text = renderer.render();
                 lines.extend(rendered_text.lines);
             }
@@ -231,7 +236,7 @@ impl MessageLog {
             );
         }
 
-        let content = self.render_message_content();
+        let content = self.render_message_content(VerbosityLevel::Summary);
         let line_count = content.lines.len();
         let longest_line_length = content
             .lines
@@ -266,7 +271,8 @@ impl MessageLog {
 
 impl Widget for &MessageLog {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let content = self.render_message_content();
+        let model = ViewModelContext::current();
+        let content = self.render_message_content(model.get().verbosity_level);
 
         // Always calculate dimensions from the actual content being rendered
         // This ensures content and scroll state are perfectly synchronized

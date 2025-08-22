@@ -81,6 +81,9 @@ pub enum Msg {
     // Unified repeat shortcut timeout events
     RepeatShortcutPressed(RepeatShortcutKey),
     ClearTimeout,
+
+    // Verbosity control
+    ToggleVerbosity,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,45 +1,12 @@
-use crate::app::{
-    event_msg::*,
-    tea_model::*,
-    ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
+use crate::{
+    app::{
+        event_msg::*,
+        tea_model::*,
+        ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
+    },
+    sdk::client::{generate_id, IdPrefix},
 };
 use opencode_sdk::models::{Message, Part, TextPart, UserMessage};
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
-
-static COUNTER: AtomicU32 = AtomicU32::new(0);
-
-fn generate_message_id() -> String {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u64;
-
-    let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let timestamp_with_counter = (now << 12) + (counter as u64 & 0xFFF);
-
-    // Convert to hex manually
-    let time_bytes = timestamp_with_counter.to_be_bytes();
-    let time_hex = time_bytes[2..8]
-        .iter()
-        .map(|b| format!("{:02x}", b))
-        .collect::<String>();
-
-    // Generate random base62 string using system entropy
-    let random_part = (0..14)
-        .map(|i| {
-            let entropy = (now
-                .wrapping_add(i as u64)
-                .wrapping_mul(1103515245)
-                .wrapping_add(12345))
-                >> 16;
-            let chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-            chars.chars().nth((entropy % 62) as usize).unwrap()
-        })
-        .collect::<String>();
-
-    format!("msg_{}{}", time_hex, random_part)
-}
 
 pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
     match msg {
@@ -76,7 +43,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
                 if let (Some(client), Some(session)) = (model.client.clone(), model.session()) {
                     let session_id = session.id.clone();
                     let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
-                    let message_id = generate_message_id();
+                    let message_id = generate_id(IdPrefix::Message);
                     return (
                         model,
                         Cmd::AsyncSendUserMessage(
@@ -195,7 +162,7 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             if let Some(client) = model.client.clone() {
                 let session_id = session.id.clone();
                 let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
-                let message_id = generate_message_id();
+                let message_id = generate_id(IdPrefix::Message);
                 (
                     model,
                     Cmd::Batch(vec![

@@ -8,11 +8,18 @@ use crate::sdk::{
 };
 use opencode_sdk::{
     apis::{configuration::Configuration, default_api},
-    models::{AppLogRequest, ConfigAgent, FileRead200Response, FindText200ResponseInner, SessionChatRequest, SessionChatRequestPartsInner, SessionMessages200ResponseInner, *},
+    models::{
+        AppLogRequest, ConfigAgent, FileRead200Response, FindText200ResponseInner,
+        SessionChatRequest, SessionChatRequestPartsInner, SessionMessages200ResponseInner, *,
+    },
 };
 use reqwest::Client;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
+
+static COUNTER: AtomicU32 = AtomicU32::new(0);
 
 /// High-level client for the OpenCode API
 ///
@@ -24,10 +31,56 @@ pub struct OpenCodeClient {
     #[allow(dead_code)]
     event_stream: Option<Arc<RwLock<EventStream>>>,
 }
-const INPUT_PREFIX_MESSAGE: &str = "msg_";
-const INPUT_PREFIX_SESSION: &str = "ses_";
-const INPUT_PREFIX_USER: &str = "usr_";
-const INPUT_PREFIX_PART: &str = "prt_";
+
+#[derive(Debug, Clone, Copy)] // Add traits for convenience
+pub enum IdPrefix {
+    Message,
+    Session,
+    User,
+    Part,
+}
+impl IdPrefix {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            IdPrefix::Message => "msg_",
+            IdPrefix::Session => "ses_",
+            IdPrefix::User => "usr_",
+            IdPrefix::Part => "prt_",
+        }
+    }
+}
+
+pub fn generate_id(prefix: IdPrefix) -> String {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+
+    let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let timestamp_with_counter = (now << 12) + (counter as u64 & 0xFFF);
+
+    // Convert to hex manually
+    let time_bytes = timestamp_with_counter.to_be_bytes();
+    let time_hex = time_bytes[2..8]
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<String>();
+
+    // Generate random base62 string using system entropy
+    let random_part = (0..14)
+        .map(|i| {
+            let entropy = (now
+                .wrapping_add(i as u64)
+                .wrapping_mul(1103515245)
+                .wrapping_add(12345))
+                >> 16;
+            let chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            chars.chars().nth((entropy % 62) as usize).unwrap()
+        })
+        .collect::<String>();
+
+    format!("{}_{}{}", prefix.as_str(), time_hex, random_part)
+}
 
 impl OpenCodeClient {
     /// Create a new OpenCode client
@@ -284,7 +337,7 @@ impl OpenCodeClient {
         tracing::info!("Sending message to session {}", session_id);
 
         let text_part = TextPartInput {
-            id: Some(uuid::Uuid::new_v4().to_string()),
+            id: Some(generate_id(IdPrefix::Part)),
             text: text.to_string(),
             synthetic: None,
             time: None,
@@ -475,7 +528,7 @@ impl MessageBuilder {
     /// Add a text part to the message
     pub fn add_text_part(mut self, text: &str) -> Self {
         let text_part = TextPartInput {
-            id: Some(uuid::Uuid::new_v4().to_string()),
+            id: Some(generate_id(IdPrefix::Part)),
             text: text.to_string(),
             synthetic: None,
             time: None,
@@ -488,7 +541,7 @@ impl MessageBuilder {
     /// Add a file part to the message
     pub fn add_file_part(mut self, filename: &str, mime: &str, url: &str) -> Self {
         let file_part = FilePartInput {
-            id: Some(uuid::Uuid::new_v4().to_string()),
+            id: Some(generate_id(IdPrefix::Part)),
             mime: mime.to_string(),
             filename: Some(filename.to_string()),
             url: url.to_string(),

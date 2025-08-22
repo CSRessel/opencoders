@@ -1,9 +1,16 @@
 use crate::{
     app::{
         message_state::MessageState,
-        ui_components::{MessageLog, PopoverSelector, PopoverSelectorEvent, TextInput, message_part::VerbosityLevel},
+        ui_components::{
+            message_part::VerbosityLevel, MessageLog, PopoverSelector, PopoverSelectorEvent,
+            TextInput,
+        },
     },
-    sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
+    sdk::{
+        client::{generate_id, IdPrefix},
+        extensions::events::EventStreamHandle,
+        OpenCodeClient, OpenCodeError,
+    },
 };
 use opencode_sdk::models::{AgentConfig, ConfigAgent, Model as SdkModel, Session};
 use std::time::SystemTime;
@@ -274,7 +281,7 @@ impl Model {
 
                 // Create pending session info
                 let pending_info = PendingSessionInfo {
-                    temp_id: uuid::Uuid::new_v4().to_string(),
+                    temp_id: generate_id(IdPrefix::Session),
                     created_at: SystemTime::now(),
                 };
                 self.session_state = SessionState::Pending(pending_info);

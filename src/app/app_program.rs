@@ -18,7 +18,7 @@
 
 use crate::{
     app::{
-        error::{AppError, Result},
+        error::Result,
         event_async_task_manager::AsyncTaskManager,
         event_msg::{Cmd, Msg},
         event_sync_subscriptions,
@@ -31,6 +31,7 @@ use crate::{
     sdk::{extensions::events::EventStream, OpenCodeClient},
 };
 use crossterm::event;
+use eyre::WrapErr;
 use ratatui::{backend::CrosstermBackend, crossterm, Terminal};
 use std::io::{self};
 use std::time::Duration;
@@ -466,11 +467,11 @@ impl Program {
                         }
                         Cmd::None => {}
                         Cmd::Batch(_) => {
-                            return Err(AppError::AsyncTask(format!(
+                            return Err(eyre::eyre!(
                                 "Nested Cmd::Batch detected in spawn_command. This indicates a logic error in the update() function. \
                                 Batch commands should only contain non-batch commands to avoid infinite recursion and stack overflow. \
                                 Please review the update() logic that produced this nested batch."
-                            )));
+                            ));
                         }
                     }
                 }

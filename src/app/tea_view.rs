@@ -9,6 +9,7 @@ use crate::app::{
     },
     view_model_context::ViewModelContext,
 };
+use eyre::WrapErr;
 use ratatui::{
     crossterm,
     layout::{Constraint, Direction, Layout},

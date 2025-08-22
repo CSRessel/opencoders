@@ -26,11 +26,16 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 > - [x] ~~fix how the session list opens in text entry mode~~
 > - [x] `54e4ea6` ~~get one single patch (like `2545ad267044`) that fixes tagging~~
 > - [ ] better status bar styling (working only when busy, row items overflow to be stacked)
+> - [ ] dynamic text input box (text wrapping, vertical resizing, scrolling
+>   overflow, etc)
 > - [ ] unify "new session" and "welcome" pages to one state
 > - [ ] fix error handling and recovery, tracing, logging, and add color eyre
 >   and remove anyhow/thiserror
 > - [ ] add owo colors for stdout messages
 > - [ ] fix live message loading
+> - [ ] basic env for non-interactive TTY execution with synthetic input for
+>   "golden tests" and for perf testing
+> - [ ] setup some basic perf tests with either divan or criterion
 >
 > **First Release:**
 > - prettier printing

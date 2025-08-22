@@ -1,82 +1,111 @@
 //! Error types for the OpenCode SDK
 
 use opencode_sdk::apis;
-use thiserror::Error;
-
-
+use std::fmt;
 
 /// Result type alias for OpenCode SDK operations
 pub type Result<T> = std::result::Result<T, OpenCodeError>;
 
 /// Main error type for the OpenCode SDK
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum OpenCodeError {
     /// HTTP request failed
-    #[error("HTTP request failed: {0}")]
-    Http(#[from] reqwest::Error),
+    Http(reqwest::Error),
 
     /// JSON serialization/deserialization error
-    #[error("Serialization error: {0}")]
-    Serialization(#[from] serde_json::Error),
+    Serialization(serde_json::Error),
 
     /// API returned an error response
-    #[error("API error: {status} - {message}")]
     Api { status: u16, message: String },
 
     /// Authentication/authorization error
-    #[error("Authentication error: {0}")]
     Auth(String),
 
     /// Session not found
-    #[error("Session not found: {session_id}")]
     SessionNotFound { session_id: String },
 
     /// Message not found
-    #[error("Message not found: {message_id} in session {session_id}")]
     MessageNotFound {
         session_id: String,
         message_id: String,
     },
 
     /// Event stream error
-    #[error("Event stream error: {0}")]
     EventStream(String),
 
     /// Configuration error
-    #[error("Configuration error: {0}")]
     Configuration(String),
 
     /// Invalid request parameters
-    #[error("Invalid request: {0}")]
     InvalidRequest(String),
 
     /// Timeout error
-    #[error("Request timeout: {0}")]
     Timeout(String),
 
     /// Server not found during discovery
-    #[error("OpenCode server not found - check if server is running")]
     ServerNotFound,
 
     /// Connection timeout
-    #[error("Connection timeout")]
     ConnectionTimeout,
 
     /// Process detection failed
-    #[error("Failed to detect running OpenCode processes")]
     ProcessDetectionFailed,
 
     /// Session persistence error
-    #[error("Session persistence error: {0}")]
     SessionPersistence(String),
 
     /// Server start failed
-    #[error("Failed to start OpenCode server: {0}")]
     ServerStartFailed(String),
 
     /// Generic error for unexpected situations
-    #[error("Unexpected error: {0}")]
     Unexpected(String),
+}
+
+impl fmt::Display for OpenCodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Http(e) => write!(f, "HTTP request failed: {}", e),
+            Self::Serialization(e) => write!(f, "Serialization error: {}", e),
+            Self::Api { status, message } => write!(f, "API error: {} - {}", status, message),
+            Self::Auth(msg) => write!(f, "Authentication error: {}", msg),
+            Self::SessionNotFound { session_id } => write!(f, "Session not found: {}", session_id),
+            Self::MessageNotFound { session_id, message_id } => {
+                write!(f, "Message not found: {} in session {}", message_id, session_id)
+            }
+            Self::EventStream(msg) => write!(f, "Event stream error: {}", msg),
+            Self::Configuration(msg) => write!(f, "Configuration error: {}", msg),
+            Self::InvalidRequest(msg) => write!(f, "Invalid request: {}", msg),
+            Self::Timeout(msg) => write!(f, "Request timeout: {}", msg),
+            Self::ServerNotFound => write!(f, "OpenCode server not found - check if server is running"),
+            Self::ConnectionTimeout => write!(f, "Connection timeout"),
+            Self::ProcessDetectionFailed => write!(f, "Failed to detect running OpenCode processes"),
+            Self::SessionPersistence(msg) => write!(f, "Session persistence error: {}", msg),
+            Self::ServerStartFailed(msg) => write!(f, "Failed to start OpenCode server: {}", msg),
+            Self::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for OpenCodeError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Http(e) => Some(e),
+            Self::Serialization(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+impl From<reqwest::Error> for OpenCodeError {
+    fn from(err: reqwest::Error) -> Self {
+        Self::Http(err)
+    }
+}
+
+impl From<serde_json::Error> for OpenCodeError {
+    fn from(err: serde_json::Error) -> Self {
+        Self::Serialization(err)
+    }
 }
 
 impl Clone for OpenCodeError {

@@ -16,7 +16,7 @@ pub mod ui_components;
 mod view_model_context;
 
 pub use app_program::Program;
-pub use error::{AppError, Result};
+pub use error::Result;
 
 pub fn run() -> Result<()> {
     let program = Program::new()?;

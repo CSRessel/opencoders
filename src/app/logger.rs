@@ -23,7 +23,8 @@
 //! - `OPENCODE_LOG_DIR`: Override log directory (default: `~/.opencode/logs`)
 //! - `RUST_LOG`: Override log levels (e.g., `RUST_LOG=opencoders=trace`)
 
-use crate::app::error::{AppError, Result};
+use crate::app::error::Result;
+use eyre::WrapErr;
 use std::path::PathBuf;
 use tracing_appender::rolling;
 use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
@@ -64,8 +65,7 @@ fn get_log_directory() -> PathBuf {
 
 #[cfg(debug_assertions)]
 fn init_debug_tracing(log_dir: &PathBuf) -> Result<LoggerGuard> {
-    std::fs::create_dir_all(log_dir)
-        .map_err(|e| AppError::LoggerInit(anyhow::anyhow!("Failed to create log directory: {}", e)))?;
+    std::fs::create_dir_all(log_dir).wrap_err("Failed to create log directory")?;
     
     let log_file = rolling::daily(log_dir, "opencode-debug.log");
     let (non_blocking_log_file, guard) = tracing_appender::non_blocking(log_file);
@@ -86,7 +86,7 @@ fn init_debug_tracing(log_dir: &PathBuf) -> Result<LoggerGuard> {
     tracing_subscriber::registry()
         .with(file_layer)
         .try_init()
-        .map_err(|e| AppError::LoggerInit(anyhow::anyhow!("Failed to initialize tracing subscriber: {}", e)))?;
+        .wrap_err("Failed to initialize tracing subscriber")?;
     
     tracing::info!("Debug tracing initialized with detailed logging to: {}", log_dir.display());
     Ok(LoggerGuard::new(guard))
@@ -95,7 +95,7 @@ fn init_debug_tracing(log_dir: &PathBuf) -> Result<LoggerGuard> {
 #[cfg(not(debug_assertions))]
 fn init_release_tracing(log_dir: &PathBuf) -> Result<LoggerGuard> {
     std::fs::create_dir_all(log_dir)
-        .map_err(|e| AppError::LoggerInit(anyhow::anyhow!("Failed to create log directory: {}", e)))?;
+        .wrap_err("Failed to create log directory")?;
     
     let log_file = rolling::daily(log_dir, "opencode.log");
     let (non_blocking_log_file, guard) = tracing_appender::non_blocking(log_file);
@@ -117,7 +117,7 @@ fn init_release_tracing(log_dir: &PathBuf) -> Result<LoggerGuard> {
     tracing_subscriber::registry()
         .with(file_layer)
         .try_init()
-        .map_err(|e| AppError::LoggerInit(anyhow::anyhow!("Failed to initialize tracing subscriber: {}", e)))?;
+        .wrap_err("Failed to initialize tracing subscriber")?;
     
     tracing::info!("Release tracing initialized with optimized logging to: {}", log_dir.display());
     Ok(LoggerGuard::new(guard))

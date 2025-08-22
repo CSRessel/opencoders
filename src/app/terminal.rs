@@ -1,7 +1,8 @@
 use crate::app::{
-    error::{AppError, Result},
+    error::Result,
     tea_model::{Model, ModelInit},
 };
+use eyre::WrapErr;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
@@ -37,23 +38,14 @@ impl TerminalGuard {
             init.inline_mode()
         );
 
-        enable_raw_mode().map_err(|e| {
-            tracing::error!("Failed to enable raw mode: {}", e);
-            AppError::Terminal(e)
-        })?;
+        enable_raw_mode().wrap_err("Failed to enable raw mode")?;
 
         let mut stdout = io::stdout();
-        execute!(stdout, EnableMouseCapture).map_err(|e| {
-            tracing::error!("Failed to enable mouse capture: {}", e);
-            AppError::Terminal(e)
-        })?;
+        execute!(stdout, EnableMouseCapture).wrap_err("Failed to enable mouse capture")?;
 
         if !init.inline_mode() {
             tracing::debug!("Entering alternate screen mode");
-            execute!(stdout, EnterAlternateScreen).map_err(|e| {
-                tracing::error!("Failed to enter alternate screen: {}", e);
-                AppError::Terminal(e)
-            })?;
+            execute!(stdout, EnterAlternateScreen).wrap_err("Failed to enter alternate screen")?;
         } else {
             tracing::debug!("Using inline mode with height: {}", height);
         }
@@ -67,13 +59,11 @@ impl TerminalGuard {
         };
 
         let mut terminal = Terminal::with_options(backend, TerminalOptions { viewport })
-            .map_err(|e| AppError::TerminalInit(format!("Failed to create terminal: {}", e)))?;
+            .wrap_err("Failed to create terminal")?;
 
         // Clear the terminal and hide cursor
-        terminal.clear()
-            .map_err(|e| AppError::TerminalInit(format!("Failed to clear terminal: {}", e)))?;
-        terminal.hide_cursor()
-            .map_err(|e| AppError::TerminalInit(format!("Failed to hide cursor: {}", e)))?;
+        terminal.clear().wrap_err("Failed to clear terminal")?;
+        terminal.hide_cursor().wrap_err("Failed to hide cursor")?;
 
         let guard = TerminalGuard { init: init.clone() };
 

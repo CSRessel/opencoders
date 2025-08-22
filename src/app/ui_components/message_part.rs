@@ -865,19 +865,29 @@ impl MessageRenderer {
 
         // Handle case where there are no step groups (ungrouped parts)
         if step_groups.is_empty() {
-            // lines.push(Line::from(" "));
-            // Render parts individually without grouping
+            // Create a single group from all parts to apply mixed grouping logic
+            let mut ungrouped_group = StepGroup {
+                text_parts: Vec::new(),
+                tool_parts: Vec::new(),
+                file_parts: Vec::new(),
+            };
+            
             for part in &self.parts {
                 match part {
                     Part::Text(text_part) => {
-                        lines.extend(self.render_text_part(text_part, false));
+                        ungrouped_group.text_parts.push((**text_part).clone());
                     }
                     Part::Tool(tool_part) => {
-                        lines.extend(self.render_tool_part(tool_part));
+                        ungrouped_group.tool_parts.push((**tool_part).clone());
+                    }
+                    Part::File(file_part) => {
+                        ungrouped_group.file_parts.push((**file_part).clone());
                     }
                     _ => {} // Skip other part types when ungrouped
                 }
             }
+            
+            lines.extend(self.render_step_group(&ungrouped_group));
         } else {
             // Render grouped parts
             for group in step_groups {
@@ -1007,7 +1017,7 @@ mod tests {
             .map(|line| {
                 line.spans
                     .iter()
-                    .map(|span| &span.content)
+                    .map(|span| span.content.as_ref())
                     .collect::<String>()
             })
             .collect::<Vec<_>>()
@@ -1033,7 +1043,7 @@ mod tests {
             .map(|line| {
                 line.spans
                     .iter()
-                    .map(|span| &span.content)
+                    .map(|span| span.content.as_ref())
                     .collect::<String>()
             })
             .collect::<Vec<_>>()
@@ -1053,7 +1063,7 @@ mod tests {
             .map(|line| {
                 line.spans
                     .iter()
-                    .map(|span| &span.content)
+                    .map(|span| span.content.as_ref())
                     .collect::<String>()
             })
             .collect::<Vec<_>>()
@@ -1070,7 +1080,7 @@ mod tests {
             .map(|line| {
                 line.spans
                     .iter()
-                    .map(|span| &span.content)
+                    .map(|span| span.content.as_ref())
                     .collect::<String>()
             })
             .collect::<Vec<_>>()
@@ -1095,7 +1105,7 @@ mod tests {
             .map(|line| {
                 line.spans
                     .iter()
-                    .map(|span| &span.content)
+                    .map(|span| span.content.as_ref())
                     .collect::<String>()
             })
             .collect::<Vec<_>>()

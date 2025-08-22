@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 mod app_program;
 pub mod error;
 mod event_async_task_manager;

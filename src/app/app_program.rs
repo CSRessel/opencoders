@@ -26,18 +26,15 @@ use crate::{
         tea_update::update,
         tea_view::{view, view_clear, view_manual},
         terminal::{align_crossterm_output_to_bottom, TerminalGuard},
-        ui_components::{
-            banner::{create_welcome_text, welcome_text_height},
-            text_input::TEXT_INPUT_HEIGHT,
-        },
+        ui_components::{banner::create_welcome_text, text_input::TEXT_INPUT_HEIGHT},
     },
     sdk::{extensions::events::EventStream, OpenCodeClient},
 };
-use crossterm::event::{self, Event};
-use ratatui::{backend::CrosstermBackend, crossterm, style::Color, text::Text, Terminal};
-use std::io::{self, Write};
+use crossterm::event;
+use ratatui::{backend::CrosstermBackend, crossterm, Terminal};
+use std::io::{self};
 use std::time::Duration;
-use tokio::time::{interval, Interval};
+use tokio::time::interval;
 
 pub struct Program {
     model: Model,

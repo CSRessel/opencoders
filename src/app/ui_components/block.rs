@@ -1,6 +1,6 @@
 use crate::app::view_model_context::ViewModelContext;
 use ratatui::{
-    style::{Style, Styled, Stylize},
+    style::{Style, Styled},
     widgets::{Block as RatatuiBlock, BorderType, Borders, Padding},
 };
 
@@ -12,14 +12,14 @@ impl Block {
     pub fn new() -> Self {
         let model = ViewModelContext::current();
         let mut block = RatatuiBlock::new();
-        
+
         // Apply default styling based on model state
         if model.ui_is_rounded() {
             block = block.border_type(BorderType::Rounded);
         } else {
             block = block.border_type(BorderType::Plain);
         }
-        
+
         Self { inner: block }
     }
 
@@ -30,14 +30,14 @@ impl Block {
     pub fn bordered() -> Self {
         let model = ViewModelContext::current();
         let mut block = RatatuiBlock::bordered();
-        
+
         // Apply default styling based on model state
         if model.ui_is_rounded() {
             block = block.border_type(BorderType::Rounded);
         } else {
             block = block.border_type(BorderType::Plain);
         }
-        
+
         Self { inner: block }
     }
 
@@ -125,3 +125,4 @@ impl Styled for Block {
         self
     }
 }
+

@@ -1,9 +1,6 @@
 mod app;
 mod sdk;
 
-use crossterm;
-use std::panic;
-
 fn main() -> app::Result<()> {
     // Initialize logger - keep guard alive for the duration of the program
     let _logger_guard = app::logger::init().expect("Failed to initialize logger");

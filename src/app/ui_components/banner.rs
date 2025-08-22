@@ -1,10 +1,6 @@
-use crate::app::tea_model::{AppState, Model};
-use crate::app::ui_components::Paragraph;
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
     style::{Color, Style},
     text::{Line, Span, Text},
-    Frame,
 };
 
 pub fn welcome_text_height() -> u16 {

@@ -1,7 +1,6 @@
 use crate::app::tea_model::RepeatShortcutKey;
 use crate::app::ui_components::{Block, Paragraph};
 use crate::app::view_model_context::ViewModelContext;
-use ratatui::text::Text;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},

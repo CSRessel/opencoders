@@ -4,8 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+opencode-sdk = { path = "./opencode-sdk" }
+
 crossterm = "0.28.1"
 ratatui = "0.29.0"  # uses crossterm 0.28.1
+throbber-widgets-tui = "=0.8.0"
 
 reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
@@ -13,8 +16,6 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bytes = "1.10.1"
 
-opencode-sdk = { path = "./opencode-sdk" }
-throbber-widgets-tui = "=0.8.0"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "registry"] }
 tracing-appender = "0.2.3"
@@ -27,6 +28,4 @@ tempfile = "3.0"
 tokio-test = "0.4"
 
 [lints.rust]
-# Temporary during development
-unused_imports = "allow"
-dead_code = "allow"
+#dead_code = "allow" # Temporary during development

@@ -9,10 +9,10 @@ use crate::{
     sdk::{
         client::{generate_id, IdPrefix},
         extensions::events::EventStreamHandle,
-        OpenCodeClient, OpenCodeError,
+        OpenCodeClient,
     },
 };
-use opencode_sdk::models::{AgentConfig, ConfigAgent, Model as SdkModel, Session};
+use opencode_sdk::models::{AgentConfig, ConfigAgent, Session};
 use std::time::SystemTime;
 
 #[derive(Debug, Clone, PartialEq)]

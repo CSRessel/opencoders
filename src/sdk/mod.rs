@@ -4,6 +4,8 @@
 //! It wraps the auto-generated OpenAPI client with additional functionality and
 //! better error handling.
 
+#![allow(unused)]
+
 pub mod client;
 pub mod discovery;
 pub mod error;
@@ -19,8 +21,8 @@ pub use session_manager::SessionManager;
 
 // Re-export commonly used generated types for convenience
 pub use opencode_sdk::models::{
-    App, AssistantMessage, Config, Event, FilePart, FindText200ResponseInner as Match, Message, Model as Mode, Provider, Session,
-    TextPart, ToolPart, UserMessage,
+    App, AssistantMessage, Config, Event, FilePart, FindText200ResponseInner as Match, Message,
+    Model as Mode, Provider, Session, TextPart, ToolPart, UserMessage,
 };
 
 // Convenience type aliases

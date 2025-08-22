@@ -2,11 +2,11 @@ use crate::app::{
     message_state::MessageContainer,
     ui_components::{
         message_part::{MessageContext, MessageRenderer, VerbosityLevel},
-        Block, MessagePart, Paragraph,
+        Block, Paragraph,
     },
     view_model_context::ViewModelContext,
 };
-use opencode_sdk::models::{Message, Part, TextPart, UserMessage};
+use opencode_sdk::models::{Message, Part};
 use ratatui::{
     buffer::Buffer,
     layout::{Margin, Rect},
@@ -14,7 +14,6 @@ use ratatui::{
     symbols::scrollbar,
     text::{Line, Span, Text},
     widgets::{Borders, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget},
-    Frame,
 };
 
 #[derive(Debug, Clone, PartialEq)]

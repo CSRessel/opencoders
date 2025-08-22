@@ -1,5 +1,4 @@
 use crate::app::ui_components::block::Block;
-use crate::app::view_model_context::ViewModelContext;
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Rect},
@@ -77,3 +76,4 @@ where
         }
     }
 }
+

@@ -6,7 +6,6 @@ use crate::{
     },
     sdk::client::{generate_id, IdPrefix},
 };
-use opencode_sdk::models::{Message, Part, TextPart, UserMessage};
 
 pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
     match msg {

@@ -4,21 +4,20 @@ use crate::app::{
     ui_components::{
         banner::welcome_text_height,
         create_welcome_text,
-        message_part::{MessageContext, MessageRenderer, VerbosityLevel},
+        message_part::{MessageContext, MessageRenderer},
         text_input::TEXT_INPUT_HEIGHT,
     },
     view_model_context::ViewModelContext,
 };
-use core::error;
 use ratatui::{
     crossterm,
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
-    text::{Line, Span, Text, ToText},
+    text::{Line, Text, ToText},
     widgets::Paragraph,
     Frame,
 };
-use std::io::{self, Write};
+use std::io;
 
 // Config:
 // - inline_mode          := true

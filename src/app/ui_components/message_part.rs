@@ -1,12 +1,11 @@
 use crate::app::ui_components::Paragraph;
 use opencode_sdk::models::{
-    FilePart, Part, SessionMessages200ResponseInner, SnapshotPart, StepFinishPart, StepStartPart,
-    TextPart, ToolPart, ToolState,
+    FilePart, Part, SessionMessages200ResponseInner, TextPart, ToolPart, ToolState,
 };
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Style, Stylize},
+    style::{Color, Style},
     text::{Line, Span, Text},
     widgets::Widget,
 };
@@ -871,7 +870,7 @@ impl MessageRenderer {
                 tool_parts: Vec::new(),
                 file_parts: Vec::new(),
             };
-            
+
             for part in &self.parts {
                 match part {
                     Part::Text(text_part) => {
@@ -886,7 +885,7 @@ impl MessageRenderer {
                     _ => {} // Skip other part types when ungrouped
                 }
             }
-            
+
             lines.extend(self.render_step_group(&ungrouped_group));
         } else {
             // Render grouped parts

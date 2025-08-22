@@ -22,9 +22,15 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 >     1. checklist
 >     1. shell commands
 >     1. other tools?
-> - TODO: fix the scroll flickering
-> - TODO: ~~fix how the session list opens in text entry mode~~
-> - TODO: get one single patch (like `2545ad267044`) that fixes tagging
+> - [x] ~~fix the scroll flickering~~
+> - [x] ~~fix how the session list opens in text entry mode~~
+> - [x] `54e4ea6` ~~get one single patch (like `2545ad267044`) that fixes tagging~~
+> - [ ] better status bar styling (working only when busy, row items overflow to be stacked)
+> - [ ] unify "new session" and "welcome" pages to one state
+> - [ ] fix error handling and recovery, tracing, logging, and add color eyre
+>   and remove anyhow/thiserror
+> - [ ] add owo colors for stdout messages
+> - [ ] fix live message loading
 >
 > **First Release:**
 > - prettier printing

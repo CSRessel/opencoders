@@ -26,7 +26,9 @@ use crate::{
         tea_update::update,
         tea_view::{view, view_clear, view_manual},
         terminal::{align_crossterm_output_to_bottom, init_terminal, restore_terminal},
-        ui_components::{banner::create_welcome_text, text_input::TEXT_INPUT_HEIGHT},
+        ui_components::{
+            banner::create_welcome_text, render_text_inline, text_input::TEXT_INPUT_HEIGHT,
+        },
     },
     sdk::{extensions::events::EventStream, OpenCodeClient},
 };
@@ -52,7 +54,7 @@ impl Program {
 
         // Print welcome message to stdout before entering TUI
         let welcome_text = create_welcome_text();
-        println!("{}", welcome_text);
+        println!("{}", render_text_inline(&welcome_text));
         let terminal = init_terminal(&model.init, model.config.height)?;
 
         // Create async task manager
@@ -74,7 +76,7 @@ impl Program {
 
     async fn run_async(mut self) -> Result<()> {
         // Create tick interval for periodic updates (60 FPS) - must be inside tokio runtime
-        let mut tick_interval = interval(Duration::from_millis(16));
+        let mut tick_interval = interval(Duration::from_millis(8));
 
         // Auto-trigger client discovery at startup
         self.spawn_command(Cmd::AsyncSpawnClientDiscovery).await?;

@@ -5,8 +5,8 @@ use crate::app::{
         banner::welcome_text_height,
         create_welcome_text,
         message_part::{MessageContext, MessageRenderer},
-        render_text,
         text_input::TEXT_INPUT_HEIGHT,
+        render_text_inline,
     },
     view_model_context::ViewModelContext,
 };
@@ -81,7 +81,7 @@ fn render_manual_history(model: &Model) -> crate::app::error::Result<()> {
         let rendered_text = renderer.render();
         
         // Convert the entire rendered text to colorized string first
-        let colorized_text = render_text(&rendered_text);
+        let colorized_text = render_text_inline(&rendered_text);
         
         // Wrap the colorized text and accumulate total lines
         let wrapped_lines = wrapper.wrap_text(&colorized_text);

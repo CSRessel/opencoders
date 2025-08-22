@@ -9,9 +9,9 @@ pub mod text_input;
 
 pub use banner::create_welcome_text;
 pub use block::Block;
-pub use inline_renderer::render_text;
+pub use inline_renderer::render_text_inline;
 pub use message_log::MessageLog;
-pub use message_part::{MessagePart, MessageRenderer, MessageContext};
+pub use message_part::{MessageContext, MessagePart, MessageRenderer};
 pub use paragraph::Paragraph;
 pub use popover_selector::{PopoverSelector, PopoverSelectorEvent};
 pub use text_input::TextInput;

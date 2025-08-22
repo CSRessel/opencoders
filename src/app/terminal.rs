@@ -2,18 +2,14 @@ use crate::app::{
     error::Result,
     tea_model::{Model, ModelInit},
 };
-use eyre::WrapErr;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use eyre::WrapErr;
 use ratatui::{backend::CrosstermBackend, Terminal, TerminalOptions, Viewport};
-use std::io::{self, Write};
-
-pub struct TerminalGuard {
-    init: ModelInit,
-}
+use std::io::{self, stdout, Write};
 
 pub fn align_crossterm_output_to_bottom(model: &Model) -> Result<()> {
     let (_window_cols, window_rows) = crossterm::terminal::size()?;
@@ -28,77 +24,103 @@ pub fn align_crossterm_output_to_bottom(model: &Model) -> Result<()> {
     Ok(())
 }
 
-impl TerminalGuard {
-    pub fn new(
-        init: &ModelInit,
-        height: u16,
-    ) -> Result<(Self, Terminal<CrosstermBackend<io::Stdout>>)> {
-        tracing::info!(
-            "Initializing terminal - inline_mode: {}",
-            init.inline_mode()
-        );
+/// Initialize the terminal with panic hook for automatic cleanup
+pub fn init_terminal(
+    init: &ModelInit,
+    height: u16,
+) -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
+    tracing::info!(
+        "Initializing terminal - inline_mode: {}",
+        init.inline_mode()
+    );
 
-        enable_raw_mode().wrap_err("Failed to enable raw mode")?;
+    enable_raw_mode().wrap_err("Failed to enable raw mode")?;
 
-        let mut stdout = io::stdout();
-        execute!(stdout, EnableMouseCapture).wrap_err("Failed to enable mouse capture")?;
+    let mut stdout = stdout();
+    execute!(stdout, EnableMouseCapture).wrap_err("Failed to enable mouse capture")?;
 
-        if !init.inline_mode() {
-            tracing::debug!("Entering alternate screen mode");
-            execute!(stdout, EnterAlternateScreen).wrap_err("Failed to enter alternate screen")?;
-        } else {
-            tracing::debug!("Using inline mode with height: {}", height);
-        }
-
-        let backend = CrosstermBackend::new(stdout);
-
-        let viewport = if init.inline_mode() {
-            Viewport::Inline(height)
-        } else {
-            Viewport::Fullscreen
-        };
-
-        let mut terminal = Terminal::with_options(backend, TerminalOptions { viewport })
-            .wrap_err("Failed to create terminal")?;
-
-        // Clear the terminal and hide cursor
-        terminal.clear().wrap_err("Failed to clear terminal")?;
-        terminal.hide_cursor().wrap_err("Failed to hide cursor")?;
-
-        let guard = TerminalGuard { init: init.clone() };
-
-        tracing::info!("Terminal initialized successfully");
-        Ok((guard, terminal))
+    if !init.inline_mode() {
+        tracing::debug!("Entering alternate screen mode");
+        execute!(stdout, EnterAlternateScreen).wrap_err("Failed to enter alternate screen")?;
+    } else {
+        tracing::debug!("Using inline mode with height: {}", height);
     }
+
+    // Set up panic hook for automatic terminal restoration
+    set_panic_hook(init.clone());
+
+    let backend = CrosstermBackend::new(stdout);
+
+    let viewport = if init.inline_mode() {
+        Viewport::Inline(height)
+    } else {
+        Viewport::Fullscreen
+    };
+
+    let mut terminal = Terminal::with_options(backend, TerminalOptions { viewport })
+        .wrap_err("Failed to create terminal")?;
+
+    // Clear the terminal and hide cursor
+    terminal.clear().wrap_err("Failed to clear terminal")?;
+    terminal.hide_cursor().wrap_err("Failed to hide cursor")?;
+
+    tracing::info!("Terminal initialized successfully");
+    Ok(terminal)
 }
 
-impl Drop for TerminalGuard {
-    fn drop(&mut self) {
-        tracing::info!(
-            "Cleaning up terminal - inline_mode: {}",
-            self.init.inline_mode()
-        );
+/// Set panic hook to ensure terminal cleanup on panic
+fn set_panic_hook(init: ModelInit) {
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        let _ = restore_terminal(&init); // ignore any errors as we are already failing
+        hook(panic_info);
+    }));
+}
 
-        if let Err(e) = disable_raw_mode() {
-            tracing::error!("Failed to disable raw mode during cleanup: {}", e);
-        }
+/// Restore the terminal to its original state
+pub fn restore_terminal(init: &ModelInit) -> io::Result<()> {
+    tracing::info!(
+        "Restoring terminal - inline_mode: {}",
+        init.inline_mode()
+    );
 
-        let mut stdout = io::stdout();
-        if let Err(e) = execute!(stdout, DisableMouseCapture) {
-            tracing::error!("Failed to disable mouse capture during cleanup: {}", e);
-        }
-
-        if !self.init.inline_mode() {
-            tracing::debug!("Leaving alternate screen mode");
-            if let Err(e) = execute!(stdout, LeaveAlternateScreen) {
-                tracing::error!("Failed to leave alternate screen during cleanup: {}", e);
-            }
-        }
-
-        if let Err(e) = stdout.flush() {
-            tracing::error!("Failed to flush stdout during cleanup: {}", e);
-        }
-
-        tracing::info!("Terminal cleanup completed");
+    // Disable raw mode first
+    if let Err(e) = disable_raw_mode() {
+        tracing::error!("Failed to disable raw mode during restore: {}", e);
     }
+
+    let mut stdout = stdout();
+    
+    // Disable mouse capture
+    if let Err(e) = execute!(stdout, DisableMouseCapture) {
+        tracing::error!("Failed to disable mouse capture during restore: {}", e);
+    }
+
+    // Handle screen mode restoration
+    if !init.inline_mode() {
+        tracing::debug!("Leaving alternate screen mode");
+        execute!(stdout, LeaveAlternateScreen)?;
+    } else {
+        // For inline mode, ensure proper cursor positioning and screen clearing
+        // to prevent overlap with error messages
+        if let Ok((cols, rows)) = crossterm::terminal::size() {
+            let ui_height = init.height().unwrap_or(10);
+            
+            // Clear from cursor position down to prevent overlap
+            execute!(
+                stdout,
+                crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
+                crossterm::cursor::MoveTo(0, rows.saturating_sub(ui_height)),
+                crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
+                crossterm::cursor::MoveTo(0, rows),
+                crossterm::cursor::Show
+            )?;
+        }
+    }
+
+    // Ensure all output is flushed
+    stdout.flush()?;
+
+    tracing::info!("Terminal restore completed");
+    Ok(())
 }

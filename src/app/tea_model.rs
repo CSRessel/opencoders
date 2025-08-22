@@ -98,6 +98,12 @@ mod model_init {
             self.init_inline_mode
         }
 
+        pub fn height(&self) -> Option<u16> {
+            // For now, return the default height
+            // In a real implementation, this could be configurable per init
+            Some(super::DEFAULT_HEIGHT)
+        }
+
         pub fn new(inline_mode: bool) -> ModelInit {
             ModelInit {
                 init_inline_mode: inline_mode,

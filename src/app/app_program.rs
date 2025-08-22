@@ -25,7 +25,7 @@ use crate::{
         tea_model::{AppState, Model, ModelInit},
         tea_update::update,
         tea_view::{view, view_clear, view_manual},
-        terminal::{align_crossterm_output_to_bottom, TerminalGuard},
+        terminal::{align_crossterm_output_to_bottom, init_terminal, restore_terminal},
         ui_components::{banner::create_welcome_text, text_input::TEXT_INPUT_HEIGHT},
     },
     sdk::{extensions::events::EventStream, OpenCodeClient},
@@ -40,7 +40,6 @@ use tokio::time::interval;
 pub struct Program {
     model: Model,
     terminal: Option<Terminal<CrosstermBackend<io::Stdout>>>,
-    guard: Option<TerminalGuard>,
     task_manager: AsyncTaskManager,
     needs_render: bool,
 }
@@ -54,7 +53,7 @@ impl Program {
         // Print welcome message to stdout before entering TUI
         let welcome_text = create_welcome_text();
         println!("{}", welcome_text);
-        let (guard, terminal) = TerminalGuard::new(&model.init, model.config.height)?;
+        let terminal = init_terminal(&model.init, model.config.height)?;
 
         // Create async task manager
         let task_manager = AsyncTaskManager::new();
@@ -62,7 +61,6 @@ impl Program {
         Ok(Program {
             model,
             terminal: Some(terminal),
-            guard: Some(guard),
             task_manager,
             needs_render: true, // Initial render needed
         })
@@ -95,7 +93,7 @@ impl Program {
             if !async_messages.is_empty() {
                 had_events = true;
                 for msg in async_messages {
-                    let (new_model, cmd) = update(self.model, msg);
+                    let (new_model, cmd) = update(self.model.clone(), msg);
                     self.model = new_model;
                     self.needs_render = true;
                     self.spawn_command(cmd).await?;
@@ -105,7 +103,7 @@ impl Program {
             // Check for input events (non-blocking)
             if let Some(msg) = self.poll_input_events().await? {
                 had_events = true;
-                let (new_model, cmd) = update(self.model, msg);
+                let (new_model, cmd) = update(self.model.clone(), msg);
                 self.model = new_model;
                 self.needs_render = true;
                 self.spawn_command(cmd).await?;
@@ -131,7 +129,7 @@ impl Program {
                     // Only render if needed
                     if self.needs_render {
                         self.render_view()?;
-                        let (new_model, cmd) = update(self.model, Msg::MarkMessagesViewed);
+                        let (new_model, cmd) = update(self.model.clone(), Msg::MarkMessagesViewed);
                         self.model = new_model;
                         self.spawn_command(cmd).await?;
                         self.needs_render = false;
@@ -218,7 +216,6 @@ impl Program {
         match cmd {
             Cmd::TerminalRebootWithInline(inline_mode) => {
                 // Deconstruct the old terminal by taking ownership from the Option
-                let old_guard = self.guard.take();
                 let mut old_terminal = self.terminal.take();
 
                 if !inline_mode {
@@ -233,13 +230,13 @@ impl Program {
                     }
                 };
 
-                // Explicitly drop the old guard and terminal
-                drop(old_guard);
-                drop(old_terminal);
+                // Restore the old terminal state before creating new one
+                if let Some(_) = old_terminal.take() {
+                    restore_terminal(&self.model.init).wrap_err("Failed to restore terminal")?;
+                }
 
                 let new_init = ModelInit::new(inline_mode);
-                let (guard, terminal) = TerminalGuard::new(&new_init, self.model.config.height)?;
-                self.guard = Some(guard);
+                let terminal = init_terminal(&new_init, self.model.config.height)?;
                 self.terminal = Some(terminal);
                 self.model.init = new_init;
             }
@@ -480,5 +477,19 @@ impl Program {
             Cmd::None => {}
         }
         Ok(())
+    }
+}
+
+impl Drop for Program {
+    fn drop(&mut self) {
+        if let Some(_) = self.terminal.take() {
+            if let Err(e) = restore_terminal(&self.model.init) {
+                tracing::error!("Failed to restore terminal during program cleanup: {}", e);
+                eprintln!(
+                    "Failed to restore terminal. Run `reset` or restart your terminal to recover: {}",
+                    e
+                );
+            }
+        }
     }
 }

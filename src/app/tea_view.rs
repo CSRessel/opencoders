@@ -5,6 +5,7 @@ use crate::app::{
         banner::welcome_text_height,
         create_welcome_text,
         message_part::{MessageContext, MessageRenderer},
+        render_text,
         text_input::TEXT_INPUT_HEIGHT,
     },
     view_model_context::ViewModelContext,
@@ -78,20 +79,19 @@ fn render_manual_history(model: &Model) -> crate::app::error::Result<()> {
             model.verbosity_level,
         );
         let rendered_text = renderer.render();
-
-        // Wrap each ratatui line and accumulate total lines
-        let mut total_wrapped_lines = 0u16;
+        
+        // Convert the entire rendered text to colorized string first
+        let colorized_text = render_text(&rendered_text);
+        
+        // Wrap the colorized text and accumulate total lines
+        let wrapped_lines = wrapper.wrap_text(&colorized_text);
+        let total_wrapped_lines = wrapped_lines.len() as u16;
 
         crossterm::execute!(io::stdout(), crossterm::cursor::MoveToColumn(0))?;
 
-        for line in &rendered_text.lines {
-            let wrapped_lines = wrapper.wrap_ratatui_line(line);
-            total_wrapped_lines += wrapped_lines.len() as u16;
-
-            // Print each wrapped line
-            for wrapped_line in &wrapped_lines {
-                println!("{}", wrapped_line);
-            }
+        // Print each wrapped line (already colorized)
+        for wrapped_line in &wrapped_lines {
+            println!("{}", wrapped_line);
         }
 
         // Scroll up by the actual number of wrapped lines

@@ -15,27 +15,31 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 
 > [!NOTE]
 >
-> **Minimum**:
+> **Minimum Usable**:
 > - REPL loop
 > - basic printing
 >     1. ~~files~~
->     1. checklist
->     1. shell commands
->     1. other tools?
+>     1. ~~checklist~~
+>     1. ~~shell commands~~
+>     1. ~~other tools?~~
 > - [x] ~~fix the scroll flickering~~
 > - [x] ~~fix how the session list opens in text entry mode~~
 > - [x] `54e4ea6` ~~get one single patch (like `2545ad267044`) that fixes tagging~~
+> - [x] ~~fix error handling and recovery, tracing, logging, and add color eyre
+>   and remove anyhow/thiserror~~
+> - [x] ~~add owo colors for stdout messages~~
 > - [ ] better status bar styling (working only when busy, row items overflow to be stacked)
 > - [ ] dynamic text input box (text wrapping, vertical resizing, scrolling
 >   overflow, etc)
 > - [ ] unify "new session" and "welcome" pages to one state
-> - [ ] fix error handling and recovery, tracing, logging, and add color eyre
->   and remove anyhow/thiserror
-> - [ ] add owo colors for stdout messages
 > - [ ] fix live message loading
+>
+> **Minimum Releasable**
 > - [ ] basic env for non-interactive TTY execution with synthetic input for
 >   "golden tests" and for perf testing
 > - [ ] setup some basic perf tests with either divan or criterion
+> - [ ] prettify README, cleanup distribution steps, improve opencode dependency
+> - [ ] cleanup CI, add precommit, and use Actions for build/release/etc
 >
 > **First Release:**
 > - prettier printing

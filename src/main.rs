@@ -1,21 +1,19 @@
 mod app;
 mod sdk;
 
-use std::panic;
 use crossterm;
+use std::panic;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-
-
-    // Initialize logger
-    app::logger::init().expect("Failed to initialize logger");
-    tracing::info!("TUI application starting");
-
+fn main() -> app::Result<()> {
+    // Initialize logger - keep guard alive for the duration of the program
+    let _logger_guard = app::logger::init().expect("Failed to initialize logger");
     // Log diagnostics in debug mode
     #[cfg(debug_assertions)]
     {
         tracing::debug!("Logger initialized");
     }
+
+    tracing::info!("TUI application starting");
 
     let result = app::run();
 

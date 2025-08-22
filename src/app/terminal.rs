@@ -1,4 +1,7 @@
-use crate::app::tea_model::{Model, ModelInit};
+use crate::app::{
+    error::{AppError, Result},
+    tea_model::{Model, ModelInit},
+};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
@@ -11,7 +14,7 @@ pub struct TerminalGuard {
     init: ModelInit,
 }
 
-pub fn align_crossterm_output_to_bottom(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
+pub fn align_crossterm_output_to_bottom(model: &Model) -> Result<()> {
     let (_window_cols, window_rows) = crossterm::terminal::size()?;
     let (_start_col, start_row) = crossterm::cursor::position()?;
     let expected_start_row = window_rows.saturating_sub(model.config.height.saturating_add(1));
@@ -28,29 +31,29 @@ impl TerminalGuard {
     pub fn new(
         init: &ModelInit,
         height: u16,
-    ) -> Result<(Self, Terminal<CrosstermBackend<io::Stdout>>), Box<dyn std::error::Error>> {
+    ) -> Result<(Self, Terminal<CrosstermBackend<io::Stdout>>)> {
         tracing::info!(
             "Initializing terminal - inline_mode: {}",
             init.inline_mode()
         );
 
-        if let Err(e) = enable_raw_mode() {
+        enable_raw_mode().map_err(|e| {
             tracing::error!("Failed to enable raw mode: {}", e);
-            return Err(e.into());
-        }
+            AppError::Terminal(e)
+        })?;
 
         let mut stdout = io::stdout();
-        if let Err(e) = execute!(stdout, EnableMouseCapture) {
+        execute!(stdout, EnableMouseCapture).map_err(|e| {
             tracing::error!("Failed to enable mouse capture: {}", e);
-            return Err(e.into());
-        }
+            AppError::Terminal(e)
+        })?;
 
         if !init.inline_mode() {
             tracing::debug!("Entering alternate screen mode");
-            if let Err(e) = execute!(stdout, EnterAlternateScreen) {
+            execute!(stdout, EnterAlternateScreen).map_err(|e| {
                 tracing::error!("Failed to enter alternate screen: {}", e);
-                return Err(e.into());
-            }
+                AppError::Terminal(e)
+            })?;
         } else {
             tracing::debug!("Using inline mode with height: {}", height);
         }
@@ -63,11 +66,14 @@ impl TerminalGuard {
             Viewport::Fullscreen
         };
 
-        let mut terminal = Terminal::with_options(backend, TerminalOptions { viewport })?;
+        let mut terminal = Terminal::with_options(backend, TerminalOptions { viewport })
+            .map_err(|e| AppError::TerminalInit(format!("Failed to create terminal: {}", e)))?;
 
         // Clear the terminal and hide cursor
-        terminal.clear()?;
-        terminal.hide_cursor()?;
+        terminal.clear()
+            .map_err(|e| AppError::TerminalInit(format!("Failed to clear terminal: {}", e)))?;
+        terminal.hide_cursor()
+            .map_err(|e| AppError::TerminalInit(format!("Failed to hide cursor: {}", e)))?;
 
         let guard = TerminalGuard { init: init.clone() };
 

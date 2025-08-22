@@ -1,4 +1,5 @@
 mod app_program;
+pub mod error;
 mod event_async_task_manager;
 mod event_msg;
 mod event_sync_subscriptions;
@@ -9,13 +10,13 @@ mod tea_update;
 mod tea_view;
 mod terminal;
 mod text_wrapper;
-mod tracing_macros;
 pub mod ui_components;
 mod view_model_context;
 
 pub use app_program::Program;
+pub use error::{AppError, Result};
 
-pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+pub fn run() -> Result<()> {
     let program = Program::new()?;
     program.run()
 }

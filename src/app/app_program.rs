@@ -18,6 +18,7 @@
 
 use crate::{
     app::{
+        error::{AppError, Result},
         event_async_task_manager::AsyncTaskManager,
         event_msg::{Cmd, Msg},
         event_sync_subscriptions,
@@ -47,7 +48,7 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new() -> Result<Self> {
         let model = Model::new();
 
         align_crossterm_output_to_bottom(&model)?;
@@ -69,13 +70,13 @@ impl Program {
         })
     }
 
-    pub fn run(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(self) -> Result<()> {
         // Create a Tokio runtime for this blocking function
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(self.run_async())
     }
 
-    async fn run_async(mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn run_async(mut self) -> Result<()> {
         // Create tick interval for periodic updates (60 FPS) - must be inside tokio runtime
         let mut tick_interval = interval(Duration::from_millis(16));
 
@@ -143,7 +144,7 @@ impl Program {
         Ok(())
     }
 
-    fn render_view(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    fn render_view(&mut self) -> Result<()> {
         // View: Manual rendering outside the TUI viewport
         if self.model.needs_manual_output() {
             if let Some(terminal) = self.terminal.as_mut() {
@@ -163,7 +164,7 @@ impl Program {
         Ok(())
     }
 
-    async fn poll_input_events(&self) -> Result<Option<Msg>, Box<dyn std::error::Error>> {
+    async fn poll_input_events(&self) -> Result<Option<Msg>> {
         // Check if we should listen for input events
         let subs = crate::app::event_sync_subscriptions::subscriptions(&self.model);
 
@@ -183,7 +184,7 @@ impl Program {
         Ok(None)
     }
 
-    async fn poll_sse_events(&mut self) -> Result<bool, Box<dyn std::error::Error>> {
+    async fn poll_sse_events(&mut self) -> Result<bool> {
         use crate::app::event_msg::Sub;
         use crate::app::tea_model::EventStreamState;
 
@@ -215,7 +216,7 @@ impl Program {
         }
     }
 
-    async fn spawn_command(&mut self, cmd: Cmd) -> Result<(), Box<dyn std::error::Error>> {
+    async fn spawn_command(&mut self, cmd: Cmd) -> Result<()> {
         match cmd {
             Cmd::TerminalRebootWithInline(inline_mode) => {
                 // Deconstruct the old terminal by taking ownership from the Option
@@ -468,11 +469,11 @@ impl Program {
                         }
                         Cmd::None => {}
                         Cmd::Batch(_) => {
-                            return Err(format!(
+                            return Err(AppError::AsyncTask(format!(
                                 "Nested Cmd::Batch detected in spawn_command. This indicates a logic error in the update() function. \
                                 Batch commands should only contain non-batch commands to avoid infinite recursion and stack overflow. \
                                 Please review the update() logic that produced this nested batch."
-                            ).into());
+                            )));
                         }
                     }
                 }

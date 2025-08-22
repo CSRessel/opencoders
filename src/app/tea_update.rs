@@ -1,7 +1,6 @@
 use crate::app::{
     event_msg::*,
     tea_model::*,
-    tracing_macros::{debug_hot_path, trace_hot_path},
     ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
 };
 use opencode_sdk::models::{Message, Part, TextPart, UserMessage};

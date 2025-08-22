@@ -44,7 +44,7 @@ use std::io::{self, Write};
 // │ > /quit  │
 // ╰──────────╯
 
-pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
+pub fn view_manual(model: &Model) -> crate::app::error::Result<()> {
     // Handle any prints that precede the dynamic TUI interface
 
     crossterm::terminal::disable_raw_mode()?;
@@ -62,7 +62,7 @@ pub fn view_manual(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn render_manual_history(model: &Model) -> Result<(), Box<dyn std::error::Error>> {
+fn render_manual_history(model: &Model) -> crate::app::error::Result<()> {
     let message_containers = model.message_containers_for_rendering();
     let (terminal_width, _) = crossterm::terminal::size()?;
     let effective_width = terminal_width.saturating_sub(2); // Account for "> " prefix

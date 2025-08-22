@@ -23,12 +23,23 @@
 //! - `OPENCODE_LOG_DIR`: Override log directory (default: `~/.opencode/logs`)
 //! - `RUST_LOG`: Override log levels (e.g., `RUST_LOG=opencoders=trace`)
 
-use anyhow::Result;
+use crate::app::error::{AppError, Result};
 use std::path::PathBuf;
 use tracing_appender::rolling;
 use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
-pub fn init() -> Result<()> {
+/// Logger guard that ensures proper cleanup of logging resources
+pub struct LoggerGuard {
+    _guard: tracing_appender::non_blocking::WorkerGuard,
+}
+
+impl LoggerGuard {
+    fn new(guard: tracing_appender::non_blocking::WorkerGuard) -> Self {
+        Self { _guard: guard }
+    }
+}
+
+pub fn init() -> Result<LoggerGuard> {
     let log_dir = get_log_directory();
     
     #[cfg(debug_assertions)]
@@ -52,11 +63,12 @@ fn get_log_directory() -> PathBuf {
 }
 
 #[cfg(debug_assertions)]
-fn init_debug_tracing(log_dir: &PathBuf) -> Result<()> {
-    std::fs::create_dir_all(log_dir)?;
+fn init_debug_tracing(log_dir: &PathBuf) -> Result<LoggerGuard> {
+    std::fs::create_dir_all(log_dir)
+        .map_err(|e| AppError::LoggerInit(anyhow::anyhow!("Failed to create log directory: {}", e)))?;
     
     let log_file = rolling::daily(log_dir, "opencode-debug.log");
-    let (non_blocking_log_file, _guard) = tracing_appender::non_blocking(log_file);
+    let (non_blocking_log_file, guard) = tracing_appender::non_blocking(log_file);
     
     let file_layer = tracing_subscriber::fmt::layer()
         .with_writer(non_blocking_log_file)
@@ -73,20 +85,20 @@ fn init_debug_tracing(log_dir: &PathBuf) -> Result<()> {
 
     tracing_subscriber::registry()
         .with(file_layer)
-        .init();
-
-    std::mem::forget(_guard);
+        .try_init()
+        .map_err(|e| AppError::LoggerInit(anyhow::anyhow!("Failed to initialize tracing subscriber: {}", e)))?;
     
     tracing::info!("Debug tracing initialized with detailed logging to: {}", log_dir.display());
-    Ok(())
+    Ok(LoggerGuard::new(guard))
 }
 
 #[cfg(not(debug_assertions))]
-fn init_release_tracing(log_dir: &PathBuf) -> Result<()> {
-    std::fs::create_dir_all(log_dir)?;
+fn init_release_tracing(log_dir: &PathBuf) -> Result<LoggerGuard> {
+    std::fs::create_dir_all(log_dir)
+        .map_err(|e| AppError::LoggerInit(anyhow::anyhow!("Failed to create log directory: {}", e)))?;
     
     let log_file = rolling::daily(log_dir, "opencode.log");
-    let (non_blocking_log_file, _guard) = tracing_appender::non_blocking(log_file);
+    let (non_blocking_log_file, guard) = tracing_appender::non_blocking(log_file);
     
     let file_layer = tracing_subscriber::fmt::layer()
         .with_writer(non_blocking_log_file)
@@ -104,10 +116,9 @@ fn init_release_tracing(log_dir: &PathBuf) -> Result<()> {
 
     tracing_subscriber::registry()
         .with(file_layer)
-        .init();
-
-    std::mem::forget(_guard);
+        .try_init()
+        .map_err(|e| AppError::LoggerInit(anyhow::anyhow!("Failed to initialize tracing subscriber: {}", e)))?;
     
     tracing::info!("Release tracing initialized with optimized logging to: {}", log_dir.display());
-    Ok(())
+    Ok(LoggerGuard::new(guard))
 }

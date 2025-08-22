@@ -9,7 +9,7 @@ Rust TUI frontend for `opencode` that communicates with a headless Node.js serve
 - **Multiple Terminal Modes**: Fullscreen (alternate screen) and inline (within terminal history)
 - **API Communication**: Type-safe HTTP client for Node.js backend via auto-generated SDK
 - **Event Handling**: Centralized async event processing with TEA architecture
-- **Terminal Safety**: RAII cleanup patterns prevent terminal corruption on panic
+- **Terminal Safety**: Panic hook system with automatic cleanup prevents terminal corruption on panic
 
 The overall TUI architecture uses TEA + Async for maintainability and
 performance.
@@ -45,7 +45,7 @@ opencoders/
 - **ratatui** + **crossterm**: Terminal UI rendering and control
 - **tokio**: Async runtime for non-blocking network calls and I/O
 - **reqwest** + **serde**: HTTP client with JSON serialization
-- **anyhow** + **thiserror**: Error handling
+- **eyre** + **color_eyre**: Error handling
 
 *New libraries must cross a high bar of necessity and quality to be considered.*
 
@@ -57,6 +57,7 @@ opencoders/
 - Always execute side effects as async `Cmd` data structures
 - Always use centralized event polling in `event_subscriptions.rs`
 - Always communicate with backend via strongly-typed structs from `opencode_sdk::models`
+- Always access model state within UI components using `ViewModelContext`
 - Explore available API's using the file `openapi.json` and the documentation
 `opencode-sdk/README.md`
 
@@ -65,4 +66,5 @@ opencoders/
 - Do NOT perform I/O or side effects directly in `update()` or `view()` functions
 - Do NOT manually edit anything in `opencode-sdk/` directory (auto-generated)
 - Do NOT call crossterm terminal functions outside of `terminal.rs`
+- Do NOT pass the model into UI components directly
 - Do NOT add dependencies without strong justification and project owner input

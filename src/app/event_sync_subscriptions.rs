@@ -77,8 +77,8 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 // /themes                   list themes               ctrl+x t                ┃
                 // /details                  toggle tool details       ctrl+x d                ┃
                 // TODO the others, once those messages are supported
-                (_, KeyCode::Char('l'), _, true) => Some(Msg::ShowSessionSelector),
-                (_, KeyCode::Tab, _, true) => Some(Msg::ChangeInline),
+                (_, KeyCode::Char('l'), _, true) => Some(Msg::LeaderShowSessionSelector),
+                (_, KeyCode::Tab, _, true) => Some(Msg::LeaderChangeInline),
                 (_, KeyCode::Char('q'), _, true) => Some(Msg::Quit),
 
                 (AppState::Welcome, KeyCode::Enter, _, _) => {

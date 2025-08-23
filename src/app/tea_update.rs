@@ -185,11 +185,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             Cmd::None
         }
 
-        Msg::ChangeInline => {
-            let new_inline = !model.init.inline_mode().clone();
-            Cmd::TerminalRebootWithInline(new_inline)
-        }
-
         Msg::Quit => {
             model.state = AppState::Quit;
             Cmd::None
@@ -268,8 +263,15 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             }
         }
 
+        Msg::LeaderChangeInline => {
+            let new_inline = !model.init.inline_mode().clone();
+            model.clear_repeat_leader_timeout();
+            Cmd::TerminalRebootWithInline(new_inline)
+        }
+
         // Session selector messages
-        Msg::ShowSessionSelector => {
+        Msg::LeaderShowSessionSelector => {
+            model.clear_repeat_leader_timeout();
             let prefix_cmd = match model.state {
                 AppState::TextEntry => Cmd::TerminalScrollPastHeight,
                 _ => Cmd::None,

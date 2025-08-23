@@ -344,6 +344,15 @@ impl Model {
         self.repeat_shortcut_timeout = None;
     }
 
+    pub fn clear_repeat_leader_timeout(&mut self) {
+        if matches!(
+            self.repeat_shortcut_timeout.clone().map(|m| m.key),
+            Some(RepeatShortcutKey::Leader)
+        ) {
+            self.clear_repeat_shortcut_timeout();
+        }
+    }
+
     pub fn is_repeat_shortcut_timeout_active(&self, key: RepeatShortcutKey) -> bool {
         if let Some(timeout) = &self.repeat_shortcut_timeout {
             if timeout.key == key {

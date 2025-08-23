@@ -1,5 +1,5 @@
-use crate::app::view_model_context::ViewModelContext;
 use crate::app::ui_components::{Block, Paragraph};
+use crate::app::view_model_context::ViewModelContext;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
@@ -278,7 +278,7 @@ impl PopoverSelector {
                     (style, prefix)
                 } else if Some(i) == self.current_session_index {
                     // Current active session (not selected)
-                    let style = Style::default().fg(Color::Black).bg(Color::Green);
+                    let style = Style::default().fg(Color::Blue);
                     (style, " *")
                 } else {
                     // Regular item

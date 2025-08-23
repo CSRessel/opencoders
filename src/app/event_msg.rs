@@ -14,7 +14,6 @@ pub enum Msg {
     Backspace,
     SubmitInput,
     ClearInput,
-    ChangeInline,
     ChangeState(AppState),
     Quit,
     ScrollMessageLog(i16),
@@ -33,8 +32,11 @@ pub enum Msg {
     SessionCreationFailed(OpenCodeError),
     SessionAbort,
 
+    // Leader actions that reset interval
+    LeaderChangeInline,
+    LeaderShowSessionSelector,
+
     // Session selector messages
-    ShowSessionSelector,
     SessionSelectorEvent(PopoverSelectorEvent),
     SessionsLoaded(Vec<Session>),
     SessionsLoadFailed(OpenCodeError),

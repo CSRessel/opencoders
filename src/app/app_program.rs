@@ -76,7 +76,7 @@ impl Program {
 
     async fn run_async(mut self) -> Result<()> {
         // Create tick interval for periodic updates (60 FPS) - must be inside tokio runtime
-        let mut tick_interval = interval(Duration::from_millis(8));
+        let mut tick_interval = interval(Duration::from_millis(4));
 
         // Auto-trigger client discovery at startup
         self.spawn_command(Cmd::AsyncSpawnClientDiscovery).await?;
@@ -95,8 +95,7 @@ impl Program {
             if !async_messages.is_empty() {
                 had_events = true;
                 for msg in async_messages {
-                    let (new_model, cmd) = update(self.model.clone(), msg);
-                    self.model = new_model;
+                    let cmd = update(&mut self.model, msg);
                     self.needs_render = true;
                     self.spawn_command(cmd).await?;
                 }
@@ -105,8 +104,7 @@ impl Program {
             // Check for input events (non-blocking)
             if let Some(msg) = self.poll_input_events().await? {
                 had_events = true;
-                let (new_model, cmd) = update(self.model.clone(), msg);
-                self.model = new_model;
+                let cmd = update(&mut self.model, msg);
                 self.needs_render = true;
                 self.spawn_command(cmd).await?;
             }
@@ -141,11 +139,10 @@ impl Program {
     }
 
     async fn render_view(&mut self) -> Result<()> {
-        let (new_model, cmd) = update(
-            self.model.clone(),
+        let cmd = update(
+            &mut self.model,
             Msg::RecordActiveTaskCount(self.task_manager.active_task_count()),
         );
-        self.model = new_model;
         self.spawn_command(cmd).await?;
 
         // View: Manual rendering outside the TUI viewport
@@ -163,8 +160,7 @@ impl Program {
         if let Some(terminal) = self.terminal.as_mut() {
             terminal.draw(|f| view(&self.model, f))?;
         }
-        let (new_model, cmd) = update(self.model.clone(), Msg::MarkMessagesViewed);
-        self.model = new_model;
+        let cmd = update(&mut self.model, Msg::MarkMessagesViewed);
         self.spawn_command(cmd).await?;
 
         Ok(())
@@ -210,8 +206,7 @@ impl Program {
         if !events.is_empty() {
             let mut processed_event = false;
             for event in events {
-                let (new_model, cmd) = update(self.model.clone(), Msg::EventReceived(event));
-                self.model = new_model;
+                let cmd = update(&mut self.model, Msg::EventReceived(event));
                 self.needs_render = true; // Signal that a re-render is needed
                 self.spawn_command(cmd).await?;
                 processed_event = true;

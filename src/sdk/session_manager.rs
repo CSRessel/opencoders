@@ -3,10 +3,13 @@
 //! This module provides functionality to persist session state locally
 //! and manage session lifecycle for the TUI application.
 
-use crate::sdk::{error::{OpenCodeError, Result}, OpenCodeClient};
+use crate::sdk::{
+    error::{OpenCodeError, Result},
+    OpenCodeClient,
+};
 use opencode_sdk::models::Session;
-use std::path::PathBuf;
 use std::env;
+use std::path::PathBuf;
 use tokio::fs;
 
 /// Session manager for handling session persistence and lifecycle
@@ -89,7 +92,7 @@ impl SessionManager {
     /// Load the last used session ID from local storage
     async fn load_last_session_id(&self) -> Result<String> {
         let session_file = self.state_dir.join("last_session");
-        
+
         if !session_file.exists() {
             return Err(OpenCodeError::session_persistence_error("No saved session"));
         }
@@ -166,8 +169,6 @@ impl OpenCodeClient {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,10 +185,10 @@ mod tests {
     #[tokio::test]
     async fn test_save_and_load_session_id() {
         let (manager, _temp_dir) = create_test_session_manager();
-        
+
         let session_id = "test-session-123";
         manager.save_last_session_id(session_id).await.unwrap();
-        
+
         let loaded_id = manager.load_last_session_id().await.unwrap();
         assert_eq!(loaded_id, session_id);
     }
@@ -195,16 +196,16 @@ mod tests {
     #[tokio::test]
     async fn test_clear_current_session() {
         let (manager, _temp_dir) = create_test_session_manager();
-        
+
         let session_id = "test-session-456";
         manager.save_last_session_id(session_id).await.unwrap();
-        
+
         // Verify it exists
         assert!(manager.load_last_session_id().await.is_ok());
-        
+
         // Clear it
         manager.clear_current_session().await.unwrap();
-        
+
         // Verify it's gone
         assert!(manager.load_last_session_id().await.is_err());
     }
@@ -215,3 +216,4 @@ mod tests {
         assert!(state_dir.ends_with(".opencode"));
     }
 }
+

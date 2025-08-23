@@ -197,7 +197,7 @@ impl OpenCodeClient {
     /// Create a new session
     pub async fn create_session(&self) -> Result<Session> {
         let params = default_api::SessionPeriodCreateParams {
-            session_create_request: None,
+            session_create_request: Some(SessionCreateRequest::new()),
         };
         default_api::session_period_create(&self.config, params)
             .await

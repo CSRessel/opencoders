@@ -421,7 +421,7 @@ impl Model {
                 Some(0)
             }
             Some(current) => {
-                if current >= 2 {
+                if current > 2 {
                     tracing::debug!(
                         "Current mode index {} out of bounds, resetting to 0",
                         current

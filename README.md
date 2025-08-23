@@ -28,11 +28,12 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 > - [x] ~~fix error handling and recovery, tracing, logging, and add color eyre
 >   and remove anyhow/thiserror~~
 > - [x] ~~add owo colors for stdout messages~~
-> - [ ] better status bar styling (working only when busy, row items overflow to be stacked)
-> - [ ] dynamic text input box (text wrapping, vertical resizing, scrolling
->   overflow, etc)
-> - [ ] unify "new session" and "welcome" pages to one state
+> - [x] status bar working only when busy
+> - [ ] better status bar styling (colors, proper context, row items overflow to stacked)
+> - [ ] dynamic text input box (text wrapping, vertical resizing, scrolling overflow, shortcut navigation)
 > - [ ] fix live message loading
+> - [ ] unify "new session" and "welcome" pages to one state
+> - [ ] fix inline mode walking down the page
 >
 > **Minimum Releasable**
 > - [ ] basic env for non-interactive TTY execution with synthetic input for

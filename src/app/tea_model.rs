@@ -81,6 +81,7 @@ pub struct Model {
     // Message state and event streaming
     pub message_state: MessageState,
     pub event_stream_state: EventStreamState,
+    pub active_task_count: usize,
     // Unified repeat shortcut timeout system
     pub repeat_shortcut_timeout: Option<RepeatShortcutTimeout>,
 }
@@ -188,6 +189,7 @@ impl Model {
             pending_first_message: None,
             message_state: MessageState::new(),
             event_stream_state: EventStreamState::Disconnected,
+            active_task_count: 0,
             repeat_shortcut_timeout: None,
         }
     }

@@ -509,6 +509,11 @@ pub fn update(mut model: Model, msg: Msg) -> (Model, Cmd) {
             new_model.toggle_verbosity();
             (new_model, Cmd::None)
         }
+
+        Msg::RecordActiveTaskCount(count) => {
+            model.active_task_count = count;
+            (model, Cmd::None)
+        }
     }
 }
 

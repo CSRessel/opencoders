@@ -234,20 +234,19 @@ impl Widget for &TextInput {
             let status_paragraph = Paragraph::new(Line::from(status_text));
 
             // Check for active repeat shortcut timeout and show appropriate message
-            let loading_label = if let Some(timeout) = &model.get().repeat_shortcut_timeout {
-                // Check if timeout is still active, not just if it exists
-                if model.get().has_active_timeout() {
-                    match timeout.key {
-                        RepeatShortcutKey::Leader => "Shortcut waiting...",
-                        RepeatShortcutKey::CtrlC => "Ctrl+C again to confirm",
-                        RepeatShortcutKey::CtrlD => "Ctrl+D again to confirm",
-                        RepeatShortcutKey::Esc => "Esc again to confirm",
-                    }
-                } else {
-                    "Working..."
-                }
-            } else {
-                "Working..."
+            let loading_label = match (
+                &model.get().has_active_timeout(),
+                &model.get().repeat_shortcut_timeout,
+                &model.get().active_task_count,
+            ) {
+                (true, Some(timeout), _) => match timeout.key {
+                    RepeatShortcutKey::Leader => "Shortcut waiting...",
+                    RepeatShortcutKey::CtrlC => "Ctrl+C again to confirm",
+                    RepeatShortcutKey::CtrlD => "Ctrl+D again to confirm",
+                    RepeatShortcutKey::Esc => "Esc again to confirm",
+                },
+                (_, _, 0) => "Ready",
+                _ => "Working...",
             };
             let loading_paragraph = throbber_widgets_tui::Throbber::default().label(loading_label);
 

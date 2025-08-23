@@ -130,10 +130,8 @@ impl Program {
 
                     // Only render if needed
                     if self.needs_render {
-                        self.render_view()?;
-                        let (new_model, cmd) = update(self.model.clone(), Msg::MarkMessagesViewed);
-                        self.model = new_model;
-                        self.spawn_command(cmd).await?;
+                        self.render_view().await?;
+
                         self.needs_render = false;
                     }
                 },
@@ -142,7 +140,14 @@ impl Program {
         Ok(())
     }
 
-    fn render_view(&mut self) -> Result<()> {
+    async fn render_view(&mut self) -> Result<()> {
+        let (new_model, cmd) = update(
+            self.model.clone(),
+            Msg::RecordActiveTaskCount(self.task_manager.active_task_count()),
+        );
+        self.model = new_model;
+        self.spawn_command(cmd).await?;
+
         // View: Manual rendering outside the TUI viewport
         if self.model.needs_manual_output() {
             if let Some(terminal) = self.terminal.as_mut() {
@@ -158,6 +163,9 @@ impl Program {
         if let Some(terminal) = self.terminal.as_mut() {
             terminal.draw(|f| view(&self.model, f))?;
         }
+        let (new_model, cmd) = update(self.model.clone(), Msg::MarkMessagesViewed);
+        self.model = new_model;
+        self.spawn_command(cmd).await?;
 
         Ok(())
     }

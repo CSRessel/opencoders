@@ -31,6 +31,7 @@ pub enum Msg {
     SessionInitializationFailed(OpenCodeError),
     SessionCreatedWithMessage(Session, String),
     SessionCreationFailed(OpenCodeError),
+    SessionAbort,
 
     // Session selector messages
     ShowSessionSelector,
@@ -58,14 +59,11 @@ pub enum Msg {
     EventStreamError(String),
     EventStreamReconnecting(u32), // attempt number
 
-    // TODO
-    // Session interactions
-    SessionAbort,
-
     // Task lifecycle messages
     TaskStarted(TaskId, String),
     TaskCompleted(TaskId),
     TaskFailed(TaskId, String),
+    RecordActiveTaskCount(usize),
 
     // Progress reporting messages
     ConnectionProgress(f32),

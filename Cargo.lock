@@ -1093,6 +1093,7 @@ dependencies = [
  "eyre",
  "opencode-sdk",
  "owo-colors",
+ "rand",
  "ratatui",
  "reqwest",
  "serde",

@@ -13,13 +13,15 @@ use opencode_sdk::{
         SessionChatRequest, SessionChatRequestPartsInner, SessionMessages200ResponseInner, *,
     },
 };
+use rand::{thread_rng, Rng};
 use reqwest::Client;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 
-static COUNTER: AtomicU32 = AtomicU32::new(0);
+static COUNTER: AtomicU64 = AtomicU64::new(0);
+static LAST_TIMESTAMP: AtomicU64 = AtomicU64::new(0);
 
 /// High-level client for the OpenCode API
 ///
@@ -38,47 +40,87 @@ pub enum IdPrefix {
     Session,
     User,
     Part,
+    Permission,
 }
 impl IdPrefix {
     pub fn as_str(&self) -> &'static str {
         match self {
-            IdPrefix::Message => "msg_",
-            IdPrefix::Session => "ses_",
-            IdPrefix::User => "usr_",
-            IdPrefix::Part => "prt_",
+            IdPrefix::Message => "msg",
+            IdPrefix::Session => "ses",
+            IdPrefix::User => "usr",
+            IdPrefix::Part => "prt",
+            IdPrefix::Permission => "per",
         }
     }
 }
 
 pub fn generate_id(prefix: IdPrefix) -> String {
-    let now = SystemTime::now()
+    generate_id_with_direction(prefix, false)
+}
+
+pub fn generate_descending_id(prefix: IdPrefix) -> String {
+    generate_id_with_direction(prefix, true)
+}
+
+fn generate_id_with_direction(prefix: IdPrefix, descending: bool) -> String {
+    let current_timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis() as u64;
 
-    let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let timestamp_with_counter = (now << 12) + (counter as u64 & 0xFFF);
+    // Handle counter increment with atomic operations to match Go/TypeScript logic
+    let (timestamp_to_use, counter) = loop {
+        let last_ts = LAST_TIMESTAMP.load(Ordering::SeqCst);
+        
+        if current_timestamp != last_ts {
+            // Try to update the timestamp and reset counter
+            if LAST_TIMESTAMP.compare_exchange(last_ts, current_timestamp, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+                COUNTER.store(1, Ordering::SeqCst);
+                break (current_timestamp, 1);
+            }
+            // If we failed to update, loop again
+        } else {
+            // Same timestamp, increment counter
+            let counter = COUNTER.fetch_add(1, Ordering::SeqCst) + 1;
+            break (current_timestamp, counter);
+        }
+    };
 
-    // Convert to hex manually
-    let time_bytes = timestamp_with_counter.to_be_bytes();
-    let time_hex = time_bytes[2..8]
+    // Match TypeScript/Go: (timestamp_ms << 12) + counter
+    let mut now = timestamp_to_use * 0x1000 + counter;
+
+    // Apply descending bit flip if requested
+    if descending {
+        now = !now;
+    }
+
+    // Extract 6 bytes like TypeScript/Go (48 bits total)
+    let time_bytes: [u8; 6] = [
+        ((now >> 40) & 0xff) as u8,
+        ((now >> 32) & 0xff) as u8,
+        ((now >> 24) & 0xff) as u8,
+        ((now >> 16) & 0xff) as u8,
+        ((now >> 8) & 0xff) as u8,
+        (now & 0xff) as u8,
+    ];
+
+    // Convert to hex string (12 hex chars)
+    let time_hex = time_bytes
         .iter()
         .map(|b| format!("{:02x}", b))
         .collect::<String>();
 
-    // Generate random base62 string using system entropy
-    let random_part = (0..14)
-        .map(|i| {
-            let entropy = (now
-                .wrapping_add(i as u64)
-                .wrapping_mul(1103515245)
-                .wrapping_add(12345))
-                >> 16;
-            let chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-            chars.chars().nth((entropy % 62) as usize).unwrap()
+    // Generate crypto-secure random base62 string (14 chars)
+    let mut rng = thread_rng();
+    let chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    let random_part: String = (0..14)
+        .map(|_| {
+            let idx = rng.gen_range(0..62);
+            chars.chars().nth(idx).unwrap()
         })
-        .collect::<String>();
+        .collect();
 
+    // Format: {prefix}_{12_hex_chars}{14_base62_chars}
     format!("{}_{}{}", prefix.as_str(), time_hex, random_part)
 }
 
@@ -353,6 +395,10 @@ impl OpenCodeClient {
             tools: None,
             parts: vec![part],
         };
+        let reqstr = serde_json::to_string_pretty(&request)?;
+
+        tracing::warn!("request...");
+        tracing::warn!(reqstr);
 
         let params = default_api::SessionPeriodChatParams {
             id: session_id.to_string(),

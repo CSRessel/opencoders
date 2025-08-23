@@ -31,6 +31,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                     if let Some(client) = model.client.clone() {
                         model.session_state = SessionState::Creating(pending_info.clone());
                         model.pending_first_message = Some(submitted_text.clone());
+                        model.session_is_idle = false;
                         return Cmd::AsyncCreateSessionWithMessage(client, submitted_text);
                     }
                 }
@@ -40,6 +41,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                     let session_id = session.id.clone();
                     let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
                     let message_id = generate_id(IdPrefix::Message);
+                    model.session_is_idle = false;
                     return Cmd::AsyncSendUserMessage(
                         client,
                         session_id,
@@ -153,6 +155,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                 let session_id = session.id.clone();
                 let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
                 let message_id = generate_id(IdPrefix::Message);
+                model.session_is_idle = false;
                 Cmd::Batch(vec![
                     Cmd::AsyncLoadSessionMessages(client.clone(), session_id.clone()),
                     Cmd::AsyncStartEventStream(client.clone()),
@@ -429,6 +432,8 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
 
         Msg::UserMessageSent(text) => {
             tracing::debug!("User message sent successfully: {}", text);
+            // Reset idle state since we just sent a message
+            model.session_is_idle = false;
             // The message will be received via SSE events and added to message state
             Cmd::None
         }
@@ -503,6 +508,7 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
     let mut updated = false;
 
     match event {
+        // Message-related events (currently implemented)
         Event::MessagePeriodUpdated(msg_event) => {
             if model
                 .message_state
@@ -530,8 +536,143 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
                 tracing::debug!("Removed message from event");
             }
         }
-        _ => {
-            // Ignore non-message events for now
+        Event::MessagePeriodPartPeriodRemoved(_part_remove_event) => {
+            // TODO: Handle message part removal
+            tracing::debug!("Received message part removed event (not implemented yet)");
+        }
+
+        // Session-related events
+        Event::SessionPeriodUpdated(session_event) => {
+            let updated_session = &*session_event.properties.info;
+            tracing::debug!(
+                "Received session updated event for session: {}",
+                updated_session.id
+            );
+
+            // Update sessions list
+            if let Some(session_index) = model
+                .sessions
+                .iter()
+                .position(|s| s.id == updated_session.id)
+            {
+                model.sessions[session_index] = updated_session.clone();
+                tracing::debug!("Updated session in sessions list");
+            }
+
+            // Update current session if it matches
+            if let Some(current_session) = model.session() {
+                if current_session.id == updated_session.id {
+                    model.session_state = SessionState::Ready(updated_session.clone());
+                    tracing::debug!("Updated current session state");
+                }
+            }
+        }
+        Event::SessionPeriodDeleted(session_event) => {
+            let deleted_session = &*session_event.properties.info;
+            tracing::debug!(
+                "Received session deleted event for session: {}",
+                deleted_session.id
+            );
+
+            // Remove from sessions list
+            model.sessions.retain(|s| s.id != deleted_session.id);
+
+            // Clear current session if it was the deleted one
+            if let Some(current_session) = model.session() {
+                if current_session.id == deleted_session.id {
+                    tracing::debug!("Deleted session was the current session, clearing state");
+                    model.session_state = SessionState::None;
+                    model.message_state.clear();
+                    model.message_log.set_message_containers(vec![]);
+                    model.text_input.set_session_id(None);
+                    model.state = AppState::Welcome;
+                }
+            }
+        }
+        Event::SessionPeriodIdle(session_event) => {
+            let idle_session_id = &session_event.properties.session_id;
+            tracing::debug!(
+                "Received session idle event for session: {}",
+                idle_session_id
+            );
+
+            // Update idle state if this is the current session
+            if let Some(current_session) = model.session() {
+                if current_session.id == *idle_session_id {
+                    model.session_is_idle = true;
+                    tracing::debug!("Current session is now idle");
+                }
+            }
+        }
+        Event::SessionPeriodError(session_event) => {
+            let error_props = &session_event.properties;
+            tracing::error!(
+                "Received session error event: session_id={:?}, error={:?}",
+                error_props.session_id,
+                error_props.error
+            );
+
+            // Show error to user if it's for the current session or no specific session
+            let should_show_error = match &error_props.session_id {
+                Some(error_session_id) => model
+                    .session()
+                    .map(|s| &s.id == error_session_id)
+                    .unwrap_or(false),
+                None => true, // Global error
+            };
+
+            if should_show_error {
+                let error_msg = if let Some(error) = &error_props.error {
+                    format!("Session error: {:?}", error)
+                } else {
+                    "Unknown session error".to_string()
+                };
+                model.transition_to_error(error_msg);
+            }
+        }
+
+        // Permission-related events
+        Event::PermissionPeriodUpdated(_permission_event) => {
+            // TODO: Handle permission updates
+            tracing::debug!("Received permission updated event (not implemented yet)");
+        }
+        Event::PermissionPeriodReplied(_permission_event) => {
+            // TODO: Handle permission replies
+            tracing::debug!("Received permission replied event (not implemented yet)");
+        }
+
+        // File-related events
+        Event::FilePeriodEdited(_file_event) => {
+            // TODO: Handle file edits
+            tracing::debug!("Received file edited event (not implemented yet)");
+        }
+        Event::FilePeriodWatcherPeriodUpdated(_file_event) => {
+            // TODO: Handle file watcher updates
+            tracing::debug!("Received file watcher updated event (not implemented yet)");
+        }
+
+        // Storage events
+        Event::StoragePeriodWrite(_storage_event) => {
+            // TODO: Handle storage writes
+            tracing::debug!("Received storage write event (not implemented yet)");
+        }
+
+        // System/Infrastructure events
+        Event::InstallationPeriodUpdated(_install_event) => {
+            // TODO: Handle installation updates
+            tracing::debug!("Received installation updated event (not implemented yet)");
+        }
+        Event::LspPeriodClientPeriodDiagnostics(_lsp_event) => {
+            // TODO: Handle LSP diagnostics
+            tracing::debug!("Received LSP client diagnostics event (not implemented yet)");
+        }
+        Event::ServerPeriodConnected(_server_event) => {
+            // TODO: Handle server connection
+            tracing::debug!("Received server connected event (not implemented yet)");
+        }
+        Event::IdePeriodInstalled(_ide_event) => {
+            // TODO: Handle IDE installation
+            tracing::debug!("Received IDE installed event (not implemented yet)");
         }
     }
 

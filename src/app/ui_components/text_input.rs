@@ -8,6 +8,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Borders, Widget},
 };
+use throbber_widgets_tui::{Throbber, ThrobberState};
 
 const MODE_COLORS: [Color; 3] = [Color::Black, Color::Magenta, Color::Green];
 const MODE_DEFAULT_COLOR: Color = Color::Gray;
@@ -248,7 +249,26 @@ impl Widget for &TextInput {
                 (_, _, 0) => "Ready",
                 _ => "Working...",
             };
-            let loading_paragraph = throbber_widgets_tui::Throbber::default().label(loading_label);
+            enum LoadingWidget<'a> {
+                Throbber(Throbber<'a>),
+                Paragraph(Paragraph<'a>),
+            }
+
+            impl<'a> Widget for LoadingWidget<'a> {
+                fn render(self, area: Rect, buf: &mut Buffer) {
+                    match self {
+                        LoadingWidget::Throbber(t) => t.render(area, buf),
+                        LoadingWidget::Paragraph(p) => p.render(area, buf),
+                    }
+                }
+            }
+
+            let loading_paragraph =
+                if !model.get().session_is_idle || model.get().active_task_count > 0 {
+                    LoadingWidget::Throbber(Throbber::default().label(loading_label))
+                } else {
+                    LoadingWidget::Paragraph(Paragraph::new(loading_label))
+                };
 
             let (status_line_start, status_line_center, status_line_provider, status_line_mode) = {
                 let start_width = (area.width / 4).min(10);

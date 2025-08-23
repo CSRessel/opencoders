@@ -82,6 +82,8 @@ pub struct Model {
     pub message_state: MessageState,
     pub event_stream_state: EventStreamState,
     pub active_task_count: usize,
+    // Session state for UI indicators
+    pub session_is_idle: bool,
     // Unified repeat shortcut timeout system
     pub repeat_shortcut_timeout: Option<RepeatShortcutTimeout>,
 }
@@ -190,6 +192,7 @@ impl Model {
             message_state: MessageState::new(),
             event_stream_state: EventStreamState::Disconnected,
             active_task_count: 0,
+            session_is_idle: true,
             repeat_shortcut_timeout: None,
         }
     }

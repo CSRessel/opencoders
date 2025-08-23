@@ -112,7 +112,7 @@ impl MessageState {
                 };
                 
                 self.messages.insert(message_id.clone(), container);
-                self.message_order.push(message_id.clone());
+                self.insert_message_in_order(message_id.clone());
                 self.streaming_messages.insert(message_id);
                 true
             }
@@ -131,11 +131,30 @@ impl MessageState {
             }
         }
         
+        // Get or create the message container
+        let container_exists = self.messages.contains_key(&message_id);
+        
+        if !container_exists {
+            // Create a placeholder message container if it doesn't exist
+            let placeholder_container = MessageContainer {
+                info: self.create_placeholder_message(&part),
+                parts: HashMap::new(),
+                part_order: Vec::new(),
+                is_streaming: true,
+                last_updated: SystemTime::now(),
+                printed_to_stdout: false,
+            };
+            
+            self.messages.insert(message_id.clone(), placeholder_container);
+            self.insert_message_in_order(message_id.clone());
+        }
+        
+        // Now we know the container exists
         if let Some(container) = self.messages.get_mut(&message_id) {
             let is_new_part = !container.parts.contains_key(&part_id);
             
             if is_new_part {
-                container.part_order.push(part_id.clone());
+                Self::insert_part_in_order(&mut container.part_order, part_id.clone());
             }
             
             container.parts.insert(part_id, part);
@@ -312,6 +331,70 @@ impl MessageState {
             Part::Patch(patch_part) => patch_part.session_id.clone(),
             Part::Agent(agent_part) => agent_part.session_id.clone(),
         }
+    }
+
+    // Helper methods for ordering
+
+    fn insert_message_in_order(&mut self, message_id: String) {
+        // Find the correct position to insert based on ID lexicographical order
+        let insert_pos = self.message_order
+            .binary_search(&message_id)
+            .unwrap_or_else(|pos| pos);
+        
+        self.message_order.insert(insert_pos, message_id);
+    }
+
+    fn insert_part_in_order(part_order: &mut Vec<String>, part_id: String) {
+        // Find the correct position to insert based on ID lexicographical order
+        let insert_pos = part_order
+            .binary_search(&part_id)
+            .unwrap_or_else(|pos| pos);
+        
+        part_order.insert(insert_pos, part_id);
+    }
+
+    fn create_placeholder_message(&self, part: &Part) -> Message {
+        let message_id = self.extract_message_id_from_part(part);
+        let session_id = self.extract_session_id_from_part(part);
+        
+        // Create a placeholder assistant message since parts typically belong to assistant messages
+        use opencode_sdk::models::{AssistantMessage, AssistantMessageTime, AssistantMessageTokens, AssistantMessageTokensCache, AssistantMessagePath};
+        
+        let time = AssistantMessageTime {
+            created: SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default().as_secs() as f64,
+            completed: None,
+        };
+        
+        let tokens = AssistantMessageTokens {
+            input: 0.0,
+            output: 0.0,
+            reasoning: 0.0,
+            cache: Box::new(AssistantMessageTokensCache {
+                read: 0.0,
+                write: 0.0,
+            }),
+        };
+        
+        let path = AssistantMessagePath {
+            cwd: "unknown".to_string(),
+            root: "unknown".to_string(),
+        };
+        
+        Message::Assistant(Box::new(AssistantMessage {
+            id: message_id,
+            session_id,
+            time: Box::new(time),
+            error: None,
+            system: vec![],
+            model_id: "unknown".to_string(),
+            provider_id: "unknown".to_string(),
+            mode: "unknown".to_string(),
+            path: Box::new(path),
+            summary: None,
+            cost: 0.0,
+            tokens: Box::new(tokens),
+        }))
     }
 }
 

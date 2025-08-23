@@ -666,9 +666,24 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
             // TODO: Handle LSP diagnostics
             tracing::debug!("Received LSP client diagnostics event (not implemented yet)");
         }
-        Event::ServerPeriodConnected(_server_event) => {
-            // TODO: Handle server connection
-            tracing::debug!("Received server connected event (not implemented yet)");
+        Event::ServerPeriodConnected(server_event) => {
+            tracing::info!("Server health confirmed: {:?}", server_event.properties);
+            
+            // Update connection status if currently in error state
+            match &model.connection_status {
+                ConnectionStatus::Error(_) => {
+                    model.connection_status = ConnectionStatus::Connected;
+                    tracing::info!("Connection recovered from error state");
+                }
+                ConnectionStatus::Disconnected => {
+                    model.connection_status = ConnectionStatus::Connected;
+                    tracing::info!("Server connection established");
+                }
+                _ => {
+                    // Server is healthy, connection status already good
+                    tracing::debug!("Server health confirmed, connection already stable");
+                }
+            }
         }
         Event::IdePeriodInstalled(_ide_event) => {
             // TODO: Handle IDE installation

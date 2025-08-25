@@ -21,7 +21,7 @@ use crate::{
     app::{
         error::Result,
         event_async_task_manager::AsyncTaskManager,
-        event_msg::{Cmd, Msg},
+        event_msg::{Cmd, CmdOrBatch, Msg},
         event_sync_subscriptions,
         tea_model::{AppState, Model, ModelInit},
         tea_update::update,
@@ -98,7 +98,7 @@ impl Program {
                 for msg in async_messages {
                     let cmd = update(&mut self.model, msg);
                     self.needs_render = true;
-                    self.spawn_command(cmd).await?;
+                    self.spawn_commands(cmd).await?;
                 }
             }
 
@@ -107,7 +107,7 @@ impl Program {
                 had_events = true;
                 let cmd = update(&mut self.model, msg);
                 self.needs_render = true;
-                self.spawn_command(cmd).await?;
+                self.spawn_commands(cmd).await?;
             }
 
             // Check for SSE events (non-blocking)
@@ -144,7 +144,7 @@ impl Program {
             &mut self.model,
             Msg::RecordActiveTaskCount(self.task_manager.active_task_count()),
         );
-        self.spawn_command(cmd).await?;
+        self.spawn_commands(cmd).await?;
 
         // View: Manual rendering outside the TUI viewport
         if self.model.needs_manual_output() {
@@ -162,7 +162,7 @@ impl Program {
             terminal.draw(|f| view(&self.model, f))?;
         }
         let cmd = update(&mut self.model, Msg::MarkMessagesViewed);
-        self.spawn_command(cmd).await?;
+        self.spawn_commands(cmd).await?;
 
         Ok(())
     }
@@ -209,13 +209,49 @@ impl Program {
             for event in events {
                 let cmd = update(&mut self.model, Msg::EventReceived(event));
                 self.needs_render = true; // Signal that a re-render is needed
-                self.spawn_command(cmd).await?;
+                self.spawn_commands(cmd).await?;
                 processed_event = true;
             }
             Ok(processed_event)
         } else {
             Ok(false)
         }
+    }
+
+    async fn spawn_commands(&mut self, cmds: CmdOrBatch) -> Result<()> {
+        match cmds {
+            CmdOrBatch::Single(cmd) => {
+                self.spawn_command(cmd).await?;
+            }
+            CmdOrBatch::Batch(commands) => {
+                // Handle batch commands by processing them in the main loop
+                // rather than recursively to avoid infinite future size
+                for cmd in commands {
+                    match cmd {
+                        Cmd::AsyncSpawnClientDiscovery
+                        | Cmd::AsyncSpawnSessionInit(_)
+                        | Cmd::AsyncCreateSessionWithMessage(_, _)
+                        | Cmd::AsyncLoadSessions(_)
+                        | Cmd::AsyncLoadModes(_)
+                        | Cmd::AsyncLoadSessionMessages(_, _)
+                        | Cmd::AsyncSendUserMessage(_, _, _, _, _, _, _)
+                        | Cmd::AsyncCancelTask(_)
+                        | Cmd::AsyncSessionAbort
+                        | Cmd::AsyncStartEventStream(_)
+                        | Cmd::AsyncStopEventStream
+                        | Cmd::AsyncReconnectEventStream
+                        | Cmd::TerminalRebootWithInline(_)
+                        | Cmd::TerminalResizeInlineViewport(_)
+                        | Cmd::TerminalScrollPastHeight
+                        | Cmd::TerminalAutoResize => {
+                            Box::pin(self.spawn_command(cmd)).await?;
+                        }
+                        Cmd::None => {}
+                    }
+                }
+            }
+        };
+        Ok(())
     }
 
     async fn spawn_command(&mut self, cmd: Cmd) -> Result<()> {
@@ -443,41 +479,6 @@ impl Program {
                     tokio::time::sleep(Duration::from_millis(1000)).await;
                     Msg::EventStreamError("Reconnection not implemented yet".to_string())
                 });
-            }
-
-            Cmd::Batch(commands) => {
-                // Handle batch commands by processing them in the main loop
-                // rather than recursively to avoid infinite future size
-                for cmd in commands {
-                    match cmd {
-                        Cmd::AsyncSpawnClientDiscovery
-                        | Cmd::AsyncSpawnSessionInit(_)
-                        | Cmd::AsyncCreateSessionWithMessage(_, _)
-                        | Cmd::AsyncLoadSessions(_)
-                        | Cmd::AsyncLoadModes(_)
-                        | Cmd::AsyncLoadSessionMessages(_, _)
-                        | Cmd::AsyncSendUserMessage(_, _, _, _, _, _, _)
-                        | Cmd::AsyncCancelTask(_)
-                        | Cmd::AsyncSessionAbort
-                        | Cmd::AsyncStartEventStream(_)
-                        | Cmd::AsyncStopEventStream
-                        | Cmd::AsyncReconnectEventStream
-                        | Cmd::TerminalRebootWithInline(_)
-                        | Cmd::TerminalResizeInlineViewport(_)
-                        | Cmd::TerminalScrollPastHeight
-                        | Cmd::TerminalAutoResize => {
-                            Box::pin(self.spawn_command(cmd)).await?;
-                        }
-                        Cmd::None => {}
-                        Cmd::Batch(_) => {
-                            return Err(eyre::eyre!(
-                                "Nested Cmd::Batch detected in spawn_command. This indicates a logic error in the update() function. \
-                                Batch commands should only contain non-batch commands to avoid infinite recursion and stack overflow. \
-                                Please review the update() logic that produced this nested batch."
-                            ));
-                        }
-                    }
-                }
             }
 
             Cmd::None => {}

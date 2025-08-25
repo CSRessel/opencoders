@@ -2,7 +2,7 @@ use crate::{
     app::{
         event_async_task_manager::TaskId,
         tea_model::{AppState, RepeatShortcutKey},
-        ui_components::{PopoverSelectorEvent, MsgTextArea},
+        ui_components::{MsgTextArea, PopoverSelectorEvent},
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
@@ -10,10 +10,6 @@ use opencode_sdk::models::{ConfigAgent, Event, Model, Session, SessionMessages20
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Msg {
-    KeyPressed(char),
-    Backspace,
-    SubmitInput,
-    ClearInput,
     ChangeState(AppState),
     Quit,
     ScrollMessageLog(i16),
@@ -88,7 +84,6 @@ pub enum Msg {
     // Component messages
     TextArea(MsgTextArea),
 }
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {
     None,
@@ -122,8 +117,11 @@ pub enum Cmd {
     AsyncStartEventStream(OpenCodeClient),
     AsyncStopEventStream,
     AsyncReconnectEventStream,
+}
 
-    // Batched commands for efficiency
+#[derive(Debug, Clone, PartialEq)]
+pub enum CmdOrBatch {
+    Single(Cmd),
     Batch(Vec<Cmd>),
 }
 

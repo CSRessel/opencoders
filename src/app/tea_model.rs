@@ -3,7 +3,7 @@ use crate::{
         message_state::MessageState,
         ui_components::{
             message_part::VerbosityLevel, MessageLog, PopoverSelector, PopoverSelectorEvent,
-            TextInput, TextInputArea,
+            TextInputArea,
         },
     },
     sdk::{
@@ -104,7 +104,7 @@ mod model_init {
         pub fn height(&self) -> Option<u16> {
             // For now, return the default height
             // In a real implementation, this could be configurable per init
-            Some(super::DEFAULT_HEIGHT)
+            Some(super::INLINE_HEIGHT)
         }
 
         pub fn new(inline_mode: bool) -> ModelInit {
@@ -150,7 +150,7 @@ pub enum ConnectionStatus {
     Error(String),
 }
 
-const DEFAULT_HEIGHT: u16 = 12;
+pub const INLINE_HEIGHT: u16 = 12;
 
 impl Model {
     pub fn new() -> Self {
@@ -163,12 +163,12 @@ impl Model {
         Model {
             init: ModelInit::new(true),
             config: UserConfig {
-                ui_block_is_rounded: true,
+                ui_block_is_rounded: false,
                 ui_block_is_bordered: true,
                 ui_block_padding: 0,
                 ui_status_is_bottom: true,
                 ui_status_use_labels: true,
-                height: DEFAULT_HEIGHT,
+                height: INLINE_HEIGHT,
                 keys_shortcut_timeout_ms: 1000,
             },
             state: AppState::ConnectingToServer,

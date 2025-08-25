@@ -14,19 +14,19 @@ pub use message_log::MessageLog;
 pub use message_part::{MessageContext, MessagePart, MessageRenderer};
 pub use paragraph::Paragraph;
 pub use popover_selector::{PopoverSelector, PopoverSelectorEvent};
-pub use text_input::{TextInput, TextInputArea, InputResult, MsgTextArea, TextAreaCmd};
+pub use text_input::{CmdTextArea, InputResult, MsgTextArea, TextInputArea};
 
 /// Component trait for modular ELM architecture
-/// 
+///
 /// Components manage their own state and handle sub-messages, returning
 /// commands that get translated to main application messages.
 pub trait Component<State, SubMsg, SubCmd> {
     /// Handle a sub-message and update component state
     fn update(&mut self, msg: SubMsg, state: &State) -> Vec<SubCmd>;
-    
+
     /// Get focus state for rendering
     fn is_focused(&self) -> bool;
-    
+
     /// Set focus state
     fn set_focus(&mut self, focused: bool);
 }

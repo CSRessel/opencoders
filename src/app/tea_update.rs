@@ -2,71 +2,19 @@ use crate::{
     app::{
         event_msg::*,
         tea_model::*,
-        ui_components::{text_input::TextInputEvent, PopoverSelectorEvent, MsgTextArea, TextAreaCmd, Component},
+        ui_components::{CmdTextArea, Component, MsgTextArea, PopoverSelectorEvent},
     },
     sdk::client::{generate_id, IdPrefix},
 };
 
-pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
+pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch {
     match msg {
-        Msg::KeyPressed(_) => {
-            // Legacy key handling - now handled by TextArea component
-            Cmd::None
-        }
-
-        Msg::Backspace => {
-            // Legacy backspace handling - now handled by TextArea component  
-            Cmd::None
-        }
-
-        Msg::SubmitInput => {
-            // Legacy submit handling - now handled by TextArea component
-            let submitted_text = model.text_input_area.content();
-            if !submitted_text.is_empty() {
-                model.input_history.push(submitted_text.clone());
-                model.last_input = Some(submitted_text.clone());
-
-                // If we have a pending session, create it now with this message
-                if let SessionState::Pending(pending_info) = &model.session_state {
-                    if let Some(client) = model.client.clone() {
-                        model.session_state = SessionState::Creating(pending_info.clone());
-                        model.pending_first_message = Some(submitted_text.clone());
-                        model.session_is_idle = false;
-                        return Cmd::AsyncCreateSessionWithMessage(client, submitted_text);
-                    }
-                }
-
-                // If we have a ready session, send the message via API
-                if let (Some(client), Some(session)) = (model.client.clone(), model.session()) {
-                    let session_id = session.id.clone();
-                    let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
-                    let message_id = generate_id(IdPrefix::Message);
-                    model.session_is_idle = false;
-                    return Cmd::AsyncSendUserMessage(
-                        client,
-                        session_id,
-                        message_id,
-                        submitted_text,
-                        provider_id,
-                        model_id,
-                        mode,
-                    );
-                };
-            }
-            Cmd::None
-        }
-
-        Msg::ClearInput => {
-            model.clear_input_state();
-            Cmd::None
-        }
-
         Msg::ChangeState(new_state) => {
             // If trying to enter TextEntry but session isn't ready, trigger session init
             if matches!(new_state, AppState::TextEntry) && !model.is_session_ready() {
                 // Same as selecting the "Create New" option
                 model.change_session(Some(0));
-                return Cmd::None;
+                return CmdOrBatch::Single(Cmd::None);
             }
 
             let old_state = model.state.clone();
@@ -76,23 +24,23 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                 // when coming from inline mode first...
                 model.clear_input_state();
                 if model.init.inline_mode() {
-                    Cmd::TerminalScrollPastHeight
+                    CmdOrBatch::Single(Cmd::TerminalScrollPastHeight)
                 } else {
-                    Cmd::None
+                    CmdOrBatch::Single(Cmd::None)
                 }
             } else {
                 if matches!(model.state, AppState::TextEntry) {
                     // Auto-scroll to bottom when entering text entry mode
                     model.message_log.touch_scroll();
                 }
-                Cmd::None
+                CmdOrBatch::Single(Cmd::None)
             }
         }
 
         // Client initialization messages
         Msg::InitializeClient => {
             model.transition_to_connecting();
-            Cmd::AsyncSpawnClientDiscovery
+            CmdOrBatch::Single(Cmd::AsyncSpawnClientDiscovery)
         }
 
         Msg::ClientConnected(client) => {
@@ -100,13 +48,13 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             model.client = Some(client.clone());
             model.transition_to_connected();
             // Load modes immediately when client connects
-            Cmd::AsyncLoadModes(client)
+            CmdOrBatch::Single(Cmd::AsyncLoadModes(client))
         }
 
         Msg::ClientConnectionFailed(error) => {
             let error_msg = format!("Failed to connect to OpenCode server: {}", error);
             model.transition_to_error(error_msg);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         // Session management messages
@@ -115,7 +63,9 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             model.state = AppState::TextEntry;
 
             // Set session data
-            model.text_input_area.set_session_id(Some(session.id.clone()));
+            model
+                .text_input_area
+                .set_session_id(Some(session.id.clone()));
             model.session_state = SessionState::Ready(session);
             model.connection_status = ConnectionStatus::SessionReady;
             model.message_log.touch_scroll();
@@ -125,12 +75,12 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
 
             // Fetch session messages and start event stream once session is ready
             if let Some(client) = model.client.clone() {
-                Cmd::Batch(vec![
+                CmdOrBatch::Batch(vec![
                     Cmd::AsyncLoadSessionMessages(client.clone(), session_id),
                     Cmd::AsyncStartEventStream(client),
                 ])
             } else {
-                Cmd::None
+                CmdOrBatch::Single(Cmd::None)
             }
         }
 
@@ -139,7 +89,9 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             model.state = AppState::TextEntry;
 
             // Set session data
-            model.text_input_area.set_session_id(Some(session.id.clone()));
+            model
+                .text_input_area
+                .set_session_id(Some(session.id.clone()));
             model.session_state = SessionState::Ready(session.clone());
             model.connection_status = ConnectionStatus::SessionReady;
             model.message_log.touch_scroll();
@@ -156,7 +108,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                 let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
                 let message_id = generate_id(IdPrefix::Message);
                 model.session_is_idle = false;
-                Cmd::Batch(vec![
+                CmdOrBatch::Batch(vec![
                     Cmd::AsyncLoadSessionMessages(client.clone(), session_id.clone()),
                     Cmd::AsyncStartEventStream(client.clone()),
                     Cmd::AsyncSendUserMessage(
@@ -170,7 +122,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                     ),
                 ])
             } else {
-                Cmd::None
+                CmdOrBatch::Single(Cmd::None)
             }
         }
 
@@ -179,59 +131,59 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             model.session_state = SessionState::None;
             model.pending_first_message = None;
             model.transition_to_error(error_msg);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::SessionInitializationFailed(error) => {
             let error_msg = format!("Failed to initialize session: {}", error);
             model.transition_to_error(error_msg);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::Quit => {
             model.state = AppState::Quit;
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
         Msg::ScrollMessageLog(direction) => {
             model.message_log.scroll_vertical(&direction);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
         Msg::ScrollMessageLogHorizontal(direction) => {
             model.message_log.scroll_horizontal(direction);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
         Msg::ValidateScrollPosition(viewport_height, viewport_width) => {
             model
                 .message_log
                 .validate_scroll_position(viewport_height, viewport_width);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         // Task lifecycle messages
         Msg::TaskStarted(_task_id, _description) => {
             // Could update UI to show active tasks
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::TaskCompleted(_task_id) => {
             // Could update UI to remove completed task indicator
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::TaskFailed(_task_id, _error) => {
             // Could show error message or update connection status
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         // Progress reporting messages
         Msg::ConnectionProgress(_progress) => {
             // Could update a progress bar in UI
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::SessionProgress(_progress) => {
             // Could update a progress bar in UI
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::MarkMessagesViewed => {
@@ -239,37 +191,37 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             if count > 0 {
                 model.mark_messages_printed_to_stdout(count);
             }
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::TerminalResize(_width, _height) => {
             // Enhanced to trigger autoresize for seamless viewport updates
             if model.state == AppState::TextEntry {
-                Cmd::Batch(vec![Cmd::TerminalScrollPastHeight, Cmd::TerminalAutoResize])
+                CmdOrBatch::Batch(vec![Cmd::TerminalScrollPastHeight, Cmd::TerminalAutoResize])
             } else {
-                Cmd::TerminalAutoResize
+                CmdOrBatch::Single(Cmd::TerminalAutoResize)
             }
         }
 
         Msg::ChangeInlineHeight(new_height) => {
             if model.init.inline_mode() {
                 if model.state == AppState::TextEntry {
-                    Cmd::Batch(vec![
+                    CmdOrBatch::Batch(vec![
                         Cmd::TerminalScrollPastHeight,
                         Cmd::TerminalResizeInlineViewport(new_height),
                     ])
                 } else {
-                    Cmd::TerminalResizeInlineViewport(new_height)
+                    CmdOrBatch::Single(Cmd::TerminalResizeInlineViewport(new_height))
                 }
             } else {
-                Cmd::None // No-op if not in inline mode
+                CmdOrBatch::Single(Cmd::None) // No-op if not in inline mode
             }
         }
 
         Msg::LeaderChangeInline => {
             let new_inline = !model.init.inline_mode().clone();
             model.clear_repeat_leader_timeout();
-            Cmd::TerminalRebootWithInline(new_inline)
+            CmdOrBatch::Single(Cmd::TerminalRebootWithInline(new_inline))
         }
 
         // Session selector messages
@@ -309,7 +261,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
 
             if let Some(client) = model.client.clone() {
                 tracing::debug!("waiting for session load......");
-                Cmd::Batch(vec![
+                CmdOrBatch::Batch(vec![
                     prefix_cmd,
                     Cmd::AsyncLoadSessions(client.clone()),
                     Cmd::AsyncLoadModes(client),
@@ -321,7 +273,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                     .handle_event(PopoverSelectorEvent::SetError(Some(
                         "No client connection".to_string(),
                     )));
-                (prefix_cmd)
+                CmdOrBatch::Single(prefix_cmd)
             }
         }
 
@@ -330,7 +282,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                 let changed_index = model.session_selector.handle_event(event.clone());
 
                 if model.change_session(changed_index) {
-                    return Cmd::AsyncSpawnSessionInit(client);
+                    return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(client));
                 }
             }
 
@@ -339,7 +291,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                 model.state = AppState::Welcome;
             }
 
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::SessionsLoaded(sessions) => {
@@ -370,7 +322,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                 .session_selector
                 .set_current_session_index(current_index);
 
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::SessionsLoadFailed(error) => {
@@ -381,18 +333,18 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                     "Failed to load sessions: {}",
                     error
                 ))));
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::ModesLoaded(modes) => {
             model.set_modes(modes);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::ModesLoadFailed(error) => {
             tracing::error!("Failed to load modes: {}", error);
             // Don't show error to user for modes loading failure, just log it
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::CycleModeState => {
@@ -400,14 +352,14 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                 // Request modes from server if empty
                 if let Some(client) = model.client.clone() {
                     tracing::debug!("Modes array empty, requesting from server");
-                    Cmd::AsyncLoadModes(client)
+                    CmdOrBatch::Single(Cmd::AsyncLoadModes(client))
                 } else {
                     tracing::debug!("No client available to load modes");
-                    Cmd::None
+                    CmdOrBatch::Single(Cmd::None)
                 }
             } else {
                 model.increment_mode_index();
-                Cmd::None
+                CmdOrBatch::Single(Cmd::None)
             }
         }
 
@@ -422,12 +374,12 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                 .cloned()
                 .collect();
             model.message_log.set_message_containers(message_containers);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::SessionMessagesLoadFailed(error) => {
             tracing::debug!("Failed to load session messages: {}", error);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::UserMessageSent(text) => {
@@ -435,37 +387,37 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             // Reset idle state since we just sent a message
             model.session_is_idle = false;
             // The message will be received via SSE events and added to message state
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::UserMessageSendFailed(error) => {
             tracing::debug!("Failed to send user message: {}", error);
             // Could show error in UI or retry
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         // Event stream messages
         Msg::EventReceived(event) => {
             let cmd = handle_event_received(&mut model, event);
-            (cmd)
+            CmdOrBatch::Single(cmd)
         }
 
         Msg::EventStreamConnected(event_stream) => {
             tracing::debug!("Event stream connected");
             model.event_stream_state = EventStreamState::Connected(event_stream);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::EventStreamDisconnected => {
             tracing::debug!("Event stream disconnected");
             model.event_stream_state = EventStreamState::Disconnected;
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::EventStreamError(error) => {
             tracing::debug!("Event stream error: {}", error);
             let cmd = handle_event_stream_error(&mut model, error);
-            (cmd)
+            CmdOrBatch::Single(cmd)
         }
 
         Msg::EventStreamReconnecting(attempt) => {
@@ -474,25 +426,25 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
                 attempt,
                 last_error: "Connection lost".to_string(),
             };
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         // Unified repeat shortcut timeout messages
         Msg::RepeatShortcutPressed(key) => {
             model.set_repeat_shortcut_timeout(key);
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::ClearTimeout => {
             model.clear_repeat_shortcut_timeout();
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::SessionAbort => Cmd::AsyncSessionAbort,
+        Msg::SessionAbort => CmdOrBatch::Single(Cmd::AsyncSessionAbort),
 
         Msg::ToggleVerbosity => {
             model.toggle_verbosity();
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::TextArea(submsg) => {
@@ -503,18 +455,18 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
 
         Msg::RecordActiveTaskCount(count) => {
             model.active_task_count = count;
-            Cmd::None
+            CmdOrBatch::Single(Cmd::None)
         }
     }
 }
 
 // Helper function to convert TextAreaCmd to main Cmd
-fn handle_textarea_commands(model: &mut Model, commands: Vec<TextAreaCmd>) -> Cmd {
+fn handle_textarea_commands(model: &mut Model, commands: Vec<CmdTextArea>) -> CmdOrBatch {
     let mut main_commands = vec![];
-    
+
     for command in commands {
         match command {
-            TextAreaCmd::Submit(text) => {
+            CmdTextArea::Submit(text) => {
                 // Handle text submission like the legacy SubmitInput logic
                 model.input_history.push(text.clone());
                 model.last_input = Some(text.clone());
@@ -547,24 +499,10 @@ fn handle_textarea_commands(model: &mut Model, commands: Vec<TextAreaCmd>) -> Cm
                     ));
                 }
             }
-            TextAreaCmd::HeightChanged(new_height) => {
-                // Update the terminal viewport if needed for dynamic height changes
-                if model.init.inline_mode() {
-                    main_commands.push(Cmd::TerminalResizeInlineViewport(new_height));
-                }
-            }
-            TextAreaCmd::FocusChanged(_focused) => {
-                // Handle focus changes if needed
-                // Currently no specific action required for focus changes
-            }
         }
     }
 
-    match main_commands.len() {
-        0 => Cmd::None,
-        1 => main_commands.into_iter().next().unwrap(),
-        _ => Cmd::Batch(main_commands),
-    }
+    CmdOrBatch::Batch(main_commands)
 }
 
 fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) -> Cmd {
@@ -733,7 +671,7 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
         }
         Event::ServerPeriodConnected(server_event) => {
             tracing::info!("Server health confirmed: {:?}", server_event.properties);
-            
+
             // Update connection status if currently in error state
             match &model.connection_status {
                 ConnectionStatus::Error(_) => {

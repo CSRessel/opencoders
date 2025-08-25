@@ -2,27 +2,27 @@ use crate::{
     app::{
         event_msg::*,
         tea_model::*,
-        ui_components::{text_input::TextInputEvent, PopoverSelectorEvent},
+        ui_components::{text_input::TextInputEvent, PopoverSelectorEvent, MsgTextArea, TextAreaCmd, Component},
     },
     sdk::client::{generate_id, IdPrefix},
 };
 
 pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
     match msg {
-        Msg::KeyPressed(c) => {
-            if let Some(submitted_text) = model.text_input.handle_event(TextInputEvent::Insert(c)) {
-                model.last_input = Some(submitted_text);
-            }
+        Msg::KeyPressed(_) => {
+            // Legacy key handling - now handled by TextArea component
             Cmd::None
         }
 
         Msg::Backspace => {
-            model.text_input.handle_event(TextInputEvent::Delete);
+            // Legacy backspace handling - now handled by TextArea component  
             Cmd::None
         }
 
         Msg::SubmitInput => {
-            if let Some(submitted_text) = model.text_input.handle_event(TextInputEvent::Submit) {
+            // Legacy submit handling - now handled by TextArea component
+            let submitted_text = model.text_input_area.content();
+            if !submitted_text.is_empty() {
                 model.input_history.push(submitted_text.clone());
                 model.last_input = Some(submitted_text.clone());
 
@@ -115,7 +115,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             model.state = AppState::TextEntry;
 
             // Set session data
-            model.text_input.set_session_id(Some(session.id.clone()));
+            model.text_input_area.set_session_id(Some(session.id.clone()));
             model.session_state = SessionState::Ready(session);
             model.connection_status = ConnectionStatus::SessionReady;
             model.message_log.touch_scroll();
@@ -139,7 +139,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             model.state = AppState::TextEntry;
 
             // Set session data
-            model.text_input.set_session_id(Some(session.id.clone()));
+            model.text_input_area.set_session_id(Some(session.id.clone()));
             model.session_state = SessionState::Ready(session.clone());
             model.connection_status = ConnectionStatus::SessionReady;
             model.message_log.touch_scroll();
@@ -495,10 +495,75 @@ pub fn update(mut model: &mut Model, msg: Msg) -> Cmd {
             Cmd::None
         }
 
+        Msg::TextArea(submsg) => {
+            // Handle component sub-messages using direct method call
+            let commands = model.text_input_area.handle_message(submsg);
+            handle_textarea_commands(model, commands)
+        }
+
         Msg::RecordActiveTaskCount(count) => {
             model.active_task_count = count;
             Cmd::None
         }
+    }
+}
+
+// Helper function to convert TextAreaCmd to main Cmd
+fn handle_textarea_commands(model: &mut Model, commands: Vec<TextAreaCmd>) -> Cmd {
+    let mut main_commands = vec![];
+    
+    for command in commands {
+        match command {
+            TextAreaCmd::Submit(text) => {
+                // Handle text submission like the legacy SubmitInput logic
+                model.input_history.push(text.clone());
+                model.last_input = Some(text.clone());
+
+                // If we have a pending session, create it now with this message
+                if let SessionState::Pending(pending_info) = &model.session_state {
+                    if let Some(client) = model.client.clone() {
+                        model.session_state = SessionState::Creating(pending_info.clone());
+                        model.pending_first_message = Some(text.clone());
+                        model.session_is_idle = false;
+                        main_commands.push(Cmd::AsyncCreateSessionWithMessage(client, text));
+                        continue;
+                    }
+                }
+
+                // If we have a ready session, send the message via API
+                if let (Some(client), Some(session)) = (model.client.clone(), model.session()) {
+                    let session_id = session.id.clone();
+                    let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
+                    let message_id = generate_id(IdPrefix::Message);
+                    model.session_is_idle = false;
+                    main_commands.push(Cmd::AsyncSendUserMessage(
+                        client,
+                        session_id,
+                        message_id,
+                        text,
+                        provider_id,
+                        model_id,
+                        mode,
+                    ));
+                }
+            }
+            TextAreaCmd::HeightChanged(new_height) => {
+                // Update the terminal viewport if needed for dynamic height changes
+                if model.init.inline_mode() {
+                    main_commands.push(Cmd::TerminalResizeInlineViewport(new_height));
+                }
+            }
+            TextAreaCmd::FocusChanged(_focused) => {
+                // Handle focus changes if needed
+                // Currently no specific action required for focus changes
+            }
+        }
+    }
+
+    match main_commands.len() {
+        0 => Cmd::None,
+        1 => main_commands.into_iter().next().unwrap(),
+        _ => Cmd::Batch(main_commands),
     }
 }
 
@@ -584,7 +649,7 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
                     model.session_state = SessionState::None;
                     model.message_state.clear();
                     model.message_log.set_message_containers(vec![]);
-                    model.text_input.set_session_id(None);
+                    model.text_input_area.set_session_id(None);
                     model.state = AppState::Welcome;
                 }
             }

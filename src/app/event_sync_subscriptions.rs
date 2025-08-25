@@ -1,7 +1,7 @@
 use crate::app::{
     event_msg::{Msg, Sub},
     tea_model::{AppState, ConnectionStatus, EventStreamState, Model, RepeatShortcutKey},
-    ui_components::PopoverSelectorEvent,
+    ui_components::{PopoverSelectorEvent, MsgTextArea},
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
@@ -85,23 +85,94 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                     Some(Msg::ChangeState(AppState::TextEntry))
                 }
 
-                // Text input events
-                (AppState::TextEntry, KeyCode::Char(c), _, _) => Some(Msg::KeyPressed(c)),
-                (AppState::TextEntry, KeyCode::Backspace, _, _) => Some(Msg::Backspace),
-                (AppState::TextEntry, KeyCode::Enter, _, _) => Some(Msg::SubmitInput),
+                // Text input events - route to TextArea component for most keys
+                (AppState::TextEntry, KeyCode::Char(c), modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::Char(c),
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
+                (AppState::TextEntry, KeyCode::Backspace, modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::Backspace,
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
+                (AppState::TextEntry, KeyCode::Enter, modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::Enter,
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
                 (AppState::TextEntry, KeyCode::Tab, _, _) => Some(Msg::CycleModeState),
+                
+                // Navigation keys for TextArea component
+                (AppState::TextEntry, KeyCode::Left, modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::Left,
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
+                (AppState::TextEntry, KeyCode::Right, modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::Right,
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
+                (AppState::TextEntry, KeyCode::Up, modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::Up,
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
+                (AppState::TextEntry, KeyCode::Down, modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::Down,
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
+                (AppState::TextEntry, KeyCode::Home, modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::Home,
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
+                (AppState::TextEntry, KeyCode::End, modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::End,
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
+                (AppState::TextEntry, KeyCode::Delete, modifiers, _) => {
+                    Some(Msg::TextArea(MsgTextArea::KeyInput(crossterm::event::KeyEvent {
+                        code: KeyCode::Delete,
+                        modifiers,
+                        kind: event::KeyEventKind::Press,
+                        state: event::KeyEventState::NONE,
+                    })))
+                }
 
-                // Message log scrolling
+                // Message log scrolling (keeping Page Up/Down for message history)
                 (AppState::TextEntry, KeyCode::PageUp, _, _) => Some(Msg::ScrollMessageLog(-5)),
                 (AppState::TextEntry, KeyCode::PageDown, _, _) => Some(Msg::ScrollMessageLog(5)),
-                (AppState::TextEntry, KeyCode::Up, _, _) => Some(Msg::ScrollMessageLog(-5)),
-                (AppState::TextEntry, KeyCode::Down, _, _) => Some(Msg::ScrollMessageLog(5)),
-                (AppState::TextEntry, KeyCode::Left, _, _) => {
-                    Some(Msg::ScrollMessageLogHorizontal(-5))
-                }
-                (AppState::TextEntry, KeyCode::Right, _, _) => {
-                    Some(Msg::ScrollMessageLogHorizontal(5))
-                }
 
                 // Session selector events
                 (AppState::SelectSession, KeyCode::Up, _, _) => {

@@ -3,7 +3,7 @@ use crate::{
         message_state::MessageState,
         ui_components::{
             message_part::VerbosityLevel, MessageLog, PopoverSelector, PopoverSelectorEvent,
-            TextInput,
+            TextInput, TextInputArea,
         },
     },
     sdk::{
@@ -52,7 +52,7 @@ pub enum EventStreamState {
     Failed(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Model {
     pub init: ModelInit,
     pub config: UserConfig,
@@ -68,7 +68,7 @@ pub struct Model {
     pub verbosity_level: VerbosityLevel,
     // Stateful components:
     pub message_log: MessageLog,
-    pub text_input: TextInput,
+    pub text_input_area: TextInputArea, // New tui-textarea based input
     pub session_selector: PopoverSelector,
     // Client and session state
     pub client: Option<OpenCodeClient>,
@@ -154,8 +154,8 @@ const DEFAULT_HEIGHT: u16 = 12;
 
 impl Model {
     pub fn new() -> Self {
-        let mut text_input = TextInput::new();
-        text_input.set_focus(true);
+        let mut text_input_area = TextInputArea::new();
+        text_input_area.set_focus(true);
 
         let message_log = MessageLog::new();
         let session_selector = PopoverSelector::new("Select Session");
@@ -180,7 +180,7 @@ impl Model {
             sdk_model: "claude-sonnet-4-20250514".to_string(),
             verbosity_level: VerbosityLevel::Summary,
             message_log,
-            text_input,
+            text_input_area,
             session_selector,
             client: None,
             session_state: SessionState::None,
@@ -237,7 +237,7 @@ impl Model {
 
     // Input management
     pub fn clear_input_state(&mut self) {
-        self.text_input.clear();
+        self.text_input_area.clear();
         self.last_input = None;
         self.input_history.clear();
         self.printed_to_stdout_count = 0;
@@ -277,7 +277,7 @@ impl Model {
 
     pub fn change_session_by_index(&mut self, index: Option<usize>) {
         self.message_log.set_message_containers(vec![]);
-        self.text_input.set_session_id(None); // This will be handled in the Cmd callback
+        self.text_input_area.set_session_id(None); // This will be handled in the Cmd callback
         self.session_selector.set_current_session_index(index);
         self.session_selector
             .handle_event(PopoverSelectorEvent::Hide);

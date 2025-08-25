@@ -2,7 +2,7 @@ use crate::{
     app::{
         event_async_task_manager::TaskId,
         tea_model::{AppState, RepeatShortcutKey},
-        ui_components::PopoverSelectorEvent,
+        ui_components::{PopoverSelectorEvent, MsgTextArea},
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
@@ -84,6 +84,9 @@ pub enum Msg {
 
     // Verbosity control
     ToggleVerbosity,
+
+    // Component messages
+    TextArea(MsgTextArea),
 }
 
 #[derive(Debug, Clone, PartialEq)]

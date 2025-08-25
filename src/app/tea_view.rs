@@ -5,8 +5,8 @@ use crate::app::{
         banner::welcome_text_height,
         create_welcome_text,
         message_part::{MessageContext, MessageRenderer},
-        text_input::TEXT_INPUT_HEIGHT,
         render_text_inline,
+        text_input::TEXT_INPUT_HEIGHT,
     },
     view_model_context::ViewModelContext,
 };
@@ -79,10 +79,10 @@ fn render_manual_history(model: &Model) -> crate::app::error::Result<()> {
             model.verbosity_level,
         );
         let rendered_text = renderer.render();
-        
+
         // Convert the entire rendered text to colorized string first
         let colorized_text = render_text_inline(&rendered_text);
-        
+
         // Wrap the colorized text and accumulate total lines
         let wrapped_lines = wrapper.wrap_text(&colorized_text);
         let total_wrapped_lines = wrapped_lines.len() as u16;
@@ -217,12 +217,12 @@ fn render_text_entry_screen(frame: &mut Frame) {
     if model.init().inline_mode() {
         // Render only the text input for inline mode
         // content_area.height = input_height;
-        frame.render_widget(&model.get().text_input, vertical_chunks[2]);
+        frame.render_widget(&model.get().text_input_area, vertical_chunks[2]);
     } else {
         // Note: We can't send messages from the view layer in TEA architecture
         // Scroll validation will happen during scroll events and when content changes
         frame.render_widget(&model.get().message_log, vertical_chunks[0]);
-        frame.render_widget(&model.get().text_input, vertical_chunks[2]);
+        frame.render_widget(&model.get().text_input_area, vertical_chunks[2]);
     }
 }
 

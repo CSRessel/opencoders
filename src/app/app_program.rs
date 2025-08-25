@@ -6,10 +6,11 @@
 //!    - scroll down welcome height rows
 //!    - Launch inline TUI
 //! 2. Render cycle:
-//!    - Clear TUI viewport if manual output needed
-//!    - Disable raw mode, move cursor UP outside TUI area
-//!    - Print messages to stdout (manually scroll terminal history per line)
-//!    - Move cursor back DOWN to TUI area, re-enable raw mode
+//!    - If manual output needed
+//!        - Clear TUI viewport
+//!        - Disable raw mode, move cursor UP outside TUI area
+//!        - Print messages to stdout (manually scroll terminal history per line)
+//!        - Move cursor back DOWN to TUI area, re-enable raw mode
 //!    - Render TUI content in fixed viewport at bottom
 //! 3. Result: Manual content in scrollback history, TUI fixed at terminal bottom
 //!

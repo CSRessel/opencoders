@@ -277,7 +277,6 @@ impl Model {
 
     pub fn change_session_by_index(&mut self, index: Option<usize>) {
         self.message_log.set_message_containers(vec![]);
-        self.text_input_area.set_session_id(None); // This will be handled in the Cmd callback
         self.session_selector.set_current_session_index(index);
         self.session_selector
             .handle_event(PopoverSelectorEvent::Hide);

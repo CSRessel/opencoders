@@ -2,7 +2,10 @@ use crate::{
     app::{
         event_msg::*,
         tea_model::*,
-        ui_components::{CmdTextArea, Component, MsgTextArea, PopoverSelectorEvent},
+        ui_components::{
+            text_input::handle_textarea_commands, CmdTextArea, Component, MsgTextArea,
+            PopoverSelectorEvent,
+        },
     },
     sdk::client::{generate_id, IdPrefix},
 };
@@ -63,9 +66,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch {
             model.state = AppState::TextEntry;
 
             // Set session data
-            model
-                .text_input_area
-                .set_session_id(Some(session.id.clone()));
             model.session_state = SessionState::Ready(session);
             model.connection_status = ConnectionStatus::SessionReady;
             model.message_log.touch_scroll();
@@ -89,9 +89,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch {
             model.state = AppState::TextEntry;
 
             // Set session data
-            model
-                .text_input_area
-                .set_session_id(Some(session.id.clone()));
             model.session_state = SessionState::Ready(session.clone());
             model.connection_status = ConnectionStatus::SessionReady;
             model.message_log.touch_scroll();
@@ -460,51 +457,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch {
     }
 }
 
-// Helper function to convert TextAreaCmd to main Cmd
-fn handle_textarea_commands(model: &mut Model, commands: Vec<CmdTextArea>) -> CmdOrBatch {
-    let mut main_commands = vec![];
-
-    for command in commands {
-        match command {
-            CmdTextArea::Submit(text) => {
-                // Handle text submission like the legacy SubmitInput logic
-                model.input_history.push(text.clone());
-                model.last_input = Some(text.clone());
-
-                // If we have a pending session, create it now with this message
-                if let SessionState::Pending(pending_info) = &model.session_state {
-                    if let Some(client) = model.client.clone() {
-                        model.session_state = SessionState::Creating(pending_info.clone());
-                        model.pending_first_message = Some(text.clone());
-                        model.session_is_idle = false;
-                        main_commands.push(Cmd::AsyncCreateSessionWithMessage(client, text));
-                        continue;
-                    }
-                }
-
-                // If we have a ready session, send the message via API
-                if let (Some(client), Some(session)) = (model.client.clone(), model.session()) {
-                    let session_id = session.id.clone();
-                    let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
-                    let message_id = generate_id(IdPrefix::Message);
-                    model.session_is_idle = false;
-                    main_commands.push(Cmd::AsyncSendUserMessage(
-                        client,
-                        session_id,
-                        message_id,
-                        text,
-                        provider_id,
-                        model_id,
-                        mode,
-                    ));
-                }
-            }
-        }
-    }
-
-    CmdOrBatch::Batch(main_commands)
-}
-
 fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) -> Cmd {
     use opencode_sdk::models::Event;
 
@@ -587,7 +539,7 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
                     model.session_state = SessionState::None;
                     model.message_state.clear();
                     model.message_log.set_message_containers(vec![]);
-                    model.text_input_area.set_session_id(None);
+
                     model.state = AppState::Welcome;
                 }
             }

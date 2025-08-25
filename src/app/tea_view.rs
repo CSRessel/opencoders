@@ -1,12 +1,11 @@
 use crate::app::{
-    tea_model::{AppState, ConnectionStatus, Model},
+    tea_model::*,
     text_wrapper::TextWrapper,
     ui_components::{
-        banner::welcome_text_height,
-        create_welcome_text,
-        message_part::{MessageContext, MessageRenderer},
-        render_text_inline,
+        banner::{create_welcome_text, welcome_text_height}, 
+        render_text_inline, 
         text_input::TEXT_INPUT_HEIGHT,
+        MessageLog, MessageRenderer, MessageContext, PopoverSelector, StatusBar,
     },
     view_model_context::ViewModelContext,
 };
@@ -199,30 +198,48 @@ fn render_text_entry_screen(frame: &mut Frame) {
 
     let content_area = horizontal_chunks[1];
 
-    let input_height = TEXT_INPUT_HEIGHT;
+    // Use dynamic height from TextInputArea and add space for StatusBar
+    let text_input_height = model.get().text_input_area.current_height();
+    let status_bar_height = 1;
+    let total_input_section_height = text_input_height + status_bar_height;
+    
     let spacer_height = match model.init().inline_mode() {
-        true => &model.get().config.height - input_height,
+        true => &model.get().config.height - total_input_section_height,
         false => 0,
     };
-    // Create vertical layout for (optional) message log and (requisite) input box
+    
+    // Create vertical layout for (optional) message log and input section
     let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(0),                // (optional) Message log
-            Constraint::Length(spacer_height), // (optional) Buffer space
-            Constraint::Length(input_height),  //            Input box
+            Constraint::Min(0),                              // (optional) Message log
+            Constraint::Length(spacer_height),               // (optional) Buffer space
+            Constraint::Length(total_input_section_height),  // Input area + status bar
         ])
         .split(content_area);
 
+    // Split the input section into text input and status bar
+    let input_section_area = vertical_chunks[2];
+    let input_section_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(text_input_height), // Text input area
+            Constraint::Length(status_bar_height), // Status bar
+        ])
+        .split(input_section_area);
+
     if model.init().inline_mode() {
-        // Render only the text input for inline mode
-        // content_area.height = input_height;
-        frame.render_widget(&model.get().text_input_area, vertical_chunks[2]);
+        // Render only the text input and status bar for inline mode
+        frame.render_widget(&model.get().text_input_area, input_section_chunks[0]);
+        let status_bar = StatusBar::new();
+        frame.render_widget(&status_bar, input_section_chunks[1]);
     } else {
         // Note: We can't send messages from the view layer in TEA architecture
         // Scroll validation will happen during scroll events and when content changes
         frame.render_widget(&model.get().message_log, vertical_chunks[0]);
-        frame.render_widget(&model.get().text_input_area, vertical_chunks[2]);
+        frame.render_widget(&model.get().text_input_area, input_section_chunks[0]);
+        let status_bar = StatusBar::new();
+        frame.render_widget(&status_bar, input_section_chunks[1]);
     }
 }
 

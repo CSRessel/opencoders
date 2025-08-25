@@ -1,6 +1,8 @@
-use crate::app::tea_model::{Model, RepeatShortcutKey, INLINE_HEIGHT};
+use crate::app::event_msg::{Cmd, CmdOrBatch};
+use crate::app::tea_model::{Model, RepeatShortcutKey, SessionState, INLINE_HEIGHT};
 use crate::app::ui_components::{Block, Component, Paragraph};
 use crate::app::view_model_context::ViewModelContext;
+use crate::sdk::client::{generate_id, IdPrefix};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     buffer::Buffer,
@@ -27,8 +29,8 @@ pub enum MsgTextArea {
 #[derive(Debug, Clone)]
 pub enum CmdTextArea {
     Submit(String),
-    // HeightChanged(u16),
-    // FocusChanged(bool),
+    HeightChanged(u16),
+    FocusChanged(bool),
 }
 
 #[derive(Debug, Clone)]
@@ -37,7 +39,6 @@ pub struct TextInputArea {
     min_height: u16,
     max_height: u16,
     current_height: u16,
-    session_id: Option<String>,
     placeholder: String,
     is_focused: bool,
 }
@@ -53,6 +54,57 @@ pub struct InputResult {
 pub const TEXT_INPUT_HEIGHT: u16 = 4;
 pub const TEXT_INPUT_AREA_MIN_HEIGHT: u16 = 3; // minimum: border + content + border
 pub const TEXT_INPUT_AREA_MAX_HEIGHT: u16 = INLINE_HEIGHT - 2; // configurable maximum
+
+// Helper function to convert CmdTextArea to main Cmd
+pub fn handle_textarea_commands(model: &mut Model, commands: Vec<CmdTextArea>) -> CmdOrBatch {
+    let mut main_commands = vec![];
+
+    for command in commands {
+        match command {
+            CmdTextArea::Submit(text) => {
+                // Handle text submission like the legacy SubmitInput logic
+                model.input_history.push(text.clone());
+                model.last_input = Some(text.clone());
+
+                // If we have a pending session, create it now with this message
+                if let SessionState::Pending(pending_info) = &model.session_state {
+                    if let Some(client) = model.client.clone() {
+                        model.session_state = SessionState::Creating(pending_info.clone());
+                        model.pending_first_message = Some(text.clone());
+                        model.session_is_idle = false;
+                        main_commands.push(Cmd::AsyncCreateSessionWithMessage(client, text));
+                        continue;
+                    }
+                }
+
+                // If we have a ready session, send the message via API
+                if let (Some(client), Some(session)) = (model.client.clone(), model.session()) {
+                    let session_id = session.id.clone();
+                    let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
+                    let message_id = generate_id(IdPrefix::Message);
+                    model.session_is_idle = false;
+                    main_commands.push(Cmd::AsyncSendUserMessage(
+                        client,
+                        session_id,
+                        message_id,
+                        text,
+                        provider_id,
+                        model_id,
+                        mode,
+                    ));
+                }
+            }
+            CmdTextArea::HeightChanged(_height) => {
+                // Handle height change if needed - currently no action required
+            }
+            CmdTextArea::FocusChanged(_focused) => {
+                // Handle focus change if needed - currently no action required
+            }
+        }
+    }
+
+    CmdOrBatch::Batch(main_commands)
+}
 
 // E.g.:
 // ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -70,7 +122,6 @@ impl TextInputArea {
             min_height: TEXT_INPUT_AREA_MIN_HEIGHT,
             max_height: TEXT_INPUT_AREA_MAX_HEIGHT,
             current_height: TEXT_INPUT_AREA_MAX_HEIGHT,
-            session_id: None,
             placeholder: "Type your message...".to_string(),
             is_focused: false,
         }
@@ -89,10 +140,6 @@ impl TextInputArea {
 
     pub fn is_focused(&self) -> bool {
         self.is_focused
-    }
-
-    pub fn set_session_id(&mut self, session_id: Option<String>) {
-        self.session_id = session_id;
     }
 
     pub fn clear(&mut self) {
@@ -252,20 +299,6 @@ impl Default for TextInputArea {
 // Widget implementation for TextInputArea
 impl Widget for &TextInputArea {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let model = ViewModelContext::current();
-
-        // Split the area to accommodate status line if session ID exists
-        let (input_area, status_area) = {
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Length(self.current_height), // Dynamic input area height
-                    Constraint::Length(1),                   // Status line
-                ])
-                .split(area);
-            (chunks[0], Some(chunks[1]))
-        };
-
         // Create a mutable textarea for rendering with proper styling
         let mut textarea = self.textarea.clone();
 
@@ -280,109 +313,7 @@ impl Widget for &TextInputArea {
 
         textarea.set_block(block);
 
-        // Render the textarea
-        textarea.render(input_area, buf);
-
-        // Render status line (preserving existing logic from TextInput)
-        if let Some(status_area) = status_area {
-            // Get current mode info for display
-            let (mode_text, mode_color) = if let Some(mode_index) = model.get().mode_state {
-                let bg_color = MODE_COLORS
-                    .get(mode_index as usize)
-                    .copied()
-                    .unwrap_or(MODE_DEFAULT_COLOR);
-                (
-                    model
-                        .get()
-                        .get_current_mode_name()
-                        .unwrap_or("UNKNOWN".to_string()),
-                    bg_color,
-                )
-            } else {
-                ("UNKNOWN".to_string(), MODE_DEFAULT_COLOR)
-            };
-            let mut mode_len = mode_text.len();
-            let mode_padding = " ".repeat(8 - mode_len);
-            mode_len += mode_padding.len();
-
-            // Render mode with background color
-            let mode_paragraph = Paragraph::new(Line::from(Span::styled(
-                format!(" {}{} ", mode_text, mode_padding),
-                Style::default().bg(mode_color).fg(Color::White),
-            )));
-
-            let status_text = format!(
-                " {} {} (20.4k tokens / 9% context) >",
-                model.get().sdk_provider,
-                model.get().sdk_model,
-            );
-            let status_len = status_text.len();
-            let status_paragraph = Paragraph::new(Line::from(status_text));
-
-            // Check for active repeat shortcut timeout and show appropriate message
-            let loading_label = match (
-                &model.get().has_active_timeout(),
-                &model.get().repeat_shortcut_timeout,
-                &model.get().active_task_count,
-            ) {
-                (true, Some(timeout), _) => match timeout.key {
-                    RepeatShortcutKey::Leader => "Shortcut waiting...",
-                    RepeatShortcutKey::CtrlC => "Ctrl+C again to confirm",
-                    RepeatShortcutKey::CtrlD => "Ctrl+D again to confirm",
-                    RepeatShortcutKey::Esc => "Esc again to confirm",
-                },
-                (_, _, 0) => "Ready",
-                _ => "Working...",
-            };
-
-            enum LoadingWidget<'a> {
-                Throbber(Throbber<'a>),
-                Paragraph(Paragraph<'a>),
-            }
-
-            impl<'a> Widget for LoadingWidget<'a> {
-                fn render(self, area: Rect, buf: &mut Buffer) {
-                    match self {
-                        LoadingWidget::Throbber(t) => t.render(area, buf),
-                        LoadingWidget::Paragraph(p) => p.render(area, buf),
-                    }
-                }
-            }
-
-            let loading_paragraph =
-                if !model.get().session_is_idle || model.get().active_task_count > 0 {
-                    LoadingWidget::Throbber(Throbber::default().label(loading_label))
-                } else {
-                    LoadingWidget::Paragraph(Paragraph::new(loading_label))
-                };
-
-            let (status_line_start, status_line_center, status_line_provider, status_line_mode) = {
-                let start_width = (area.width / 4).min(10);
-                let chunks = Layout::default()
-                    .direction(Direction::Horizontal)
-                    .constraints([
-                        Constraint::Min(start_width / 2),
-                        Constraint::Min(start_width),
-                        Constraint::Length(status_len as u16),
-                        Constraint::Length(mode_len as u16),
-                    ])
-                    .split(status_area);
-                (chunks[0], chunks[1], chunks[2], chunks[3])
-            };
-
-            loading_paragraph.render(status_line_start, buf);
-
-            // Render session ID status line if present
-            if let Some(session_id) = &self.session_id {
-                let session_paragraph = Paragraph::new(Line::from(Span::styled(
-                    session_id,
-                    Style::default().fg(Color::DarkGray),
-                )));
-                session_paragraph.render(status_line_center, buf);
-            }
-
-            status_paragraph.render(status_line_provider, buf);
-            mode_paragraph.render(status_line_mode, buf);
-        }
+        // Render the textarea (no status bar logic here anymore)
+        textarea.render(area, buf);
     }
 }

@@ -14,6 +14,12 @@ Rust TUI frontend for `opencode` that communicates with a headless Node.js serve
 The overall TUI architecture uses TEA + Async for maintainability and
 performance.
 
+## Modular Elm Architecture
+
+- **Component System**: UI components implement `Component<State, SubMsg, SubCmd>` trait for self-contained state management
+- **Sub-Messages**: Complex components use `Msg::ComponentName(submsg)` pattern with component-specific message types
+- **Trait-Based Design**: Components implement `Focusable`, `DynamicSize`, and other behavioral traits as needed
+
 ## Development Commands
 
 ```bash
@@ -58,6 +64,7 @@ opencoders/
 - Always use centralized event polling in `event_subscriptions.rs`
 - Always communicate with backend via strongly-typed structs from `opencode_sdk::models`
 - Always access model state within UI components using `ViewModelContext`
+- Always implement complex UI components using the Component trait with sub-messages (e.g., `Msg::TextArea(MsgTextArea::KeyInput)`)
 - Explore available API's using the file `openapi.json` and the documentation
 `opencode-sdk/README.md`
 
@@ -67,4 +74,5 @@ opencoders/
 - Do NOT manually edit anything in `opencode-sdk/` directory (auto-generated)
 - Do NOT call crossterm terminal functions outside of `terminal.rs`
 - Do NOT pass the model into UI components directly
+- Do NOT handle component-specific logic directly in the main `update()` function - delegate to component's `update()` method
 - Do NOT add dependencies without strong justification and project owner input

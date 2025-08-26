@@ -11,7 +11,6 @@ pub mod tea_model;
 pub mod tea_update;
 pub mod tea_view;
 pub mod terminal;
-pub mod text_wrapper;
 pub mod ui_components;
 pub mod view_model_context;
 

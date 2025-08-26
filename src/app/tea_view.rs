@@ -1,22 +1,22 @@
 use crate::app::{
     tea_model::*,
-    text_wrapper::TextWrapper,
     ui_components::{
-        banner::{create_welcome_text, welcome_text_height}, 
-        render_text_inline, 
+        banner::{create_welcome_text, welcome_text_height},
         text_input::TEXT_INPUT_HEIGHT,
-        MessageLog, MessageRenderer, MessageContext, PopoverSelector, StatusBar,
+        MessageContext, MessageLog, MessageRenderer, PopoverSelector, StatusBar,
     },
     view_model_context::ViewModelContext,
 };
 use eyre::WrapErr;
 use ratatui::{
+    backend::CrosstermBackend,
     crossterm,
     layout::{Constraint, Direction, Layout},
+    prelude::Widget,
     style::{Color, Style},
     text::{Line, Text, ToText},
-    widgets::Paragraph,
-    Frame,
+    widgets::{Paragraph, Wrap},
+    Frame, Terminal,
 };
 use std::io;
 
@@ -44,32 +44,23 @@ use std::io;
 // │ > /quit  │
 // ╰──────────╯
 
-pub fn view_manual(model: &Model) -> crate::app::error::Result<()> {
-    // Handle any prints that precede the dynamic TUI interface
-
-    crossterm::terminal::disable_raw_mode()?;
-    // Move cursor up outside the TUI height
-    crossterm::execute!(io::stdout(), crossterm::cursor::MoveUp(5),)?;
-
+pub fn view_manual(
+    model: &Model,
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+) -> crate::app::error::Result<()> {
     match model.state {
-        AppState::TextEntry => render_manual_history(&model)?,
+        AppState::TextEntry => render_history(model, terminal)?,
         _ => {}
-    };
-
-    // Move cursor back down to TUI
-    crossterm::execute!(io::stdout(), crossterm::cursor::MoveDown(1))?;
-    crossterm::terminal::enable_raw_mode()?;
+    }
     Ok(())
 }
 
-fn render_manual_history(model: &Model) -> crate::app::error::Result<()> {
+fn render_history(
+    model: &Model,
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+) -> crate::app::error::Result<()> {
     let message_containers = model.message_containers_for_rendering();
-    let (terminal_width, _) = crossterm::terminal::size()?;
-    let effective_width = terminal_width.saturating_sub(2); // Account for "> " prefix
-
-    // Create wrapper with reasonable tolerance (10% of width or minimum 5)
-    let tolerance = (effective_width as usize / 10).max(5);
-    let wrapper = TextWrapper::new(effective_width, Some(tolerance));
+    let (window_cols, _window_rows) = crossterm::terminal::size()?;
 
     for container in &message_containers {
         let renderer = MessageRenderer::from_message_container(
@@ -78,28 +69,13 @@ fn render_manual_history(model: &Model) -> crate::app::error::Result<()> {
             model.verbosity_level,
         );
         let rendered_text = renderer.render();
+        let paragraph = Paragraph::new(rendered_text).wrap(Wrap { trim: false });
+        let line_count = paragraph.line_count(window_cols) as u16;
 
-        // Convert the entire rendered text to colorized string first
-        let colorized_text = render_text_inline(&rendered_text);
-
-        // Wrap the colorized text and accumulate total lines
-        let wrapped_lines = wrapper.wrap_text(&colorized_text);
-        let total_wrapped_lines = wrapped_lines.len() as u16;
-
-        crossterm::execute!(io::stdout(), crossterm::cursor::MoveToColumn(0))?;
-
-        // Print each wrapped line (already colorized)
-        for wrapped_line in &wrapped_lines {
-            println!("{}", wrapped_line);
-        }
-
-        // Scroll up by the actual number of wrapped lines
-        crossterm::execute!(
-            io::stdout(),
-            crossterm::terminal::ScrollUp(total_wrapped_lines.min(TEXT_INPUT_HEIGHT))
-        )?;
+        terminal.insert_before(line_count, |buf| {
+            paragraph.render(buf.area, buf);
+        })?;
     }
-    print!("\n\n");
 
     Ok(())
 }
@@ -202,19 +178,19 @@ fn render_text_entry_screen(frame: &mut Frame) {
     let text_input_height = model.get().text_input_area.current_height();
     let status_bar_height = 1;
     let total_input_section_height = text_input_height + status_bar_height;
-    
+
     let spacer_height = match model.init().inline_mode() {
         true => &model.get().config.height - total_input_section_height,
         false => 0,
     };
-    
+
     // Create vertical layout for (optional) message log and input section
     let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(0),                              // (optional) Message log
-            Constraint::Length(spacer_height),               // (optional) Buffer space
-            Constraint::Length(total_input_section_height),  // Input area + status bar
+            Constraint::Min(0),                             // (optional) Message log
+            Constraint::Length(spacer_height),              // (optional) Buffer space
+            Constraint::Length(total_input_section_height), // Input area + status bar
         ])
         .split(content_area);
 

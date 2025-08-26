@@ -6,13 +6,9 @@
 //!    - scroll down welcome height rows
 //!    - Launch inline TUI
 //! 2. Render cycle:
-//!    - If manual output needed
-//!        - Clear TUI viewport
-//!        - Disable raw mode, move cursor UP outside TUI area
-//!        - Print messages to stdout (manually scroll terminal history per line)
-//!        - Move cursor back DOWN to TUI area, re-enable raw mode
+//!    - If outside-inline output needed, call view_history for terminal.insert_before
 //!    - Render TUI content in fixed viewport at bottom
-//! 3. Result: Manual content in scrollback history, TUI fixed at terminal bottom
+//! 3. Result: Message content in scrollback history, TUI fixed at terminal bottom
 //!
 //! The fullscreen viewport has none of these intricacies, because all message
 //! history scrolls within the message log.
@@ -26,16 +22,18 @@ use crate::{
         tea_model::{AppState, Model, ModelInit},
         tea_update::update,
         tea_view::{view, view_clear, view_manual},
-        terminal::{align_crossterm_output_to_bottom, init_terminal, restore_terminal},
+        terminal::{init_terminal, restore_terminal},
         ui_components::{
-            banner::create_welcome_text, render_text_inline, text_input::TEXT_INPUT_HEIGHT,
+            banner::{create_welcome_text, welcome_text_height},
+            text_input::TEXT_INPUT_HEIGHT,
         },
     },
     sdk::{extensions::events::EventStream, OpenCodeClient},
 };
 use crossterm::event;
 use eyre::WrapErr;
-use ratatui::{backend::CrosstermBackend, crossterm, Terminal};
+use ratatui::prelude::Widget;
+use ratatui::{backend::CrosstermBackend, crossterm, widgets::Paragraph, Terminal};
 use std::io::{self};
 use std::time::Duration;
 use tokio::time::interval;
@@ -51,12 +49,11 @@ impl Program {
     pub fn new() -> Result<Self> {
         let model = Model::new();
 
-        align_crossterm_output_to_bottom(&model)?;
-
-        // Print welcome message to stdout before entering TUI
         let welcome_text = create_welcome_text();
-        println!("{}", render_text_inline(&welcome_text));
-        let terminal = init_terminal(&model.init, model.config.height)?;
+        let mut terminal = init_terminal(&model.init, model.config.height)?;
+        terminal.insert_before(welcome_text_height().saturating_add(1), |buf| {
+            Paragraph::new(welcome_text).render(buf.area, buf)
+        });
 
         // Create async task manager
         let task_manager = AsyncTaskManager::new();
@@ -153,7 +150,7 @@ impl Program {
                 terminal.draw(|f| view_clear(f))?;
 
                 // Manually execute with crossterm
-                view_manual(&self.model)?;
+                view_manual(&self.model, terminal)?;
             }
         }
 
@@ -258,27 +255,53 @@ impl Program {
         match cmd {
             Cmd::TerminalRebootWithInline(inline_mode) => {
                 // Deconstruct the old terminal by taking ownership from the Option
+                if let Some(terminal) = self.terminal.as_mut() {
+                    terminal.try_draw(|f| {
+                        let pos = crossterm::cursor::position()?;
+                        tracing::debug!(
+                            "starting inline={} with cursor={:?}",
+                            self.model.init.inline_mode(),
+                            pos
+                        );
+                        Ok::<(), std::io::Error>(())
+                    });
+                }
                 let mut old_terminal = self.terminal.take();
 
                 if !inline_mode {
                     if let Some(terminal) = old_terminal.as_mut() {
                         // Clear the TUI when leaving inline mode, so it doesn't
                         // leave artifacts in the history
+                        tracing::debug!("clearing to switch from inline to altscreen");
                         terminal.draw(|f| view_clear(f))?;
                         // Move the cursor back to the top left of the TUI,
                         // so if we switch back and forth we don't offset
                         terminal
                             .draw(|f| f.set_cursor_position((f.area().left(), f.area().top())))?;
+
+                        terminal.try_draw(|f| {
+                            let pos = crossterm::cursor::position()?;
+                            tracing::debug!("cleared and now cursor={:?}", pos);
+                            Ok::<(), std::io::Error>(())
+                        });
                     }
                 };
 
                 // Restore the old terminal state before creating new one
-                if let Some(_) = old_terminal.take() {
+                if let Some(mut terminal) = old_terminal.take() {
                     restore_terminal(&self.model.init).wrap_err("Failed to restore terminal")?;
                 }
-
                 let new_init = ModelInit::new(inline_mode);
-                let terminal = init_terminal(&new_init, self.model.config.height)?;
+                let mut terminal = init_terminal(&new_init, self.model.config.height)?;
+                terminal.try_draw(|f| {
+                    let pos = crossterm::cursor::position()?;
+                    tracing::debug!(
+                        "finishing inline={} with cursor={:?}",
+                        new_init.inline_mode(),
+                        pos
+                    );
+                    Ok::<(), std::io::Error>(())
+                });
                 self.terminal = Some(terminal);
                 self.model.init = new_init;
             }

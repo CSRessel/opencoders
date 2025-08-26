@@ -20,14 +20,9 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             let old_state = model.state.clone();
             model.state = new_state.clone();
             if matches!(old_state, AppState::TextEntry) {
-                // TODO we need to crossterm scroll down height many lines
-                // when coming from inline mode first...
                 model.clear_input_state();
-                if model.init.inline_mode() {
-                    CmdOrBatch::Single(Cmd::TerminalScrollPastHeight)
-                } else {
-                    CmdOrBatch::Single(Cmd::None)
-                }
+                CmdOrBatch::Single(Cmd::None)
+                // }
             } else {
                 if matches!(model.state, AppState::TextEntry) {
                     // Auto-scroll to bottom when entering text entry mode
@@ -188,25 +183,11 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::TerminalResize(_width, _height) => {
-            // Enhanced to trigger autoresize for seamless viewport updates
-            if model.state == AppState::TextEntry {
-                CmdOrBatch::Batch(vec![Cmd::TerminalScrollPastHeight, Cmd::TerminalAutoResize])
-            } else {
-                CmdOrBatch::Single(Cmd::TerminalAutoResize)
-            }
-        }
+        Msg::TerminalResize(_width, _height) => CmdOrBatch::Single(Cmd::TerminalAutoResize),
 
         Msg::ChangeInlineHeight(new_height) => {
             if model.init.inline_mode() {
-                if model.state == AppState::TextEntry {
-                    CmdOrBatch::Batch(vec![
-                        Cmd::TerminalScrollPastHeight,
-                        Cmd::TerminalResizeInlineViewport(new_height),
-                    ])
-                } else {
-                    CmdOrBatch::Single(Cmd::TerminalResizeInlineViewport(new_height))
-                }
+                CmdOrBatch::Single(Cmd::TerminalResizeInlineViewport(new_height))
             } else {
                 CmdOrBatch::Single(Cmd::None) // No-op if not in inline mode
             }
@@ -221,11 +202,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         // Session selector messages
         Msg::LeaderShowSessionSelector => {
             model.clear_repeat_leader_timeout();
-            let prefix_cmd = match model.state {
-                AppState::TextEntry => Cmd::TerminalScrollPastHeight,
-                _ => Cmd::None,
-            };
-
             model.state = AppState::SelectSession;
             model
                 .session_selector
@@ -256,7 +232,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             if let Some(client) = model.client.clone() {
                 tracing::debug!("waiting for session load......");
                 CmdOrBatch::Batch(vec![
-                    prefix_cmd,
                     Cmd::AsyncLoadSessions(client.clone()),
                     Cmd::AsyncLoadModes(client),
                 ])
@@ -267,7 +242,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                     .handle_event(PopoverSelectorEvent::SetError(Some(
                         "No client connection".to_string(),
                     )));
-                CmdOrBatch::Single(prefix_cmd)
+                CmdOrBatch::Single(Cmd::None)
             }
         }
 

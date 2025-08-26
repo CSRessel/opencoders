@@ -2,15 +2,12 @@ use crate::{
     app::{
         event_msg::*,
         tea_model::*,
-        ui_components::{
-            text_input::handle_textarea_commands, CmdTextArea, Component, MsgTextArea,
-            PopoverSelectorEvent,
-        },
+        ui_components::{Component, MsgTextArea, PopoverSelectorEvent},
     },
     sdk::client::{generate_id, IdPrefix},
 };
 
-pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch {
+pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
     match msg {
         Msg::ChangeState(new_state) => {
             // If trying to enter TextEntry but session isn't ready, trigger session init
@@ -446,12 +443,49 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch {
 
         Msg::TextArea(submsg) => {
             // Handle component sub-messages using direct method call
-            let commands = model.text_input_area.handle_message(submsg);
-            handle_textarea_commands(model, commands)
+            let text_area_cmds = model.text_input_area.handle_message(submsg);
+            CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::RecordActiveTaskCount(count) => {
             model.active_task_count = count;
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::SubmitTextInput => {
+            let text = model.text_input_area.content();
+
+            // Handle text submission like the legacy SubmitInput logic
+            model.input_history.push(text.clone());
+            model.last_input = Some(text.clone());
+
+            // If we have a pending session, create it now with this message
+            if let SessionState::Pending(pending_info) = &model.session_state {
+                if let Some(client) = model.client.clone() {
+                    model.session_state = SessionState::Creating(pending_info.clone());
+                    model.pending_first_message = Some(text.clone());
+                    model.session_is_idle = false;
+                    return CmdOrBatch::Single(Cmd::AsyncCreateSessionWithMessage(client, text));
+                }
+            }
+
+            // If we have a ready session, send the message via API
+            if let (Some(client), Some(session)) = (model.client.clone(), model.session()) {
+                let session_id = session.id.clone();
+                let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
+                let message_id = generate_id(IdPrefix::Message);
+                model.session_is_idle = false;
+                return CmdOrBatch::Single(Cmd::AsyncSendUserMessage(
+                    client,
+                    session_id,
+                    message_id,
+                    text,
+                    provider_id,
+                    model_id,
+                    mode,
+                ));
+            }
+
             CmdOrBatch::Single(Cmd::None)
         }
     }

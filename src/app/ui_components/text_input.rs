@@ -1,4 +1,4 @@
-use crate::app::event_msg::{Cmd, CmdOrBatch};
+use crate::app::event_msg::{Cmd, CmdOrBatch, Msg};
 use crate::app::tea_model::{Model, RepeatShortcutKey, SessionState, INLINE_HEIGHT};
 use crate::app::ui_components::{Block, Component, Paragraph};
 use crate::app::view_model_context::ViewModelContext;
@@ -23,15 +23,14 @@ pub enum MsgTextArea {
     KeyInput(KeyEvent),
     SetFocus(bool),
     Clear,
-    Submit,
 }
 
-#[derive(Debug, Clone)]
-pub enum CmdTextArea {
-    Submit(String),
-    HeightChanged(u16),
-    FocusChanged(bool),
-}
+// #[derive(Debug, Clone, PartialEq)]
+// pub enum CmdTextArea {
+//     FocusChanged(bool),
+//     Clear,
+//     None,
+// }
 
 #[derive(Debug, Clone)]
 pub struct TextInputArea {
@@ -54,57 +53,6 @@ pub struct InputResult {
 pub const TEXT_INPUT_HEIGHT: u16 = 4;
 pub const TEXT_INPUT_AREA_MIN_HEIGHT: u16 = 3; // minimum: border + content + border
 pub const TEXT_INPUT_AREA_MAX_HEIGHT: u16 = INLINE_HEIGHT - 2; // configurable maximum
-
-// Helper function to convert CmdTextArea to main Cmd
-pub fn handle_textarea_commands(model: &mut Model, commands: Vec<CmdTextArea>) -> CmdOrBatch {
-    let mut main_commands = vec![];
-
-    for command in commands {
-        match command {
-            CmdTextArea::Submit(text) => {
-                // Handle text submission like the legacy SubmitInput logic
-                model.input_history.push(text.clone());
-                model.last_input = Some(text.clone());
-
-                // If we have a pending session, create it now with this message
-                if let SessionState::Pending(pending_info) = &model.session_state {
-                    if let Some(client) = model.client.clone() {
-                        model.session_state = SessionState::Creating(pending_info.clone());
-                        model.pending_first_message = Some(text.clone());
-                        model.session_is_idle = false;
-                        main_commands.push(Cmd::AsyncCreateSessionWithMessage(client, text));
-                        continue;
-                    }
-                }
-
-                // If we have a ready session, send the message via API
-                if let (Some(client), Some(session)) = (model.client.clone(), model.session()) {
-                    let session_id = session.id.clone();
-                    let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
-                    let message_id = generate_id(IdPrefix::Message);
-                    model.session_is_idle = false;
-                    main_commands.push(Cmd::AsyncSendUserMessage(
-                        client,
-                        session_id,
-                        message_id,
-                        text,
-                        provider_id,
-                        model_id,
-                        mode,
-                    ));
-                }
-            }
-            CmdTextArea::HeightChanged(_height) => {
-                // Handle height change if needed - currently no action required
-            }
-            CmdTextArea::FocusChanged(_focused) => {
-                // Handle focus change if needed - currently no action required
-            }
-        }
-    }
-
-    CmdOrBatch::Batch(main_commands)
-}
 
 // E.g.:
 // ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -167,58 +115,431 @@ impl TextInputArea {
         self.current_height
     }
 
-    pub fn handle_input(&mut self, event: Event) -> InputResult {
-        // self.textarea
-        //     .input(TextArea::input(&mut self.textarea, event));
-
+    pub fn handle_input(&mut self, key_event: KeyEvent) -> InputResult {
         let old_height = self.current_height;
 
-        // Filter out Enter/newline input to maintain single-line behavior for now
-        let filtered_input = match event {
-            Event::Key(key_event) => match key_event.code {
-                KeyCode::Enter => {
-                    if !self.is_empty() {
-                        let submitted_text = self.content();
-                        self.clear();
-                        return InputResult {
-                            submitted_text: Some(submitted_text),
-                            height_changed: self.current_height != old_height,
-                            new_height: self.current_height,
-                        };
-                    } else {
-                        return InputResult {
-                            submitted_text: None,
-                            height_changed: false,
-                            new_height: self.current_height,
-                        };
-                    }
+        // Filter out most newline input, except shift+enter
+        let filtered_input = match (
+            key_event.code,
+            key_event.modifiers.contains(KeyModifiers::CONTROL),
+            key_event.modifiers.contains(KeyModifiers::ALT),
+            key_event.modifiers.contains(KeyModifiers::SHIFT),
+        ) {
+            (KeyCode::Enter, _, _, true) => {
+                let new_height = self
+                    .current_height
+                    .saturating_add(1)
+                    .min(TEXT_INPUT_AREA_MAX_HEIGHT);
+                self.textarea.insert_newline();
+                return InputResult {
+                    submitted_text: None,
+                    height_changed: new_height != self.current_height,
+                    new_height: new_height,
+                };
+            }
+            (KeyCode::Enter, _, _, false) => {
+                if !self.is_empty() {
+                    let submitted_text = self.content();
+                    self.clear();
+                    return InputResult {
+                        submitted_text: Some(submitted_text),
+                        height_changed: self.current_height != old_height,
+                        new_height: self.current_height,
+                    };
+                } else {
+                    return InputResult {
+                        submitted_text: None,
+                        height_changed: false,
+                        new_height: self.current_height,
+                    };
                 }
-                _ => Input::from(Event::Key(key_event)),
-            },
-            // Input {
-            //     key: Key::Char('m'),
-            //     ctrl: true,
-            //     ..
-            // } => {
-            //     // Disable Ctrl+M (alternative Enter) to prevent newlines
-            //     return InputResult {
-            //         submitted_text: None,
-            //         height_changed: false,
-            //         new_height: self.current_height,
-            //     };
-            // }
-            // Event::Key(key_event) => Input {
-            //     key: key_event.code.key........,
-            //     alt: false,
-            //     ctrl: false,
-            //     shift: false,
-            // },
-            other => Input::from(other),
+            }
+            _ => Input::from(Event::Key(key_event)),
         };
+        // Disable alternative enter shorcuts
+        // Input {
+        //     key: Key::Char('m'),
+        //     ctrl: true,
+        //     ..
+        // }
+        // | Input {
+        //     key: Key::Char('\n' | '\r'),
+        //     ctrl: false,
+        //     alt: false,
+        //     ..
+        // } => {
+        //     return InputResult {
+        //         submitted_text: None,
+        //         height_changed: false,
+        //         new_height: self.current_height,
+        //     };
+        // }
+        //
+        // And disable basically anything we don't need rn:
+        // Input {
+        //     key: Key::Tab,
+        //     ctrl: false,
+        //     alt: false,
+        //     ..
+        // }
+        // | Input {
+        //     key: Key::Char('h'),
+        //     ctrl: true,
+        //     alt: false,
+        //     ..
+        // } => {
+        //     return InputResult {
+        //         submitted_text: None,
+        //         height_changed: false,
+        //         new_height: self.current_height,
+        //     }
+        // }
+        // Input {
+        //     key: Key::Delete,
+        //     ctrl: false,
+        //     alt: true,
+        //     ..
+        // }
+        // | Input {
+        //     key: Key::Char('d'),
+        //     ctrl: false,
+        //     alt: true,
+        //     ..
+        // } => self.delete_next_word(),
+        // Input {
+        //     key: Key::Char('n'),
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // }
+        //
+        // Input {
+        //     key: Key::Char('p'),
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // }
+        //
+        // But probably want:
+        // Input {
+        //     key: Key::Backspace,
+        //     ctrl: true,
+        //     alt: false,
+        //     ..
+        // } => {
+        //     self.delete_word();
+        //     return InputResult {
+        //         submitted_text: None,
+        //         height_changed: false,
+        //         new_height: self.current_height,
+        //     };
+        // }
+        // Input {
+        //     key: Key::Down,
+        //     ctrl: false,
+        //     alt: false,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::Down, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Up,
+        //     ctrl: false,
+        //     alt: false,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::Up, shift);
+        //     false
+        // }
+        //
+        // Don't want
+        // Input {
+        //     key: Key::Char('f'),
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Right,
+        //     ctrl: false,
+        //     alt: false,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::Forward, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('b'),
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Left,
+        //     ctrl: false,
+        //     alt: false,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::Back, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('a'),
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // }
+        //
+        // Probably want, at lease some of:
+        // | Input {
+        //     key: Key::Home,
+        //     shift,
+        //     ..
+        // }
+        // | Input {
+        //     key: Key::Left | Key::Char('b'),
+        //     ctrl: true,
+        //     alt: true,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::Head, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('e'),
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::End,
+        //     shift,
+        //     ..
+        // }
+        // | Input {
+        //     key: Key::Right | Key::Char('f'),
+        //     ctrl: true,
+        //     alt: true,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::End, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('<'),
+        //     ctrl: false,
+        //     alt: true,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Up | Key::Char('p'),
+        //     ctrl: true,
+        //     alt: true,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::Top, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('>'),
+        //     ctrl: false,
+        //     alt: true,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Down | Key::Char('n'),
+        //     ctrl: true,
+        //     alt: true,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::Bottom, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('f'),
+        //     ctrl: false,
+        //     alt: true,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Right,
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::WordForward, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('b'),
+        //     ctrl: false,
+        //     alt: true,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Left,
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::WordBack, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char(']'),
+        //     ctrl: false,
+        //     alt: true,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Char('n'),
+        //     ctrl: false,
+        //     alt: true,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Down,
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::ParagraphForward, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('['),
+        //     ctrl: false,
+        //     alt: true,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Char('p'),
+        //     ctrl: false,
+        //     alt: true,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::Up,
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::ParagraphBack, shift);
+        //     false
+        // }
+        //
+        // Need to replace somewhat:
+        // Input {
+        //     key: Key::Char('u'),
+        //     ctrl: true,
+        //     alt: false,
+        //     ..
+        // } => self.undo(),
+        // Input {
+        //     key: Key::Char('r'),
+        //     ctrl: true,
+        //     alt: false,
+        //     ..
+        // } => self.redo(),
+        // Input {
+        //     key: Key::Char('y'),
+        //     ctrl: true,
+        //     alt: false,
+        //     ..
+        // }
+        // | Input {
+        //     key: Key::Paste, ..
+        // } => self.paste(),
+        // Input {
+        //     key: Key::Char('x'),
+        //     ctrl: true,
+        //     alt: false,
+        //     ..
+        // }
+        // | Input { key: Key::Cut, .. } => self.cut(),
+        // Input {
+        //     key: Key::Char('c'),
+        //     ctrl: true,
+        //     alt: false,
+        //     ..
+        // }
+        // | Input { key: Key::Copy, .. } => {
+        //     self.copy();
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('v'),
+        //     ctrl: true,
+        //     alt: false,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::PageDown,
+        //     shift,
+        //     ..
+        // } => {
+        //     self.scroll_with_shift(Scrolling::PageDown, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::Char('v'),
+        //     ctrl: false,
+        //     alt: true,
+        //     shift,
+        // }
+        // | Input {
+        //     key: Key::PageUp,
+        //     shift,
+        //     ..
+        // } => {
+        //     self.scroll_with_shift(Scrolling::PageUp, shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::MouseScrollDown,
+        //     shift,
+        //     ..
+        // } => {
+        //     self.scroll_with_shift((1, 0).into(), shift);
+        //     false
+        // }
+        // Input {
+        //     key: Key::MouseScrollUp,
+        //     shift,
+        //     ..
+        // } => {
+        //     self.scroll_with_shift((-1, 0).into(), shift);
+        //     false
+        // }
+        // _ => false,
+
+        // TO SUPPORT:
+        // Input {
+        //     key: Key::Backspace,
+        //     ctrl: true,
+        //     alt: false,
+        //     ..
+        // } => {
+        //     self.delete_word();
+        //     return InputResult {
+        //         submitted_text: None,
+        //         height_changed: false,
+        //         new_height: self.current_height,
+        //     };
+        // }
+        // Input {
+        //     key: Key::Down,
+        //     ctrl: false,
+        //     alt: false,
+        //     shift,
+        // } => {
+        //     self.move_cursor_with_shift(CursorMove::Down, shift);
+        //     false
+        // }
 
         // Process the input through textarea
         self.textarea.input(filtered_input);
-
         // Recalculate height
         self.current_height = self.calculate_required_height();
 
@@ -232,61 +553,20 @@ impl TextInputArea {
 
 // Component trait implementation for TextInputArea
 impl TextInputArea {
-    pub fn handle_message(&mut self, msg: MsgTextArea) -> Vec<CmdTextArea> {
-        match msg {
+    pub fn handle_message(&mut self, msg: MsgTextArea) {
+        return match msg {
             MsgTextArea::KeyInput(key_event) => {
-                let event = Event::Key(key_event);
-                let old_height = self.current_height;
-
-                // Process the input similar to handle_input
-                let filtered_input = match key_event.code {
-                    KeyCode::Enter => {
-                        if !self.is_empty() {
-                            let submitted_text = self.content();
-                            self.clear();
-                            return vec![CmdTextArea::Submit(submitted_text)];
-                        } else {
-                            return vec![];
-                        }
-                    }
-                    _ => Input::from(event),
-                };
-
-                // Process the input through textarea
-                self.textarea.input(filtered_input);
-
-                // Recalculate height
-                self.current_height = self.calculate_required_height();
-
-                // Return commands for any changes
-                let mut commands = vec![];
-                if self.current_height != old_height {
-                    // commands.push(CmdTextArea::HeightChanged(self.current_height));
-                }
-                commands
+                self.handle_input(key_event);
             }
             MsgTextArea::SetFocus(focused) => {
                 if self.is_focused != focused {
                     self.set_focus(focused);
-                    vec![]
-                } else {
-                    vec![]
                 }
             }
             MsgTextArea::Clear => {
                 self.clear();
-                vec![]
             }
-            MsgTextArea::Submit => {
-                if !self.is_empty() {
-                    let submitted_text = self.content();
-                    self.clear();
-                    vec![CmdTextArea::Submit(submitted_text)]
-                } else {
-                    vec![]
-                }
-            }
-        }
+        };
     }
 }
 

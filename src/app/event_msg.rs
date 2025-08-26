@@ -15,6 +15,7 @@ pub enum Msg {
     ScrollMessageLog(i16),
     ScrollMessageLogHorizontal(i16),
     ValidateScrollPosition(u16, u16), // viewport_height, viewport_width
+    SubmitTextInput,
 
     // Client initialization messages
     InitializeClient,
@@ -120,9 +121,9 @@ pub enum Cmd {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum CmdOrBatch {
-    Single(Cmd),
-    Batch(Vec<Cmd>),
+pub enum CmdOrBatch<T> {
+    Single(T),
+    Batch(Vec<T>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

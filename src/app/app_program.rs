@@ -218,7 +218,7 @@ impl Program {
         }
     }
 
-    async fn spawn_commands(&mut self, cmds: CmdOrBatch) -> Result<()> {
+    async fn spawn_commands(&mut self, cmds: CmdOrBatch<Cmd>) -> Result<()> {
         match cmds {
             CmdOrBatch::Single(cmd) => {
                 self.spawn_command(cmd).await?;

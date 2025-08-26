@@ -16,7 +16,9 @@ pub use message_part::{MessageContext, MessagePart, MessageRenderer};
 pub use paragraph::Paragraph;
 pub use popover_selector::{PopoverSelector, PopoverSelectorEvent};
 pub use status_bar::StatusBar;
-pub use text_input::{CmdTextArea, InputResult, MsgTextArea, TextInputArea};
+pub use text_input::{InputResult, MsgTextArea, TextInputArea};
+
+use crate::app::event_msg::CmdOrBatch;
 
 /// Component trait for modular ELM architecture
 ///
@@ -24,7 +26,7 @@ pub use text_input::{CmdTextArea, InputResult, MsgTextArea, TextInputArea};
 /// commands that get translated to main application messages.
 pub trait Component<State, SubMsg, SubCmd> {
     /// Handle a sub-message and update component state
-    fn update(&mut self, msg: SubMsg, state: &State) -> Vec<SubCmd>;
+    fn update(&mut self, msg: SubMsg, state: &State) -> CmdOrBatch<SubCmd>;
 
     /// Get focus state for rendering
     fn is_focused(&self) -> bool;

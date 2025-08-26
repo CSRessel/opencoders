@@ -112,3 +112,4 @@ impl Widget for &StatusBar {
         mode_paragraph.render(chunks[3], buf);
     }
 }
+

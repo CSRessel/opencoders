@@ -121,23 +121,23 @@ impl TextInputArea {
         // Filter out most newline input, except shift+enter
         let filtered_input = match (
             key_event.code,
-            key_event.modifiers.contains(KeyModifiers::CONTROL),
-            key_event.modifiers.contains(KeyModifiers::ALT),
             key_event.modifiers.contains(KeyModifiers::SHIFT),
         ) {
-            (KeyCode::Enter, _, _, true) => {
+            (KeyCode::Enter, true) => {
                 let new_height = self
                     .current_height
                     .saturating_add(1)
                     .min(TEXT_INPUT_AREA_MAX_HEIGHT);
+                self.current_height = new_height;
                 self.textarea.insert_newline();
                 return InputResult {
                     submitted_text: None,
-                    height_changed: new_height != self.current_height,
-                    new_height: new_height,
+                    height_changed: self.current_height != old_height,
+                    new_height: self.current_height,
                 };
             }
-            (KeyCode::Enter, _, _, false) => {
+            (KeyCode::Enter, false) => {
+                // Should be handled before the event ever hits here
                 if !self.is_empty() {
                     let submitted_text = self.content();
                     self.clear();

@@ -465,6 +465,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                     model.session_state = SessionState::Creating(pending_info.clone());
                     model.pending_first_message = Some(text.clone());
                     model.session_is_idle = false;
+                    model.text_input_area.clear();
                     return CmdOrBatch::Single(Cmd::AsyncCreateSessionWithMessage(client, text));
                 }
             }
@@ -475,6 +476,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                 let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
                 let message_id = generate_id(IdPrefix::Message);
                 model.session_is_idle = false;
+                model.text_input_area.clear();
                 return CmdOrBatch::Single(Cmd::AsyncSendUserMessage(
                     client,
                     session_id,

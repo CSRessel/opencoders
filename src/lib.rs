@@ -5,6 +5,7 @@
 
 pub mod app;
 pub mod sdk;
+pub mod storybook;
 
 // Re-export commonly used types for convenience
 pub use sdk::{OpenCodeClient, OpenCodeError, Result};

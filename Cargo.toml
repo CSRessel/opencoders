@@ -34,5 +34,9 @@ dirs = "5.0"
 tempfile = "3.0"
 tokio-test = "0.4"
 
+[[bin]]
+name = "storybook"
+path = "src/bin/storybook.rs"
+
 [lints.rust]
 #dead_code = "allow" # Temporary during development

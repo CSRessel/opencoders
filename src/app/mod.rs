@@ -2,18 +2,18 @@
 
 mod app_program;
 pub mod error;
-mod event_async_task_manager;
-mod event_msg;
-mod event_sync_subscriptions;
+pub mod event_async_task_manager;
+pub mod event_msg;
+pub mod event_sync_subscriptions;
 pub mod logger;
-mod message_state;
-mod tea_model;
-mod tea_update;
-mod tea_view;
-mod terminal;
-mod text_wrapper;
+pub mod message_state;
+pub mod tea_model;
+pub mod tea_update;
+pub mod tea_view;
+pub mod terminal;
+pub mod text_wrapper;
 pub mod ui_components;
-mod view_model_context;
+pub mod view_model_context;
 
 pub use app_program::Program;
 pub use error::Result;

@@ -32,12 +32,13 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 > - [x] ~~fix live message loading~~
 > - [ ] dynamic text input box (text wrapping, vertical resizing, scrolling overflow, shortcut navigation)
 > - [ ] unify "new session" and "welcome" pages to one state
+> - [ ] basic input dropdown for files
 >
 > **Minimum Releasable**
 > - [ ] fix inline mode walking down the page
 > - [ ] cleanup message/part/tool styling and colorization
+> - [ ] more input dropdowns (need slash commands: help, new, sessions, compact)
 > - [ ] better status bar styling (colors, proper context, row items overflow to stacked)
-> - [ ] basic input dropdowns (need files, and need slash commands: help, new, sessions, compact)
 > - [ ] basic env for non-interactive TTY execution with synthetic input for
 >   "golden tests" and for perf testing
 > - [ ] setup some basic perf tests with either divan or criterion
@@ -48,30 +49,28 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 > - prettier printing
 >     1. diff pager
 >     1. markdown highlighting
->     1. checklist shape
+>     1. ~~checklist shape~~
 >     1. shell highlighting
 >     1. prettier tool call boxes
 >     1. thinking tokens
 >     1. file tree
+>     1. UI token usage in status
 > - config handling (flags and rc)
 >     1. inline vs alt screen
 >     1. model selection
+>     1. support for server specified storage
 > - CI/CD
 >     1. full unit test suite
 >     1. e2e test with local model
 >     1. error handling and recovery
 >     1. cargo deployment via git repo
-> 
-> **Nice-to-have:**
-> - ~~multi-session~~
-> - cmd permissions
-> - theming
-> - UI token usage
-> - UI @ file finder
-> - UI model select
-> - UI slash commands
-> - UI modal toggle (PLAN vs. BUILD vs. DEBUG)
-> - nvim hook-in
+> - other features
+>     1. ~~multi-session~~
+>     1. cmd permissions
+>     1. theming
+>     1. UI model select
+>     1. UI slash commands
+>     1. ~~UI modal toggle (PLAN vs. BUILD vs. DEBUG)~~
 
 ## Quick Start
 

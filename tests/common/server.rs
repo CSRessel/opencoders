@@ -24,6 +24,23 @@ impl TestServer {
     pub async fn start_with_config(config: TestConfig) -> Result<Self> {
         // Create a temporary directory for the test
         let temp_dir = tempfile::tempdir().wrap_err("Failed to create temporary directory")?;
+        
+        // Create a main.rs file with dummy code in the temp directory
+        let main_rs_path = temp_dir.path().join("main.rs");
+        let main_rs_content = r#"fn main() {
+    println!("Hello from test server!");
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn dummy_test() {
+        assert_eq!(2 + 2, 4);
+    }
+}
+"#;
+        std::fs::write(&main_rs_path, main_rs_content)
+            .wrap_err("Failed to create main.rs in temp directory")?;
 
         // Find an available port
         let port = find_available_port()

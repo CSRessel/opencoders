@@ -36,6 +36,8 @@ tracing-appender = "0.2.3"
 dirs = "5.0"
 
 [dev-dependencies]
+pty = "0.2.2"
+rexpect = "0.6.2"
 tempfile = "3.0"
 tokio-test = "0.4"
 

@@ -1,3 +1,4 @@
+pub mod automation;
 pub mod mock_model;
 pub mod stories;
 

@@ -16,7 +16,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
 };
-use std::io;
+use std::{io, time::Duration};
 
 fn main() -> Result<()> {
     let init = ModelInit::new(true);
@@ -49,12 +49,18 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
 }
 
 fn handle_events() -> Result<bool> {
-    if let Event::Key(key) = event::read()? {
-        if key.kind == KeyEventKind::Press {
-            return Ok(true); // Any key press exits
+    // Use poll with timeout to enable exit after 1 seconds
+    if event::poll(Duration::from_secs(1))? {
+        if let Event::Key(key) = event::read()? {
+            if key.kind == KeyEventKind::Press {
+                return Ok(true); // Any key press exits successfully
+            }
         }
+        Ok(false)
+    } else {
+        // Timeout reached - exit with error code
+        std::process::exit(1);
     }
-    Ok(false)
 }
 
 fn render_storybook(frame: &mut Frame, story: &mut TextInputStory, variants: &[StoryVariant]) {

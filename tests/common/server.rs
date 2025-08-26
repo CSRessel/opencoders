@@ -42,6 +42,14 @@ mod tests {
         std::fs::write(&main_rs_path, main_rs_content)
             .wrap_err("Failed to create main.rs in temp directory")?;
 
+        // Initialize git repository in temp directory
+        Command::new("git")
+            .args(&["init"])
+            .current_dir(temp_dir.path())
+            .output()
+            .await
+            .wrap_err("Failed to initialize git repository in temp directory")?;
+
         // Find an available port
         let port = find_available_port()
             .await

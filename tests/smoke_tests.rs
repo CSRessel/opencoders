@@ -161,11 +161,11 @@ async fn smoke_test_concurrent_requests() {
 
     // Wait for all tasks to complete
     let result1 = task1.await.expect("Task should complete");
-    assert!(result1.is_ok(), "Concurrent request 1 should succeed");
+    let _app = assert_api_success!(result1, "concurrent request 1");
     println!("✓ Concurrent request 1 completed successfully");
 
     let result2 = task2.await.expect("Task should complete");
-    assert!(result2.is_ok(), "Concurrent request 2 should succeed");
+    let _config = assert_api_success!(result2, "concurrent request 2");
     println!("✓ Concurrent request 2 completed successfully");
 
     server.shutdown().await.expect("Failed to shutdown server");

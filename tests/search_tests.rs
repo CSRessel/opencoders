@@ -5,7 +5,7 @@
 
 mod common;
 
-use common::{assert_api_success, TestServer};
+use common::{assert_api_success, assert_error_not_empty, TestServer};
 use opencoders::sdk::OpenCodeClient;
 
 #[tokio::test]
@@ -45,10 +45,7 @@ async fn smoke_test_find_files() {
                     description, e
                 );
                 // Ensure error is properly structured
-                assert!(
-                    !format!("{}", e).is_empty(),
-                    "Error message should not be empty"
-                );
+                assert_error_not_empty(&e, "file search error");
             }
         }
     }
@@ -95,10 +92,7 @@ async fn smoke_test_find_text() {
                     description, e
                 );
                 // Ensure error is properly structured
-                assert!(
-                    !format!("{}", e).is_empty(),
-                    "Error message should not be empty"
-                );
+                assert_error_not_empty(&e, "text search error");
             }
         }
     }
@@ -144,10 +138,7 @@ async fn smoke_test_find_symbols() {
                     description, e
                 );
                 // Ensure error is properly structured
-                assert!(
-                    !format!("{}", e).is_empty(),
-                    "Error message should not be empty"
-                );
+                assert_error_not_empty(&e, "symbol search error");
             }
         }
     }

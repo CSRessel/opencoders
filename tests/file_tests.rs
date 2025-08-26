@@ -5,7 +5,7 @@
 
 mod common;
 
-use common::{assert_api_success, TestServer};
+use common::{assert_api_success, assert_error_not_empty, TestServer};
 use opencoders::sdk::OpenCodeClient;
 
 #[tokio::test]
@@ -44,8 +44,8 @@ async fn smoke_test_read_existing_file() {
     let client = OpenCodeClient::new(server.base_url());
 
     // Create a test file in the server's working directory
-    let test_content = "Hello, OpenCode SDK test!";
-    let test_file_path = "test_file.txt";
+    let _test_content = "Hello, OpenCode SDK test!";
+    let _test_file_path = "test_file.txt";
 
     // We need to create the file in the server's temp directory
     // For now, let's test reading a file that should exist (like Cargo.toml from the project root)
@@ -140,10 +140,7 @@ async fn smoke_test_file_error_handling() {
             Err(e) => {
                 println!("✓ {} failed as expected: {}", description, e);
                 // Verify the error is properly structured
-                assert!(
-                    !format!("{}", e).is_empty(),
-                    "Error message should not be empty"
-                );
+                assert_error_not_empty(&e, "file operation error");
             }
         }
     }
@@ -215,11 +212,7 @@ async fn smoke_test_concurrent_file_operations() {
     // Wait for all tasks to complete
     for task in tasks {
         let (task_id, result) = task.await.expect("Task should complete");
-        assert!(
-            result.is_ok(),
-            "Concurrent file status request {} should succeed",
-            task_id
-        );
+        let _files = assert_api_success!(result, &format!("concurrent file status request {}", task_id));
         println!(
             "✓ Concurrent file status request {} completed successfully",
             task_id

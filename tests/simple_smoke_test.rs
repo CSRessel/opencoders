@@ -4,7 +4,7 @@
 
 mod common;
 
-use common::TestServer;
+use common::{TestServer, assert_string_not_empty};
 use reqwest::Client;
 use serde_json::Value;
 
@@ -89,6 +89,9 @@ async fn test_json_response_format() {
         // Basic validation - should have version field
         if let Some(version) = json.get("version") {
             assert!(version.is_string(), "Version should be a string");
+            if let Some(version_str) = version.as_str() {
+                assert_string_not_empty(version_str, "version field");
+            }
             println!("✓ Found version: {}", version);
         }
     } else {

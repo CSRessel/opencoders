@@ -84,5 +84,14 @@ where
     }
 }
 
+/// Assert that an error message is not empty
+pub fn assert_error_not_empty<E>(error: &E, context: &str)
+where
+    E: std::fmt::Display,
+{
+    let error_string = format!("{}", error);
+    assert!(!error_string.is_empty(), "Error message in {} should not be empty", context);
+}
+
 // Tests temporarily removed due to SDK generation issues
 

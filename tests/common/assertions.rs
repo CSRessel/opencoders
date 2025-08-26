@@ -1,7 +1,5 @@
 //! Custom assertion helpers for smoke tests
 
-// Temporarily removed SDK dependency due to generation issues
-
 /// Assert that an API call succeeds, providing detailed error information on failure
 macro_rules! assert_api_success {
     ($result:expr, $context:expr) => {
@@ -30,12 +28,19 @@ macro_rules! assert_api_error {
     ($result:expr, $expected_error:pat, $context:expr) => {
         match $result {
             Ok(value) => {
-                panic!("Expected error in {} but got success: {:?}", $context, value);
+                panic!(
+                    "Expected error in {} but got success: {:?}",
+                    $context, value
+                );
             }
             Err(e) => {
                 if !matches!(e, $expected_error) {
-                    panic!("Expected error pattern {} in {} but got: {:?}", 
-                           stringify!($expected_error), $context, e);
+                    panic!(
+                        "Expected error pattern {} in {} but got: {:?}",
+                        stringify!($expected_error),
+                        $context,
+                        e
+                    );
                 }
             }
         }
@@ -43,10 +48,8 @@ macro_rules! assert_api_error {
 }
 
 // Export the macros
-pub(crate) use assert_api_success;
 pub(crate) use assert_api_error;
-
-
+pub(crate) use assert_api_success;
 
 /// Assert that a collection is not empty
 pub fn assert_not_empty<T>(collection: &[T], context: &str) {
@@ -65,7 +68,10 @@ pub fn assert_some<T>(option: &Option<T>, context: &str) {
 
 /// Helper to check if a server response looks reasonable
 /// Temporarily simplified due to SDK generation issues
-pub fn validate_basic_response_structure<T, E>(result: &std::result::Result<T, E>, operation: &str) -> bool
+pub fn validate_basic_response_structure<T, E>(
+    result: &std::result::Result<T, E>,
+    operation: &str,
+) -> bool
 where
     E: std::fmt::Display,
 {
@@ -79,3 +85,4 @@ where
 }
 
 // Tests temporarily removed due to SDK generation issues
+

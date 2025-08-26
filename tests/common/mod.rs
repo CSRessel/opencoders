@@ -26,7 +26,7 @@ impl Default for TestConfig {
 }
 
 /// Find an available port for testing
-pub async fn find_available_port() -> anyhow::Result<u16> {
+pub async fn find_available_port() -> eyre::Result<u16> {
     use tokio::net::TcpListener;
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let port = listener.local_addr()?.port();
@@ -34,7 +34,7 @@ pub async fn find_available_port() -> anyhow::Result<u16> {
 }
 
 /// Wait for a server to be ready by polling its health endpoint
-pub async fn wait_for_server_ready(port: u16, timeout: Duration) -> anyhow::Result<()> {
+pub async fn wait_for_server_ready(port: u16, timeout: Duration) -> eyre::Result<()> {
     use tokio::time::{timeout as tokio_timeout, sleep};
     
     let client = reqwest::Client::new();
@@ -54,7 +54,7 @@ pub async fn wait_for_server_ready(port: u16, timeout: Duration) -> anyhow::Resu
                 }
             }
         }
-    }).await.map_err(|_| anyhow::anyhow!("Timeout waiting for server to be ready"))?;
+    }).await.map_err(|_| eyre::eyre!("Timeout waiting for server to be ready"))?;
     
     Ok(())
 }

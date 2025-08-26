@@ -1,7 +1,7 @@
 //! Test server management for smoke tests
 
 use crate::common::{find_available_port, wait_for_server_ready, TestConfig};
-use anyhow::{Context, Result};
+use eyre::{Result, WrapErr};
 use std::process::Stdio;
 use tempfile::TempDir;
 use tokio::process::{Child, Command};
@@ -23,12 +23,12 @@ impl TestServer {
     /// Start a new test server instance with custom configuration
     pub async fn start_with_config(config: TestConfig) -> Result<Self> {
         // Create a temporary directory for the test
-        let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
+        let temp_dir = tempfile::tempdir().wrap_err("Failed to create temporary directory")?;
 
         // Find an available port
         let port = find_available_port()
             .await
-            .context("Failed to find available port")?;
+            .wrap_err("Failed to find available port")?;
         // let port = 8080;
 
         println!(
@@ -48,7 +48,7 @@ impl TestServer {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .context("Failed to start opencode server. Make sure 'opencode' is installed and available in PATH")?;
+            .wrap_err("Failed to start opencode server. Make sure 'opencode' is installed and available in PATH")?;
 
         let base_url = format!("http://127.0.0.1:{}", port);
 
@@ -66,7 +66,7 @@ impl TestServer {
             Err(e) => {
                 // Kill the process if server failed to start
                 let _ = process.kill().await;
-                Err(e).context("Server failed to start within timeout")
+                Err(e).wrap_err("Server failed to start within timeout")
             }
         }
     }

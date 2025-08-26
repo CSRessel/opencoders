@@ -2,6 +2,11 @@
 name = "opencoders"
 version = "0.1.0"
 edition = "2021"
+default-run = "opencoders"
+
+[[bin]]
+name = "opencoders"
+path = "src/main.rs"
 
 [dependencies]
 # OpenAPI server

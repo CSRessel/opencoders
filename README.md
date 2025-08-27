@@ -25,22 +25,21 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 > - [x] ~~fix the scroll flickering~~
 > - [x] ~~fix how the session list opens in text entry mode~~
 > - [x] `54e4ea6` ~~get one single patch (like `2545ad267044`) that fixes tagging~~
-> - [x] ~~fix error handling and recovery, tracing, logging, and add color eyre
->   and remove anyhow/thiserror~~
+> - [x] ~~fix error handling and recovery, tracing, logging, and add color eyre and remove anyhow/thiserror~~
 > - [x] ~~add owo colors for stdout messages~~
 > - [x] ~~status bar working only when busy~~
 > - [x] ~~fix live message loading~~
-> - [ ] dynamic text input box (text wrapping, vertical resizing, scrolling overflow, shortcut navigation)
-> - [ ] unify "new session" and "welcome" pages to one state
+> - [x] ~~dynamic text input box (text wrapping, vertical resizing, shortcut navigation)~~
+> - [x] ~~unify "new session" and "welcome" pages to one state~~
 > - [ ] basic input dropdown for files
 >
 > **Minimum Releasable**
-> - [ ] fix inline mode walking down the page
+> - [x] ~~fix inline mode walking down the page~~
 > - [ ] cleanup message/part/tool styling and colorization
+> - [ ] support multi-line textarea (shift+enter newlines, expanding height, scroll overflow)
 > - [ ] more input dropdowns (need slash commands: help, new, sessions, compact)
-> - [ ] better status bar styling (colors, proper context, row items overflow to stacked)
-> - [ ] basic env for non-interactive TTY execution with synthetic input for
->   "golden tests" and for perf testing
+> - [ ] better status bar styling (fix mode state for /agent, better colors, proper tokens/context, row items overflow to stacked)
+> - [ ] basic env for non-interactive TTY execution with synthetic input for "golden tests" and for perf testing
 > - [ ] setup some basic perf tests with either divan or criterion
 > - [ ] prettify README, cleanup distribution steps, improve opencode dependency
 > - [ ] cleanup CI, add precommit, and use Actions for build/release/etc

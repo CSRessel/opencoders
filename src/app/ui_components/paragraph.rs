@@ -47,6 +47,10 @@ impl<'a> Paragraph<'a> {
         self
     }
 
+    pub fn line_count(self, width: u16) -> usize {
+        self.inner.line_count(width)
+    }
+
     // Convert to the inner ratatui Paragraph for rendering
     pub fn into_inner(self) -> RatatuiParagraph<'a> {
         self.inner
@@ -76,4 +80,3 @@ where
         }
     }
 }
-

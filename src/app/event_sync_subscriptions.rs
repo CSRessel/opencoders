@@ -1,23 +1,18 @@
 use crate::app::{
     event_msg::{Msg, Sub},
-    tea_model::{AppState, ConnectionStatus, EventStreamState, Model, RepeatShortcutKey},
+    tea_model::{AppModalState, ConnectionStatus, EventStreamState, Model, RepeatShortcutKey},
     ui_components::{MsgTextArea, PopoverSelectorEvent},
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
 pub fn subscriptions(model: &Model) -> Vec<Sub> {
     let mut subs = match model.state {
-        AppState::Welcome
-        | AppState::TextEntry
-        | AppState::ConnectingToServer
-        | AppState::InitializingSession
-        | AppState::SelectSession
-        | AppState::ConnectionError(_) => vec![Sub::KeyboardInput, Sub::TerminalResize],
-        AppState::Quit => vec![],
+        AppModalState::Quit => vec![],
+        _ => vec![Sub::KeyboardInput, Sub::TerminalResize],
     };
 
     // Add event stream subscription when connected and in active states
-    if matches!(model.state, AppState::TextEntry | AppState::Welcome)
+    if model.is_session_ready()
         && matches!(model.event_stream_state, EventStreamState::Connected(_))
     {
         subs.push(Sub::EventStream);
@@ -71,68 +66,78 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (_, KeyCode::Tab, _, true) => Some(Msg::LeaderChangeInline),
                 (_, KeyCode::Char('q'), _, true) => Some(Msg::Quit),
 
-                (AppState::Welcome, KeyCode::Enter, _, _) => {
-                    Some(Msg::ChangeState(AppState::TextEntry))
-                }
-
-                (AppState::TextEntry, KeyCode::Char('c'), KeyModifiers::CONTROL, _) => {
+                (AppModalState::None, KeyCode::Char('c'), KeyModifiers::CONTROL, _) => {
                     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::CtrlC) {
                         Some(Msg::Quit)
                     } else {
                         Some(Msg::TextArea(MsgTextArea::Clear))
                     }
                 }
-                (AppState::TextEntry, KeyCode::Esc, __, _) => {
-                    if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
-                        Some(Msg::SessionAbort)
-                    } else {
-                        Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Esc))
-                    }
+                // (AppModalState::None, KeyCode::Esc, __, _) => {
+                //     // Leave session for main screen
+                //     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
+                //         Some(Msg::SessionAbort)
+                //     } else {
+                //         Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Esc))
+                //     }
+                // }
+                (AppModalState::Help | AppModalState::SelectSession, KeyCode::Esc, _, __) => {
+                    // Close modals
+                    Some(Msg::ChangeState(AppModalState::None))
                 }
-                (AppState::TextEntry, KeyCode::Char('r'), KeyModifiers::CONTROL, _) => {
+                (AppModalState::None, KeyCode::Char('r'), KeyModifiers::CONTROL, _) => {
                     Some(Msg::ToggleVerbosity)
                 }
-                (AppState::TextEntry, KeyCode::Enter, modifiers, _) => {
+                (AppModalState::None, KeyCode::Enter, modifiers, _) => {
                     if modifiers.contains(KeyModifiers::SHIFT) {
                         Some(Msg::TextArea(MsgTextArea::Newline))
                     } else {
                         Some(Msg::SubmitTextInput)
                     }
                 }
-                (AppState::TextEntry, KeyCode::Tab, _, _) => Some(Msg::CycleModeState),
-                // Text input events (internally routed to TextArea component for most keys)
-                (AppState::TextEntry, _, _, _) => Some(Msg::TextArea(MsgTextArea::KeyInput(key))),
+                (AppModalState::None, KeyCode::Tab, _, _) => Some(Msg::CycleModeState),
 
                 // Message log scrolling (keeping Page Up/Down for message history)
-                (AppState::TextEntry, KeyCode::PageUp, _, _) => Some(Msg::ScrollMessageLog(-5)),
-                (AppState::TextEntry, KeyCode::PageDown, _, _) => Some(Msg::ScrollMessageLog(5)),
+                (AppModalState::None, KeyCode::PageUp, _, _) => Some(Msg::ScrollMessageLog(-5)),
+                (AppModalState::None, KeyCode::PageDown, _, _) => Some(Msg::ScrollMessageLog(5)),
 
                 // Session selector events
-                (AppState::SelectSession, KeyCode::Up, _, _) => {
+                (AppModalState::SelectSession, KeyCode::Up, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
                 }
-                (AppState::SelectSession, KeyCode::Down, _, _)
-                | (AppState::SelectSession, KeyCode::Tab, _, _) => {
+                (AppModalState::SelectSession, KeyCode::Down, _, _)
+                | (AppModalState::SelectSession, KeyCode::Tab, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
                 }
-                (AppState::SelectSession, KeyCode::Char('k'), _, _) => {
+                (AppModalState::SelectSession, KeyCode::Char('k'), _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
                 }
-                (AppState::SelectSession, KeyCode::Char('j'), _, _) => {
+                (AppModalState::SelectSession, KeyCode::Char('j'), _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
                 }
-                (AppState::SelectSession, KeyCode::Enter, _, _) => {
+                (AppModalState::SelectSession, KeyCode::Enter, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Select))
                 }
-                (AppState::SelectSession, KeyCode::Esc, _, _) => {
+                (AppModalState::SelectSession, KeyCode::Esc, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Cancel))
                 }
 
+                // Text input events (internally routed to TextArea component for most keys)
+                (AppModalState::None, _, _, _) => Some(Msg::TextArea(MsgTextArea::KeyInput(key))),
+
                 // Retry connection
-                (AppState::ConnectionError(_), KeyCode::Char('r'), _, _) => {
-                    Some(Msg::InitializeClient)
-                }
-                (AppState::Welcome, KeyCode::Char('r'), _, _) => {
+                (
+                    AppModalState::Connecting(ConnectionStatus::Error(_)),
+                    KeyCode::Char('r'),
+                    _,
+                    _,
+                ) => Some(Msg::InitializeClient),
+                (
+                    AppModalState::Connecting(ConnectionStatus::Disconnected),
+                    KeyCode::Char('r'),
+                    _,
+                    _,
+                ) => {
                     if matches!(model.connection_status, ConnectionStatus::Disconnected) {
                         Some(Msg::InitializeClient)
                     } else {
@@ -151,8 +156,8 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
             }
         }
         Event::Mouse(mouse) => match (&model.state, mouse.kind) {
-            (AppState::TextEntry, MouseEventKind::ScrollUp) => Some(Msg::ScrollMessageLog(-1)),
-            (AppState::TextEntry, MouseEventKind::ScrollDown) => Some(Msg::ScrollMessageLog(1)),
+            (AppModalState::None, MouseEventKind::ScrollUp) => Some(Msg::ScrollMessageLog(-1)),
+            (AppModalState::None, MouseEventKind::ScrollDown) => Some(Msg::ScrollMessageLog(1)),
             _ => None,
         },
         Event::Resize(width, height) => Some(Msg::TerminalResize(width, height)),

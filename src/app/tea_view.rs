@@ -4,7 +4,7 @@ use crate::app::{
         banner::{create_welcome_text, welcome_text_height},
         message_part::StepRenderingMode,
         text_input::TEXT_INPUT_HEIGHT,
-        MessageContext, MessageLog, MessageRenderer, PopoverSelector, StatusBar,
+        MessageContext, MessageLog, MessageRenderer, Paragraph, PopoverSelector, StatusBar,
     },
     view_model_context::ViewModelContext,
 };
@@ -12,11 +12,11 @@ use eyre::WrapErr;
 use ratatui::{
     backend::CrosstermBackend,
     crossterm,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     prelude::Widget,
     style::{Color, Style},
     text::{Line, Text, ToText},
-    widgets::{Paragraph, Wrap},
+    widgets::Wrap,
     Frame, Terminal,
 };
 use std::io;
@@ -45,18 +45,7 @@ use std::io;
 // │ > /quit  │
 // ╰──────────╯
 
-pub fn view_manual(
-    model: &Model,
-    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-) -> crate::app::error::Result<()> {
-    match model.state {
-        AppState::TextEntry => render_history(model, terminal)?,
-        _ => {}
-    }
-    Ok(())
-}
-
-fn render_history(
+pub fn render_manual_inline_history(
     model: &Model,
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
 ) -> crate::app::error::Result<()> {
@@ -64,14 +53,11 @@ fn render_history(
     let (window_cols, _window_rows) = crossterm::terminal::size()?;
 
     for container in &message_containers {
-        let renderer = MessageRenderer::step_safe(
-            container,
-            MessageContext::Inline,
-            model.verbosity_level,
-        );
+        let renderer =
+            MessageRenderer::step_safe(container, MessageContext::Inline, model.verbosity_level);
         let rendered_text = renderer.render();
         let paragraph = Paragraph::new(rendered_text).wrap(Wrap { trim: false });
-        let line_count = paragraph.line_count(window_cols) as u16;
+        let line_count = paragraph.clone().line_count(window_cols) as u16;
 
         terminal.insert_before(line_count, |buf| {
             paragraph.render(buf.area, buf);
@@ -83,19 +69,22 @@ fn render_history(
 
 pub fn view(model: &Model, frame: &mut Frame) {
     ViewModelContext::with_model(model, || {
+        // First render the text entry
+        render_text_entry_screen(frame);
+
+        // Then render the modals depending on state
         match &model.state {
-            AppState::Welcome => render_welcome_screen(frame),
-            AppState::ConnectingToServer => render_connecting_screen(frame),
-            AppState::InitializingSession => render_initializing_session_screen(frame),
-            AppState::TextEntry => render_text_entry_screen(frame),
-            AppState::SelectSession => {
-                // Render the underlying state first (Welcome screen)
-                render_welcome_screen(frame);
+            AppModalState::Help => frame.render_widget(Paragraph::new("help!"), frame.area()),
+            AppModalState::Connecting(ConnectionStatus::Error(e)) => render_error_screen(frame, e),
+            // AppModalState::Connecting(status) => frame.render_widget(
+            //     Paragraph::new(format!("status: {:?}", status)),
+            //     frame.area(),
+            // ),
+            AppModalState::SelectSession => {
                 // Then render the popover selector on top
                 frame.render_widget(&model.session_selector, frame.area());
             }
-            AppState::ConnectionError(error) => render_error_screen(frame, error),
-            AppState::Quit => {} // No rendering needed for quit state
+            AppModalState::Connecting(_) | AppModalState::None | AppModalState::Quit => {} // No rendering needed for quit state
         };
     })
 }
@@ -105,51 +94,28 @@ pub fn view_clear(frame: &mut Frame) {
     frame.render_widget(Paragraph::new(""), frame.area());
 }
 
-fn render_welcome_screen(frame: &mut Frame) {
-    let model = ViewModelContext::current();
-    let status_text = match model.connection_status() {
-        ConnectionStatus::SessionReady => "✓ Session ready!",
-        ConnectionStatus::ClientReady => "✓ Connected!",
-        ConnectionStatus::Connected => "Connected to server...",
-        ConnectionStatus::Connecting => "Connecting to OpenCode server...",
-        ConnectionStatus::InitializingSession => "Initializing session...",
-        ConnectionStatus::Disconnected => "Disconnected from server! Press 'r' to retry",
-        ConnectionStatus::Error(ref _error) => "Connection failed! Press 'r' to retry",
-    }
-    .to_string();
-    let help_text = "\n
-    Enter    start input
-    ^x l     select session
-    ^x tab   toggle view
-    ^x q     quit
-    ";
-
-    let text = Text::from(status_text + help_text);
-    let line_height =
-        (text.to_text().lines.len().saturating_add(2) as u16).max(model.get().config.height);
-    let paragraph = Paragraph::new(text);
-
-    if model.init().inline_mode() {
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(line_height), Constraint::Min(0)])
-            .split(frame.area());
-        frame.render_widget(paragraph, vertical_chunks[0]);
-    } else {
-        let constraints = vec![
-            Constraint::Length(welcome_text_height().saturating_add(2)),
-            Constraint::Length(line_height),
-        ];
-
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints(constraints)
-            .split(frame.area());
-
-        frame.render_widget(create_welcome_text(), vertical_chunks[0]);
-        frame.render_widget(paragraph, vertical_chunks[1]);
-    };
-}
+// fn render_welcome_screen(frame: &mut Frame) {
+//     if model.init().inline_mode() {
+//         let vertical_chunks = Layout::default()
+//             .direction(Direction::Vertical)
+//             .constraints([Constraint::Min(line_height), Constraint::Min(0)])
+//             .split(frame.area());
+//         frame.render_widget(paragraph, vertical_chunks[0]);
+//     } else {
+//         let constraints = vec![
+//             Constraint::Length(welcome_text_height().saturating_add(2)),
+//             Constraint::Length(line_height),
+//         ];
+//
+//         let vertical_chunks = Layout::default()
+//             .direction(Direction::Vertical)
+//             .constraints(constraints)
+//             .split(frame.area());
+//
+//         frame.render_widget(create_welcome_text(), vertical_chunks[0]);
+//         frame.render_widget(paragraph, vertical_chunks[1]);
+//     };
+// }
 
 fn render_text_entry_screen(frame: &mut Frame) {
     let model = ViewModelContext::current();
@@ -206,17 +172,52 @@ fn render_text_entry_screen(frame: &mut Frame) {
         .split(input_section_area);
 
     if model.init().inline_mode() {
-        // Render only the text input and status bar for inline mode
+        render_main_body(frame, vertical_chunks[1]);
         frame.render_widget(&model.get().text_input_area, input_section_chunks[0]);
         let status_bar = StatusBar::new();
         frame.render_widget(&status_bar, input_section_chunks[1]);
     } else {
         // Note: We can't send messages from the view layer in TEA architecture
         // Scroll validation will happen during scroll events and when content changes
-        frame.render_widget(&model.get().message_log, vertical_chunks[0]);
+        render_main_body(frame, vertical_chunks[0]);
         frame.render_widget(&model.get().text_input_area, input_section_chunks[0]);
         let status_bar = StatusBar::new();
         frame.render_widget(&status_bar, input_section_chunks[1]);
+    }
+}
+
+fn render_main_body(frame: &mut Frame, buf: Rect) {
+    let model = ViewModelContext::current();
+
+    if model.get().is_session_ready() {
+        if !model.init().inline_mode() {
+            frame.render_widget(&model.get().message_log, buf);
+        }
+    } else {
+        // Then render either the welcome message or the message log
+        let status_text = match model.connection_status() {
+            ConnectionStatus::SessionReady => "✓ Session ready!",
+            ConnectionStatus::ClientReady => "✓ Connected!",
+            ConnectionStatus::Connected => "Connected to server...",
+            ConnectionStatus::Connecting => "Connecting to OpenCode server...",
+            ConnectionStatus::InitializingSession => "Initializing session...",
+            ConnectionStatus::Disconnected => "Disconnected from server! Press 'r' to retry",
+            ConnectionStatus::Error(ref _error) => "Connection failed! Press 'r' to retry",
+        }
+        .to_string();
+        let help_text = "\n
+    Enter    start input
+    ^x l     select session
+    ^x tab   toggle view
+    ^x q     quit
+    ";
+
+        let welcome_text = Text::from(status_text + help_text);
+        let line_height = (welcome_text.to_text().lines.len().saturating_add(2) as u16)
+            .max(model.get().config.height);
+        let paragraph = Paragraph::new(welcome_text);
+
+        frame.render_widget(paragraph, buf);
     }
 }
 

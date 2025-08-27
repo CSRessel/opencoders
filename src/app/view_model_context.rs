@@ -55,7 +55,7 @@ impl ModelRef {
 
 // Convenience methods for common model access patterns
 impl ModelRef {
-    pub fn state(&self) -> &crate::app::tea_model::AppState {
+    pub fn state(&self) -> &crate::app::tea_model::AppModalState {
         &self.get().state
     }
 
@@ -109,4 +109,3 @@ mod tests {
         ViewModelContext::current();
     }
 }
-

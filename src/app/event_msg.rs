@@ -1,7 +1,7 @@
 use crate::{
     app::{
         event_async_task_manager::TaskId,
-        tea_model::{AppState, RepeatShortcutKey},
+        tea_model::{AppModalState, RepeatShortcutKey},
         ui_components::{MsgTextArea, PopoverSelectorEvent},
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
@@ -10,7 +10,7 @@ use opencode_sdk::models::{ConfigAgent, Event, Model, Session, SessionMessages20
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Msg {
-    ChangeState(AppState),
+    ChangeState(AppModalState),
     Quit,
     ScrollMessageLog(i16),
     ScrollMessageLogHorizontal(i16),

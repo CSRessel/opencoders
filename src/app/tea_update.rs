@@ -10,8 +10,12 @@ use crate::{
 pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
     match msg {
         Msg::ChangeState(new_state) => {
-            // If trying to enter TextEntry but session isn't ready, trigger session init
-            if matches!(new_state, AppState::TextEntry) && !model.is_session_ready() {
+            // If trying to mark connected but session isn't ready, trigger session init
+            if matches!(
+                new_state,
+                AppModalState::Connecting(ConnectionStatus::Connected)
+            ) && !model.is_session_ready()
+            {
                 // Same as selecting the "Create New" option
                 model.change_session(Some(0));
                 return CmdOrBatch::Single(Cmd::None);
@@ -19,43 +23,43 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
             let old_state = model.state.clone();
             model.state = new_state.clone();
-            if matches!(old_state, AppState::TextEntry) {
-                model.clear_input_state();
-                CmdOrBatch::Single(Cmd::None)
-                // }
-            } else {
-                if matches!(model.state, AppState::TextEntry) {
-                    // Auto-scroll to bottom when entering text entry mode
-                    model.message_log.touch_scroll();
-                }
-                CmdOrBatch::Single(Cmd::None)
+            // if matches!(old_state, AppModalState::TextEntry) {
+            //     model.clear_input_state();
+            //     CmdOrBatch::Single(Cmd::None)
+            //     // }
+            // } else {
+            if matches!(model.state, AppModalState::None) {
+                // Auto-scroll to bottom when entering text entry mode
+                model.message_log.touch_scroll();
             }
+            CmdOrBatch::Single(Cmd::None)
         }
 
         // Client initialization messages
         Msg::InitializeClient => {
-            model.transition_to_connecting();
+            model.state = AppModalState::Connecting(ConnectionStatus::Connecting);
             CmdOrBatch::Single(Cmd::AsyncSpawnClientDiscovery)
         }
 
         Msg::ClientConnected(client) => {
             tracing::info!("Client connected successfully");
             model.client = Some(client.clone());
-            model.transition_to_connected();
+            model.state = AppModalState::Connecting(ConnectionStatus::Connected);
+            model.connection_status = ConnectionStatus::Connected;
             // Load modes immediately when client connects
             CmdOrBatch::Single(Cmd::AsyncLoadModes(client))
         }
 
         Msg::ClientConnectionFailed(error) => {
             let error_msg = format!("Failed to connect to OpenCode server: {}", error);
-            model.transition_to_error(error_msg);
+            model.state = AppModalState::Connecting(ConnectionStatus::Error(error.to_string()));
             CmdOrBatch::Single(Cmd::None)
         }
 
         // Session management messages
         Msg::SessionReady(session) => {
             let session_id = session.id.clone();
-            model.state = AppState::TextEntry;
+            model.state = AppModalState::None;
 
             // Set session data
             model.session_state = SessionState::Ready(session);
@@ -78,7 +82,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
         Msg::SessionCreatedWithMessage(session, first_message) => {
             let session_id = session.id.clone();
-            model.state = AppState::TextEntry;
+            model.state = AppModalState::None;
 
             // Set session data
             model.session_state = SessionState::Ready(session.clone());
@@ -119,18 +123,18 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             let error_msg = format!("Failed to create session: {}", error);
             model.session_state = SessionState::None;
             model.pending_first_message = None;
-            model.transition_to_error(error_msg);
+            model.state = AppModalState::Connecting(ConnectionStatus::Error(error_msg));
             CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::SessionInitializationFailed(error) => {
             let error_msg = format!("Failed to initialize session: {}", error);
-            model.transition_to_error(error_msg);
+            model.state = AppModalState::Connecting(ConnectionStatus::Error(error_msg));
             CmdOrBatch::Single(Cmd::None)
         }
 
         Msg::Quit => {
-            model.state = AppState::Quit;
+            model.state = AppModalState::Quit;
             CmdOrBatch::Single(Cmd::None)
         }
         Msg::ScrollMessageLog(direction) => {
@@ -202,7 +206,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         // Session selector messages
         Msg::LeaderShowSessionSelector => {
             model.clear_repeat_leader_timeout();
-            model.state = AppState::SelectSession;
+            model.state = AppModalState::SelectSession;
             model
                 .session_selector
                 .cache_render_height_for_terminal(model.config.height);
@@ -257,7 +261,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
             // Handle cancel
             if matches!(event, PopoverSelectorEvent::Cancel) {
-                model.state = AppState::Welcome;
+                model.state = AppModalState::None;
             }
 
             CmdOrBatch::Single(Cmd::None)
@@ -551,7 +555,7 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
                     model.message_state.clear();
                     model.message_log.set_message_containers(vec![]);
 
-                    model.state = AppState::Welcome;
+                    model.state = AppModalState::None;
                 }
             }
         }
@@ -593,7 +597,7 @@ fn handle_event_received(model: &mut Model, event: opencode_sdk::models::Event) 
                 } else {
                     "Unknown session error".to_string()
                 };
-                model.transition_to_error(error_msg);
+                model.state = AppModalState::Connecting(ConnectionStatus::Error(error_msg));
             }
         }
 

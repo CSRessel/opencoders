@@ -57,7 +57,7 @@ pub struct Model {
     pub init: ModelInit,
     pub config: UserConfig,
     // App state
-    pub state: AppState,
+    pub state: AppModalState,
     pub input_history: Vec<String>,
     pub last_input: Option<String>,
     pub printed_to_stdout_count: usize,
@@ -129,13 +129,15 @@ pub struct UserConfig {
 pub use model_init::ModelInit;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum AppState {
-    Welcome,
-    ConnectingToServer,
-    InitializingSession,
-    TextEntry,
+pub enum AppModalState {
+    None,
+    Help,
+    Connecting(ConnectionStatus),
     SelectSession,
-    ConnectionError(String),
+    // SelectModel,
+    // SelectAgent,
+    // SelectFile,
+    // SlashCommands,
     Quit,
 }
 
@@ -171,7 +173,7 @@ impl Model {
                 height: INLINE_HEIGHT,
                 keys_shortcut_timeout_ms: 1000,
             },
-            state: AppState::ConnectingToServer,
+            state: AppModalState::Connecting(ConnectionStatus::Connecting),
             input_history: Vec::new(),
             last_input: None,
             printed_to_stdout_count: 0,
@@ -213,22 +215,6 @@ impl Model {
         self.message_state.get_message_containers_for_rendering()
     }
 
-    // State transition helpers
-    pub fn transition_to_connecting(&mut self) {
-        self.state = AppState::ConnectingToServer;
-        self.connection_status = ConnectionStatus::Connecting;
-    }
-
-    pub fn transition_to_connected(&mut self) {
-        self.connection_status = ConnectionStatus::ClientReady;
-        self.state = AppState::Welcome;
-    }
-
-    pub fn transition_to_error(&mut self, error_msg: String) {
-        self.connection_status = ConnectionStatus::Error(error_msg.clone());
-        self.state = AppState::ConnectionError(error_msg);
-    }
-
     pub fn mark_messages_printed_to_stdout(&mut self, count: usize) {
         self.message_state.mark_messages_printed_to_stdout(count);
         // Keep the old counter for backward compatibility with input_history
@@ -261,7 +247,10 @@ impl Model {
     pub fn is_session_ready(&self) -> bool {
         self.client.is_some()
             && matches!(self.session_state, SessionState::Ready(_))
-            && matches!(self.connection_status, ConnectionStatus::SessionReady)
+            && (matches!(
+                self.state,
+                AppModalState::Connecting(ConnectionStatus::SessionReady)
+            ) || !matches!(self.state, AppModalState::Connecting(_)))
     }
 
     pub fn client(&self) -> Option<&OpenCodeClient> {
@@ -287,7 +276,7 @@ impl Model {
             // Handle selection
             Some(0) => {
                 self.change_session_by_index(None);
-                self.state = AppState::TextEntry;
+                self.state = AppModalState::None;
 
                 // Create pending session info
                 let pending_info = PendingSessionInfo {
@@ -301,8 +290,7 @@ impl Model {
                 let session_index = requested_session_index - 1;
                 if session_index < self.sessions.len() {
                     self.change_session_by_index(Some(requested_session_index));
-                    self.state = AppState::InitializingSession;
-                    self.connection_status = ConnectionStatus::InitializingSession;
+                    self.state = AppModalState::Connecting(ConnectionStatus::InitializingSession);
 
                     return true;
                 }

@@ -19,9 +19,9 @@ use crate::{
         event_async_task_manager::AsyncTaskManager,
         event_msg::{Cmd, CmdOrBatch, Msg},
         event_sync_subscriptions,
-        tea_model::{AppState, Model, ModelInit},
+        tea_model::{AppModalState, ConnectionStatus, Model, ModelInit},
         tea_update::update,
-        tea_view::{view, view_clear, view_manual},
+        tea_view::{render_manual_inline_history, view, view_clear},
         terminal::{init_terminal, restore_terminal},
         ui_components::{
             banner::{create_welcome_text, welcome_text_height},
@@ -81,7 +81,7 @@ impl Program {
 
         loop {
             // Check for quit state
-            if matches!(self.model.state, AppState::Quit) {
+            if matches!(self.model.state, AppModalState::Quit) {
                 break;
             }
 
@@ -146,11 +146,11 @@ impl Program {
         // View: Manual rendering outside the TUI viewport
         if self.model.needs_manual_output() {
             if let Some(terminal) = self.terminal.as_mut() {
-                // Clear the TUI
-                terminal.draw(|f| view_clear(f))?;
+                // // Clear the TUI
+                // terminal.draw(|f| view_clear(f))?;
 
                 // Manually execute with crossterm
-                view_manual(&self.model, terminal)?;
+                render_manual_inline_history(&self.model, terminal)?;
             }
         }
 
@@ -467,7 +467,9 @@ impl Program {
             Cmd::AsyncSessionAbort => {
                 self.task_manager
                     // TODO eventually call proper API to cancel loop
-                    .spawn_task(async move { Msg::ChangeState(AppState::Welcome) });
+                    .spawn_task(async move {
+                        Msg::ChangeState(AppModalState::Connecting(ConnectionStatus::Disconnected))
+                    });
             }
 
             Cmd::AsyncCancelTask(task_id) => {

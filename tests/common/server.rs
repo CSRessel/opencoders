@@ -24,31 +24,25 @@ impl TestServer {
     pub async fn start_with_config(config: TestConfig) -> Result<Self> {
         // Create a temporary directory for the test
         let temp_dir = tempfile::tempdir().wrap_err("Failed to create temporary directory")?;
-        
+
         // Create a main.rs file with dummy code in the temp directory
-        let main_rs_path = temp_dir.path().join("main.rs");
-        let main_rs_content = r#"fn main() {
-    println!("Hello from test server!");
-}
+        if let Some(program_contents) = config.program_contents {
+            let temp_program_path = if let Some(program_path) = config.program_path {
+                temp_dir.path().join(program_path)
+            } else {
+                temp_dir.path().join("main.rs")
+            };
+            std::fs::write(&temp_program_path, program_contents)
+                .wrap_err("Failed to create main.rs in temp directory")?;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn dummy_test() {
-        assert_eq!(2 + 2, 4);
-    }
-}
-"#;
-        std::fs::write(&main_rs_path, main_rs_content)
-            .wrap_err("Failed to create main.rs in temp directory")?;
-
-        // Initialize git repository in temp directory
-        Command::new("git")
-            .args(&["init"])
-            .current_dir(temp_dir.path())
-            .output()
-            .await
-            .wrap_err("Failed to initialize git repository in temp directory")?;
+            // Initialize git repository in temp directory if we have files
+            Command::new("git")
+                .args(&["init"])
+                .current_dir(temp_dir.path())
+                .output()
+                .await
+                .wrap_err("Failed to initialize git repository in temp directory")?;
+        }
 
         // Find an available port
         let port = find_available_port()
@@ -99,11 +93,6 @@ mod tests {
     /// Get the base URL of the test server
     pub fn base_url(&self) -> &str {
         &self.base_url
-    }
-
-    /// Get the port the server is running on
-    pub fn port(&self) -> u16 {
-        self.port
     }
 
     /// Check if the server process is still running

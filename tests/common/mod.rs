@@ -2,9 +2,11 @@
 
 #![allow(unused_imports)]
 
-pub mod assertions;
-pub mod server;
-pub use assertions::*;
+mod assertions;
+mod server;
+pub use assertions::{
+    assert_error_not_empty, assert_string_not_empty, validate_basic_response_structure,
+};
 pub use server::TestServer;
 use std::time::Duration;
 

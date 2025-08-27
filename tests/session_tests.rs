@@ -5,8 +5,10 @@
 
 mod common;
 
-use common::{assert_api_success, TestServer};
+use common::TestServer;
 use opencoders::sdk::OpenCodeClient;
+
+use crate::common::assert_string_not_empty;
 
 #[tokio::test]
 async fn smoke_test_session_list_empty() {
@@ -41,7 +43,7 @@ async fn smoke_test_session_create_and_delete() {
     let session_result = client.create_session().await;
     let session = assert_api_success!(session_result, "create_session");
 
-    common::assert_string_not_empty(&session.id, "session ID");
+    assert_string_not_empty(&session.id, "session ID");
     println!("✓ Session created successfully with ID: {}", session.id);
 
     // Verify session exists in list
@@ -186,12 +188,18 @@ async fn smoke_test_session_error_handling() {
     match messages_result {
         Ok(messages) => {
             // The API returns empty array for non-existent sessions
-            assert!(messages.is_empty(), "Non-existent session should have no messages");
+            assert!(
+                messages.is_empty(),
+                "Non-existent session should have no messages"
+            );
             println!("✓ Getting messages for non-existent session returned empty array");
         }
         Err(e) => {
             // If it does error, that's also acceptable behavior
-            println!("✓ Getting messages for non-existent session failed as expected: {}", e);
+            println!(
+                "✓ Getting messages for non-existent session failed as expected: {}",
+                e
+            );
         }
     }
 
@@ -199,7 +207,10 @@ async fn smoke_test_session_error_handling() {
     match abort_result {
         Ok(success) => {
             // The API returns false for non-existent sessions (can't abort what doesn't exist)
-            assert!(!success, "Aborting non-existent session should return false");
+            assert!(
+                !success,
+                "Aborting non-existent session should return false"
+            );
             println!("✓ Aborting non-existent session returned false as expected");
         }
         Err(e) => {
@@ -212,4 +223,3 @@ async fn smoke_test_session_error_handling() {
 
     server.shutdown().await.expect("Failed to shutdown server");
 }
-

@@ -6,7 +6,7 @@
 
 mod common;
 
-use common::server::TestServer;
+use common::TestServer;
 use eyre::{Result, WrapErr};
 use opencoders::sdk::client::{generate_descending_id, generate_id, IdPrefix, OpenCodeClient};
 use opencoders::sdk::LogLevel;

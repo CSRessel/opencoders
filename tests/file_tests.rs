@@ -5,8 +5,10 @@
 
 mod common;
 
-use common::{assert_api_success, assert_error_not_empty, TestServer};
+use common::{assert_error_not_empty, TestServer};
 use opencoders::sdk::OpenCodeClient;
+
+use crate::common::assert_string_not_empty;
 
 #[tokio::test]
 async fn smoke_test_file_status() {
@@ -28,7 +30,7 @@ async fn smoke_test_file_status() {
     // Verify that we get some basic file information
     if !files.is_empty() {
         let first_file = &files[0];
-        common::assert_string_not_empty(&first_file.path, "file path");
+        assert_string_not_empty(&first_file.path, "file path");
         println!("✓ File status contains valid file information");
     }
 
@@ -97,7 +99,7 @@ async fn smoke_test_file_operations_with_created_file() {
         match read_result {
             Ok(content) => {
                 println!("✓ Successfully read file: {}", file.path);
-                common::assert_string_not_empty(&content.content, "file content");
+                assert_string_not_empty(&content.content, "file content");
             }
             Err(e) => {
                 println!(
@@ -212,7 +214,10 @@ async fn smoke_test_concurrent_file_operations() {
     // Wait for all tasks to complete
     for task in tasks {
         let (task_id, result) = task.await.expect("Task should complete");
-        let _files = assert_api_success!(result, &format!("concurrent file status request {}", task_id));
+        let _files = assert_api_success!(
+            result,
+            &format!("concurrent file status request {}", task_id)
+        );
         println!(
             "✓ Concurrent file status request {} completed successfully",
             task_id
@@ -221,4 +226,3 @@ async fn smoke_test_concurrent_file_operations() {
 
     server.shutdown().await.expect("Failed to shutdown server");
 }
-

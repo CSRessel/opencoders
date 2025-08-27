@@ -5,8 +5,10 @@
 
 mod common;
 
-use common::{assert_api_success, assert_error_not_empty, TestServer};
+use common::{assert_error_not_empty, TestServer};
 use opencoders::sdk::OpenCodeClient;
+
+use crate::common::assert_string_not_empty;
 
 #[tokio::test]
 async fn smoke_test_find_files() {
@@ -36,7 +38,7 @@ async fn smoke_test_find_files() {
 
                 // Verify that results are strings (file paths)
                 for file_path in &files {
-                    common::assert_string_not_empty(file_path, "file path in search results");
+                    assert_string_not_empty(file_path, "file path in search results");
                 }
             }
             Err(e) => {
@@ -82,7 +84,7 @@ async fn smoke_test_find_text() {
 
                 // Verify match structure if we have results
                 for match_result in &matches {
-                    common::assert_string_not_empty(&match_result.path.text, "match file path");
+                    assert_string_not_empty(&match_result.path.text, "match file path");
                     // Note: We don't validate line numbers or content as they depend on the specific files
                 }
             }
@@ -128,7 +130,7 @@ async fn smoke_test_find_symbols() {
 
                 // Verify symbol structure if we have results
                 for symbol in &symbols {
-                    common::assert_string_not_empty(&symbol.name, "symbol name");
+                    assert_string_not_empty(&symbol.name, "symbol name");
                     // Note: Other fields like location depend on the specific codebase
                 }
             }
@@ -326,4 +328,3 @@ async fn smoke_test_search_consistency() {
 
     server.shutdown().await.expect("Failed to shutdown server");
 }
-

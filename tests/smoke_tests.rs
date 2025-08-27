@@ -5,8 +5,10 @@
 
 mod common;
 
-use common::{assert_api_success, TestServer};
+use common::TestServer;
 use opencoders::sdk::OpenCodeClient;
+
+use crate::common::{assert_string_not_empty, validate_basic_response_structure};
 
 #[tokio::test]
 async fn smoke_test_app_info() {
@@ -20,7 +22,7 @@ async fn smoke_test_app_info() {
     let app = assert_api_success!(app_info, "get_app_info");
 
     // Verify basic app info structure
-    common::assert_string_not_empty(&app.hostname, "app hostname");
+    assert_string_not_empty(&app.hostname, "app hostname");
     println!(
         "✓ App info retrieved successfully: hostname {}",
         app.hostname
@@ -46,7 +48,10 @@ async fn smoke_test_config_endpoints() {
     let providers_result = client.get_providers().await;
     match providers_result {
         Ok(providers_response) => {
-            common::assert_not_empty(&providers_response.providers[..], "providers list");
+            assert!(
+                !&providers_response.providers[..].is_empty(),
+                "providers list should not be empty",
+            );
             println!(
                 "✓ Providers list retrieved successfully ({} providers)",
                 providers_response.providers.len()
@@ -78,7 +83,7 @@ async fn smoke_test_basic_connectivity_health() {
     // Test app info endpoint
     let app_result = client.get_app_info().await;
     assert!(
-        common::validate_basic_response_structure(&app_result, "get_app_info"),
+        validate_basic_response_structure(&app_result, "get_app_info"),
         "Endpoint get_app_info failed basic validation"
     );
     println!("✓ Endpoint get_app_info passed connectivity test");
@@ -86,14 +91,14 @@ async fn smoke_test_basic_connectivity_health() {
     // Test config endpoint
     let config_result = client.get_config().await;
     assert!(
-        common::validate_basic_response_structure(&config_result, "get_config"),
+        validate_basic_response_structure(&config_result, "get_config"),
         "Endpoint get_config failed basic validation"
     );
     println!("✓ Endpoint get_config passed connectivity test");
 
     // Test providers endpoint
     let providers_result = client.get_providers().await;
-    if common::validate_basic_response_structure(&providers_result, "get_providers") {
+    if validate_basic_response_structure(&providers_result, "get_providers") {
         println!("✓ Endpoint get_providers passed connectivity test");
     } else {
         // API/SDK compatibility issue - log but don't fail the test

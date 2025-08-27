@@ -375,8 +375,34 @@ async fn test_send_user_message() -> Result<()> {
 /// Test file operations
 #[tokio::test]
 async fn test_file_operations() -> Result<()> {
-    // TODO need to add staged changes so file status can detect working files
-    let server = TestServer::start().await?;
+    let server = TestServer::start_with_config(TestConfig {
+        server_timeout: Duration::from_secs(30),
+        program_path: Some("main.rs".to_string()),
+        program_contents: Some(
+            r#"
+
+#[derive(Debug, Display)]
+pub struct Message {
+    m: String,
+}
+
+fn main() {
+    let message = Message{ m: "Hello from test server!".to_string() };
+    println!("{}", message);
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn dummy_test() {
+        assert_eq!(2 + 2, 4);
+    }
+}
+"#
+            .to_string(),
+        ),
+    })
+    .await?;
     let client = OpenCodeClient::new(&server.base_url());
 
     // Test file status
@@ -417,7 +443,6 @@ async fn test_file_operations() -> Result<()> {
 async fn test_search_operations() -> Result<()> {
     let server = TestServer::start_with_config(TestConfig {
         server_timeout: Duration::from_secs(30),
-        cleanup_on_failure: true,
         program_path: Some("main.rs".to_string()),
         program_contents: Some(
             r#"

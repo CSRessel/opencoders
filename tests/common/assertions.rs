@@ -1,5 +1,8 @@
 //! Custom assertion helpers for smoke tests
 
+#![allow(unused_imports)]
+#![allow(unused_macros)]
+
 /// Assert that an API call succeeds, providing detailed error information on failure
 macro_rules! assert_api_success {
     ($result:expr, $context:expr) => {
@@ -90,13 +93,17 @@ where
     E: std::fmt::Display,
 {
     let error_string = format!("{}", error);
-    assert!(!error_string.is_empty(), "Error message in {} should not be empty", context);
+    assert!(
+        !error_string.is_empty(),
+        "Error message in {} should not be empty",
+        context
+    );
 }
 
 // SDK-specific assertion functions
 
-use opencode_sdk::models::{App, Config, Session, ConfigProviders200Response};
 use eyre::Result;
+use opencode_sdk::models::{App, Config, ConfigProviders200Response, Session};
 
 /// Assert that an App info structure is valid
 pub fn assert_app_info_valid(app: &App) -> Result<()> {
@@ -109,28 +116,38 @@ pub fn assert_app_info_valid(app: &App) -> Result<()> {
 /// Assert that a Config structure is valid
 pub fn assert_config_valid(config: &Config) -> Result<()> {
     // Config should have some basic structure
-    assert!(config.agent.is_some() || config.agent.is_none(), "Config should have valid agent field");
+    assert!(
+        config.agent.is_some() || config.agent.is_none(),
+        "Config should have valid agent field"
+    );
     Ok(())
 }
 
 /// Assert that a Session structure is valid
 pub fn assert_session_valid(session: &Session) -> Result<()> {
     assert!(!session.id.is_empty(), "Session ID should not be empty");
-    assert!(!session.title.is_empty(), "Session title should not be empty");
-    assert!(!session.version.is_empty(), "Session version should not be empty");
+    assert!(
+        !session.title.is_empty(),
+        "Session title should not be empty"
+    );
+    assert!(
+        !session.version.is_empty(),
+        "Session version should not be empty"
+    );
     Ok(())
 }
 
 /// Assert that a providers response is valid
 pub fn assert_providers_valid(providers: &ConfigProviders200Response) -> Result<()> {
-    // Should have at least an empty list
-    assert!(providers.providers.len() >= 0, "Providers list should be valid");
-    
     // If we have providers, they should be valid
     for provider in &providers.providers {
         assert!(!provider.id.is_empty(), "Provider ID should not be empty");
-        assert!(!provider.name.is_empty(), "Provider name should not be empty");
+        assert!(
+            !provider.name.is_empty(),
+            "Provider name should not be empty"
+        );
     }
-    
+
     Ok(())
 }
+

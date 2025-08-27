@@ -1,5 +1,7 @@
 //! Common test utilities for smoke tests
 
+#![allow(unused_imports)]
+
 pub mod assertions;
 pub mod server;
 pub use assertions::*;
@@ -9,7 +11,6 @@ use std::time::Duration;
 /// Configuration for test execution
 pub struct TestConfig {
     pub server_timeout: Duration,
-    pub cleanup_on_failure: bool,
     pub program_path: Option<String>,
     pub program_contents: Option<String>,
 }
@@ -18,7 +19,6 @@ impl Default for TestConfig {
     fn default() -> Self {
         Self {
             server_timeout: Duration::from_secs(30),
-            cleanup_on_failure: true,
             program_path: None,
             program_contents: None,
         }

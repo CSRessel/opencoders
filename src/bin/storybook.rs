@@ -29,7 +29,7 @@ fn main() -> Result<()> {
 
     let mut terminal = init_terminal(&init, viewport_height)?;
     let app_result = run(&mut terminal);
-    restore_terminal(&init)?;
+    restore_terminal(&init, viewport_height)?;
     app_result
 }
 

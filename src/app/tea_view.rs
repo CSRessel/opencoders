@@ -157,32 +157,36 @@ fn render_text_entry_screen(frame: &mut Frame) {
         .constraints([
             Constraint::Min(0),                             // (optional) Message log
             Constraint::Length(spacer_height),              // (optional) Buffer space
-            Constraint::Length(total_input_section_height), // Input area + status bar
+            Constraint::Length(total_input_section_height), // Input textarea + status bar
         ])
         .split(content_area);
+    let fullscreen_chunk = vertical_chunks[0];
+    let spacer_chunk = vertical_chunks[1];
+    let input_chunk = vertical_chunks[2];
 
-    // Split the input section into text input and status bar
-    let input_section_area = vertical_chunks[2];
+    // Split the input section into textarea and status bar
     let input_section_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(text_input_height), // Text input area
+            Constraint::Length(text_input_height), // Textarea
             Constraint::Length(status_bar_height), // Status bar
         ])
-        .split(input_section_area);
+        .split(input_chunk);
+    let input_textarea = input_section_chunks[0];
+    let input_status = input_section_chunks[1];
 
     if model.init().inline_mode() {
-        render_main_body(frame, vertical_chunks[1]);
-        frame.render_widget(&model.get().text_input_area, input_section_chunks[0]);
+        render_main_body(frame, spacer_chunk);
+        frame.render_widget(&model.get().text_input_area, input_textarea);
         let status_bar = StatusBar::new();
-        frame.render_widget(&status_bar, input_section_chunks[1]);
+        frame.render_widget(&status_bar, input_status);
     } else {
         // Note: We can't send messages from the view layer in TEA architecture
         // Scroll validation will happen during scroll events and when content changes
-        render_main_body(frame, vertical_chunks[0]);
-        frame.render_widget(&model.get().text_input_area, input_section_chunks[0]);
+        render_main_body(frame, fullscreen_chunk);
+        frame.render_widget(&model.get().text_input_area, input_textarea);
         let status_bar = StatusBar::new();
-        frame.render_widget(&status_bar, input_section_chunks[1]);
+        frame.render_widget(&status_bar, input_status);
     }
 }
 
@@ -194,25 +198,13 @@ fn render_main_body(frame: &mut Frame, buf: Rect) {
             frame.render_widget(&model.get().message_log, buf);
         }
     } else {
-        // Then render either the welcome message or the message log
-        let status_text = match model.connection_status() {
-            ConnectionStatus::SessionReady => "✓ Session ready!",
-            ConnectionStatus::ClientReady => "✓ Connected!",
-            ConnectionStatus::Connected => "Connected to server...",
-            ConnectionStatus::Connecting => "Connecting to OpenCode server...",
-            ConnectionStatus::InitializingSession => "Initializing session...",
-            ConnectionStatus::Disconnected => "Disconnected from server! Press 'r' to retry",
-            ConnectionStatus::Error(ref _error) => "Connection failed! Press 'r' to retry",
-        }
-        .to_string();
         let help_text = "\n
-    Enter    start input
     ^x l     select session
     ^x tab   toggle view
     ^x q     quit
     ";
 
-        let welcome_text = Text::from(status_text + help_text);
+        let welcome_text = Text::from(format!("\n{}{}", model.connection_status(), help_text));
         let line_height = (welcome_text.to_text().lines.len().saturating_add(2) as u16)
             .max(model.get().config.height);
         let paragraph = Paragraph::new(welcome_text);

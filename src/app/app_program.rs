@@ -253,22 +253,11 @@ impl Program {
 
     async fn spawn_command(&mut self, cmd: Cmd) -> Result<()> {
         match cmd {
-            Cmd::TerminalRebootWithInline(inline_mode) => {
+            Cmd::TerminalRebootWithInline(new_inline_mode) => {
                 // Deconstruct the old terminal by taking ownership from the Option
-                if let Some(terminal) = self.terminal.as_mut() {
-                    terminal.try_draw(|f| {
-                        let pos = crossterm::cursor::position()?;
-                        tracing::debug!(
-                            "starting inline={} with cursor={:?}",
-                            self.model.init.inline_mode(),
-                            pos
-                        );
-                        Ok::<(), std::io::Error>(())
-                    });
-                }
                 let mut old_terminal = self.terminal.take();
 
-                if !inline_mode {
+                if !new_inline_mode {
                     if let Some(terminal) = old_terminal.as_mut() {
                         // Clear the TUI when leaving inline mode, so it doesn't
                         // leave artifacts in the history
@@ -278,30 +267,23 @@ impl Program {
                         // so if we switch back and forth we don't offset
                         terminal
                             .draw(|f| f.set_cursor_position((f.area().left(), f.area().top())))?;
-
-                        terminal.try_draw(|f| {
-                            let pos = crossterm::cursor::position()?;
-                            tracing::debug!("cleared and now cursor={:?}", pos);
-                            Ok::<(), std::io::Error>(())
-                        });
                     }
-                };
+                }
 
                 // Restore the old terminal state before creating new one
                 if let Some(mut terminal) = old_terminal.take() {
-                    restore_terminal(&self.model.init).wrap_err("Failed to restore terminal")?;
+                    restore_terminal(&self.model.init, self.model.config.height)
+                        .wrap_err("Failed to restore terminal")?;
                 }
-                let new_init = ModelInit::new(inline_mode);
-                let mut terminal = init_terminal(&new_init, self.model.config.height)?;
-                terminal.try_draw(|f| {
-                    let pos = crossterm::cursor::position()?;
-                    tracing::debug!(
-                        "finishing inline={} with cursor={:?}",
-                        new_init.inline_mode(),
-                        pos
+                let new_init = ModelInit::new(new_inline_mode);
+                if new_inline_mode {
+                    // Manual hack because cursor positioning stuff stopped working somehow...
+                    crossterm::execute!(
+                        io::stdout(),
+                        crossterm::cursor::MoveUp(self.model.config.height),
                     );
-                    Ok::<(), std::io::Error>(())
-                });
+                };
+                let mut terminal = init_terminal(&new_init, self.model.config.height)?;
                 self.terminal = Some(terminal);
                 self.model.init = new_init;
             }
@@ -515,7 +497,7 @@ impl Program {
 impl Drop for Program {
     fn drop(&mut self) {
         if let Some(_) = self.terminal.take() {
-            if let Err(e) = restore_terminal(&self.model.init) {
+            if let Err(e) = restore_terminal(&self.model.init, self.model.config.height) {
                 tracing::error!("Failed to restore terminal during program cleanup: {}", e);
                 eprintln!(
                     "Failed to restore terminal. Run `reset` or restart your terminal to recover: {}",

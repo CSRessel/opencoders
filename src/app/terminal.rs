@@ -40,7 +40,7 @@ pub fn init_terminal(
     enable_raw_mode().wrap_err("Failed to enable raw mode")?;
 
     // Necessary for some terminals to report shift+enter and other modified keys
-    let flags = KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES 
+    let flags = KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
         | KeyboardEnhancementFlags::REPORT_EVENT_TYPES
         | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES;
     crossterm::execute!(std::io::stdout(), PushKeyboardEnhancementFlags(flags))
@@ -57,7 +57,7 @@ pub fn init_terminal(
     }
 
     // Set up panic hook for automatic terminal restoration
-    set_panic_hook(init.clone());
+    set_panic_hook(init.clone(), height);
 
     let backend = CrosstermBackend::new(stdout);
 
@@ -79,16 +79,16 @@ pub fn init_terminal(
 }
 
 /// Set panic hook to ensure terminal cleanup on panic
-fn set_panic_hook(init: ModelInit) {
+fn set_panic_hook(init: ModelInit, height: u16) {
     let hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
-        let _ = restore_terminal(&init); // ignore any errors as we are already failing
+        let _ = restore_terminal(&init, height); // ignore any errors as we are already failing
         hook(panic_info);
     }));
 }
 
 /// Restore the terminal to its original state
-pub fn restore_terminal(init: &ModelInit) -> io::Result<()> {
+pub fn restore_terminal(init: &ModelInit, height: u16) -> io::Result<()> {
     tracing::info!("Restoring terminal - inline_mode: {}", init.inline_mode());
 
     // Disable raw mode first
@@ -111,13 +111,11 @@ pub fn restore_terminal(init: &ModelInit) -> io::Result<()> {
         // For inline mode, ensure proper cursor positioning and screen clearing
         // to prevent overlap with error messages
         if let Ok((cols, rows)) = crossterm::terminal::size() {
-            let ui_height = init.height().unwrap_or(10);
-
             // Clear from cursor position down to prevent overlap
             execute!(
                 stdout,
                 crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
-                crossterm::cursor::MoveTo(0, rows.saturating_sub(ui_height)),
+                crossterm::cursor::MoveTo(0, rows.saturating_sub(height)),
                 crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
                 crossterm::cursor::MoveTo(0, rows),
                 crossterm::cursor::Show

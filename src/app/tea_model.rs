@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use opencode_sdk::models::{AgentConfig, ConfigAgent, Session};
-use std::time::SystemTime;
+use std::{fmt::Display, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RepeatShortcutKey {
@@ -101,12 +101,6 @@ mod model_init {
             self.init_inline_mode
         }
 
-        pub fn height(&self) -> Option<u16> {
-            // For now, return the default height
-            // In a real implementation, this could be configurable per init
-            Some(super::INLINE_HEIGHT)
-        }
-
         pub fn new(inline_mode: bool) -> ModelInit {
             ModelInit {
                 init_inline_mode: inline_mode,
@@ -150,6 +144,25 @@ pub enum ConnectionStatus {
     InitializingSession,
     SessionReady,
     Error(String),
+}
+
+impl Display for ConnectionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match &self {
+                ConnectionStatus::Disconnected => "Disconnected from server! Press 'r' to retry",
+                ConnectionStatus::Connecting => "Connecting to OpenCode server...",
+                ConnectionStatus::Connected => "Connected to server...",
+                ConnectionStatus::ClientReady => "✓ Connected! (no session)",
+                ConnectionStatus::InitializingSession => "Initializing session...",
+                ConnectionStatus::SessionReady => "✓ Session ready!",
+                ConnectionStatus::Error(ref _error) => "Connection failed! Press 'r' to retry",
+            }
+        );
+        Ok(())
+    }
 }
 
 pub const INLINE_HEIGHT: u16 = 12;

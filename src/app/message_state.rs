@@ -25,6 +25,25 @@ pub struct MessageContainer {
     pub printed_to_stdout: bool, // Track if this message has been printed to stdout
 }
 
+impl MessageContainer {
+    /// Check if this message has incomplete steps (StepStart without matching StepFinish)
+    pub fn has_incomplete_steps(&self) -> bool {
+        let mut step_depth: i32 = 0;
+        
+        for part_id in &self.part_order {
+            if let Some(part) = self.parts.get(part_id) {
+                match part {
+                    Part::StepStart(_) => step_depth += 1,
+                    Part::StepFinish(_) => step_depth = step_depth.saturating_sub(1),
+                    _ => {}
+                }
+            }
+        }
+        
+        step_depth > 0
+    }
+}
+
 impl MessageState {
     pub fn new() -> Self {
         Self {

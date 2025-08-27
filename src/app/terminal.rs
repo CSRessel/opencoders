@@ -39,8 +39,10 @@ pub fn init_terminal(
 
     enable_raw_mode().wrap_err("Failed to enable raw mode")?;
 
-    // Necessary for some terminals to report shift+enter
-    let flags = KeyboardEnhancementFlags::REPORT_EVENT_TYPES;
+    // Necessary for some terminals to report shift+enter and other modified keys
+    let flags = KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES 
+        | KeyboardEnhancementFlags::REPORT_EVENT_TYPES
+        | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES;
     crossterm::execute!(std::io::stdout(), PushKeyboardEnhancementFlags(flags))
         .wrap_err("Failed to push kb flags")?;
 

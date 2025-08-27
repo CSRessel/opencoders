@@ -2,6 +2,7 @@ use crate::app::{
     tea_model::*,
     ui_components::{
         banner::{create_welcome_text, welcome_text_height},
+        message_part::StepRenderingMode,
         text_input::TEXT_INPUT_HEIGHT,
         MessageContext, MessageLog, MessageRenderer, PopoverSelector, StatusBar,
     },
@@ -63,7 +64,7 @@ fn render_history(
     let (window_cols, _window_rows) = crossterm::terminal::size()?;
 
     for container in &message_containers {
-        let renderer = MessageRenderer::from_message_container(
+        let renderer = MessageRenderer::step_safe(
             container,
             MessageContext::Inline,
             model.verbosity_level,

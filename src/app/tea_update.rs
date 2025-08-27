@@ -428,7 +428,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         }
 
         Msg::SubmitTextInput => {
-            let text = model.text_input_area.content();
+            let text = model.text_input_area.content().trim().to_string();
 
             // Handle text submission like the legacy SubmitInput logic
             model.input_history.push(text.clone());

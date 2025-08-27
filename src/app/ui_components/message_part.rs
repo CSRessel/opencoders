@@ -23,11 +23,19 @@ pub enum VerbosityLevel {
     Verbose, // Full details for all content
 }
 
+/// Controls how message parts within steps are rendered during streaming
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum StepRenderingMode {
+    Immediate,
+    OnStepFinish,
+}
+
 #[derive(Debug, Clone)]
 pub struct MessageRenderer {
     parts: Vec<Part>,
     context: MessageContext,
     verbosity: VerbosityLevel,
+    step_rendering_mode: StepRenderingMode,
     expanded_tools: HashSet<String>, // Track which tools are expanded (fullscreen only)
 }
 
@@ -36,6 +44,7 @@ struct StepGroup {
     text_parts: Vec<TextPart>,
     tool_parts: Vec<ToolPart>,
     file_parts: Vec<FilePart>,
+    is_completed: bool, // Track if this step has received a StepFinish
 }
 
 impl MessageRenderer {
@@ -44,6 +53,7 @@ impl MessageRenderer {
             parts,
             context,
             verbosity,
+            step_rendering_mode: StepRenderingMode::Immediate,
             expanded_tools: HashSet::new(),
         }
     }
@@ -54,6 +64,17 @@ impl MessageRenderer {
         verbosity: VerbosityLevel,
     ) -> Self {
         Self::new(message.parts.clone(), context, verbosity)
+    }
+
+    pub fn from_message_with_step_mode(
+        message: &SessionMessages200ResponseInner,
+        context: MessageContext,
+        verbosity: VerbosityLevel,
+        step_rendering_mode: StepRenderingMode,
+    ) -> Self {
+        let mut renderer = Self::new(message.parts.clone(), context, verbosity);
+        renderer.step_rendering_mode = step_rendering_mode;
+        renderer
     }
 
     pub fn from_message_container(
@@ -69,9 +90,46 @@ impl MessageRenderer {
         Self::new(parts, context, verbosity)
     }
 
+    pub fn from_message_container_with_step_mode(
+        container: &crate::app::message_state::MessageContainer,
+        context: MessageContext,
+        verbosity: VerbosityLevel,
+        step_rendering_mode: StepRenderingMode,
+    ) -> Self {
+        let parts: Vec<Part> = container
+            .part_order
+            .iter()
+            .filter_map(|part_id| container.parts.get(part_id).cloned())
+            .collect();
+        let mut renderer = Self::new(parts, context, verbosity);
+        renderer.step_rendering_mode = step_rendering_mode;
+        renderer
+    }
+
     pub fn with_verbosity(mut self, verbosity: VerbosityLevel) -> Self {
         self.verbosity = verbosity;
         self
+    }
+
+    pub fn with_step_rendering_mode(mut self, step_rendering_mode: StepRenderingMode) -> Self {
+        self.step_rendering_mode = step_rendering_mode;
+        self
+    }
+
+    /// Create a renderer that automatically defers incomplete step rendering
+    /// Uses OnStepFinish mode if container has incomplete steps, otherwise Immediate mode
+    pub fn step_safe(
+        container: &crate::app::message_state::MessageContainer,
+        context: MessageContext,
+        verbosity: VerbosityLevel,
+    ) -> Self {
+        let step_mode = if container.has_incomplete_steps() {
+            StepRenderingMode::OnStepFinish
+        } else {
+            StepRenderingMode::Immediate
+        };
+        
+        Self::from_message_container_with_step_mode(container, context, verbosity, step_mode)
     }
 
     fn get_tool_status_color(&self, state: &ToolState) -> Color {
@@ -696,6 +754,7 @@ impl MessageRenderer {
             text_parts: Vec::new(),
             tool_parts: Vec::new(),
             file_parts: Vec::new(),
+            is_completed: false,
         };
         let mut in_step = false;
 
@@ -704,7 +763,7 @@ impl MessageRenderer {
                 Part::StepStart(_) => {
                     // Start a new step group
                     if in_step {
-                        // Finish previous group
+                        // Finish previous group (not completed if no StepFinish was seen)
                         if !current_group.text_parts.is_empty()
                             || !current_group.tool_parts.is_empty()
                             || !current_group.file_parts.is_empty()
@@ -716,12 +775,14 @@ impl MessageRenderer {
                         text_parts: Vec::new(),
                         tool_parts: Vec::new(),
                         file_parts: Vec::new(),
+                        is_completed: false,
                     };
                     in_step = true;
                 }
                 Part::StepFinish(_) => {
-                    // Finish current step group
+                    // Finish current step group and mark as completed
                     if in_step {
+                        current_group.is_completed = true;
                         if !current_group.text_parts.is_empty()
                             || !current_group.tool_parts.is_empty()
                             || !current_group.file_parts.is_empty()
@@ -732,6 +793,7 @@ impl MessageRenderer {
                             text_parts: Vec::new(),
                             tool_parts: Vec::new(),
                             file_parts: Vec::new(),
+                            is_completed: false,
                         };
                     }
                     in_step = false;
@@ -803,6 +865,25 @@ impl MessageRenderer {
     fn render_step_group(&self, group: &StepGroup) -> Vec<Line<'static>> {
         let mut lines = Vec::new();
 
+        // Apply step rendering mode filtering
+        let should_render_step = match self.step_rendering_mode {
+            StepRenderingMode::Immediate => true,
+            StepRenderingMode::OnStepFinish => group.is_completed,
+        };
+
+        if !should_render_step {
+            // For incomplete steps in OnStepFinish mode, show a placeholder
+            lines.push(Line::from(" "));
+            lines.push(Line::from(vec![
+                Span::styled("⏳ ".to_string(), Style::default().fg(Color::Yellow)),
+                Span::styled(
+                    "Step in progress...".to_string(),
+                    Style::default().fg(Color::Gray),
+                ),
+            ]));
+            return lines;
+        }
+
         // Determine if this is a mixed grouping
         let has_text_parts = !group.text_parts.is_empty();
         let has_tool_parts = !group.tool_parts.is_empty();
@@ -869,6 +950,7 @@ impl MessageRenderer {
                 text_parts: Vec::new(),
                 tool_parts: Vec::new(),
                 file_parts: Vec::new(),
+                is_completed: true, // Ungrouped parts are always considered "completed"
             };
 
             for part in &self.parts {
@@ -941,7 +1023,9 @@ impl<'a> Widget for MessagePart<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use opencode_sdk::models::{ToolStateCompleted, ToolStateCompletedTime};
+    use opencode_sdk::models::{
+        StepFinishPart, StepStartPart, ToolStateCompleted, ToolStateCompletedTime,
+    };
     use std::collections::HashMap;
 
     fn create_text_part(text: &str) -> Part {
@@ -972,6 +1056,33 @@ mod tests {
                     end: 1.0,
                 }),
             }))),
+        }))
+    }
+
+    fn create_step_start_part(id: &str) -> Part {
+        Part::StepStart(Box::new(StepStartPart {
+            id: id.to_string(),
+            session_id: "session1".to_string(),
+            message_id: "msg1".to_string(),
+        }))
+    }
+
+    fn create_step_finish_part(id: &str) -> Part {
+        use opencode_sdk::models::{AssistantMessageTokens, AssistantMessageTokensCache};
+        Part::StepFinish(Box::new(StepFinishPart {
+            id: id.to_string(),
+            session_id: "session1".to_string(),
+            message_id: "msg1".to_string(),
+            cost: 0.0,
+            tokens: Box::new(AssistantMessageTokens {
+                input: 0.0,
+                output: 0.0,
+                reasoning: 0.0,
+                cache: Box::new(AssistantMessageTokensCache {
+                    read: 0.0,
+                    write: 0.0,
+                }),
+            }),
         }))
     }
 
@@ -1110,5 +1221,102 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
         assert!(content.contains("This is standalone text"));
+    }
+
+    #[test]
+    fn test_step_rendering_mode_immediate() {
+        let parts = vec![
+            create_step_start_part("step_start_1"),
+            create_text_part("Step content"),
+            create_tool_part("bash", "Command output"),
+        ];
+
+        let renderer =
+            MessageRenderer::new(parts, MessageContext::Fullscreen, VerbosityLevel::Summary)
+                .with_step_rendering_mode(StepRenderingMode::Immediate);
+
+        let text = renderer.render();
+        let content = text
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| span.content.as_ref())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        // Should show content even without StepFinish
+        assert!(content.contains("bash"));
+        assert!(!content.contains("Step in progress"));
+    }
+
+    #[test]
+    fn test_step_rendering_mode_on_step_finish() {
+        // Test incomplete step (no StepFinish)
+        let incomplete_parts = vec![
+            create_step_start_part("step_start_1"),
+            create_text_part("Step content"),
+            create_tool_part("bash", "Command output"),
+        ];
+
+        let renderer_incomplete = MessageRenderer::new(
+            incomplete_parts,
+            MessageContext::Fullscreen,
+            VerbosityLevel::Summary,
+        )
+        .with_step_rendering_mode(StepRenderingMode::OnStepFinish);
+
+        let text = renderer_incomplete.render();
+        let content = text
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| span.content.as_ref())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        // Should show placeholder for incomplete step
+        assert!(content.contains("Step in progress"));
+        assert!(!content.contains("bash"));
+        assert!(!content.contains("Step content"));
+
+        // Test complete step (with StepFinish)
+        let complete_parts = vec![
+            create_step_start_part("step_start_1"),
+            create_text_part("Step content"),
+            create_tool_part("bash", "Command output"),
+            create_step_finish_part("step_finish_1"),
+        ];
+
+        let renderer_complete = MessageRenderer::new(
+            complete_parts,
+            MessageContext::Fullscreen,
+            VerbosityLevel::Summary,
+        )
+        .with_step_rendering_mode(StepRenderingMode::OnStepFinish);
+
+        let text = renderer_complete.render();
+        let content = text
+            .lines
+            .iter()
+            .map(|line| {
+                line.spans
+                    .iter()
+                    .map(|span| span.content.as_ref())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        // Should show actual content for complete step
+        assert!(content.contains("bash"));
+        assert!(!content.contains("Step in progress"));
     }
 }

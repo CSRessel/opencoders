@@ -17,20 +17,13 @@ use tui_textarea::{Input, Key, TextArea};
 const MODE_COLORS: [Color; 3] = [Color::Black, Color::Magenta, Color::Green];
 const MODE_DEFAULT_COLOR: Color = Color::Gray;
 
-// Message types for modular ELM architecture
 #[derive(Debug, Clone, PartialEq)]
 pub enum MsgTextArea {
     KeyInput(KeyEvent),
+    Newline,
     SetFocus(bool),
     Clear,
 }
-
-// #[derive(Debug, Clone, PartialEq)]
-// pub enum CmdTextArea {
-//     FocusChanged(bool),
-//     Clear,
-//     None,
-// }
 
 #[derive(Debug, Clone)]
 pub struct TextInputArea {
@@ -42,7 +35,6 @@ pub struct TextInputArea {
     is_focused: bool,
 }
 
-// Result type for input handling
 #[derive(Debug)]
 pub struct InputResult {
     pub submitted_text: Option<String>,
@@ -69,7 +61,7 @@ impl TextInputArea {
             textarea,
             min_height: TEXT_INPUT_AREA_MIN_HEIGHT,
             max_height: TEXT_INPUT_AREA_MAX_HEIGHT,
-            current_height: TEXT_INPUT_AREA_MAX_HEIGHT,
+            current_height: TEXT_INPUT_AREA_MIN_HEIGHT,
             placeholder: "Type your message...".to_string(),
             is_focused: false,
         }
@@ -555,6 +547,10 @@ impl TextInputArea {
 impl TextInputArea {
     pub fn handle_message(&mut self, msg: MsgTextArea) {
         return match msg {
+            MsgTextArea::Newline => {
+                self.textarea.insert_newline();
+                self.current_height = self.current_height.saturating_add(1);
+            }
             MsgTextArea::KeyInput(key_event) => {
                 self.handle_input(key_event);
             }

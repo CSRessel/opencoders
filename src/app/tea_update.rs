@@ -418,7 +418,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
         Msg::TextArea(submsg) => {
             // Handle component sub-messages using direct method call
-            let text_area_cmds = model.text_input_area.handle_message(submsg);
+            model.text_input_area.handle_message(submsg);
             CmdOrBatch::Single(Cmd::None)
         }
 

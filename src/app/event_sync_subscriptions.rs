@@ -75,6 +75,13 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                     Some(Msg::ChangeState(AppState::TextEntry))
                 }
 
+                (AppState::TextEntry, KeyCode::Char('c'), KeyModifiers::CONTROL, _) => {
+                    if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::CtrlC) {
+                        Some(Msg::Quit)
+                    } else {
+                        Some(Msg::TextArea(MsgTextArea::Clear))
+                    }
+                }
                 (AppState::TextEntry, KeyCode::Esc, __, _) => {
                     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
                         Some(Msg::SessionAbort)
@@ -87,7 +94,7 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 }
                 (AppState::TextEntry, KeyCode::Enter, modifiers, _) => {
                     if modifiers.contains(KeyModifiers::SHIFT) {
-                        Some(Msg::TextArea(MsgTextArea::KeyInput(key)))
+                        Some(Msg::TextArea(MsgTextArea::Newline))
                     } else {
                         Some(Msg::SubmitTextInput)
                     }

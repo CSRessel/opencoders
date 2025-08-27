@@ -3,7 +3,10 @@ use crate::app::{
     tea_model::{Model, ModelInit},
 };
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
+    event::{
+        DisableMouseCapture, EnableMouseCapture, KeyboardEnhancementFlags,
+        PushKeyboardEnhancementFlags,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -35,6 +38,11 @@ pub fn init_terminal(
     );
 
     enable_raw_mode().wrap_err("Failed to enable raw mode")?;
+
+    // Necessary for some terminals to report shift+enter
+    let flags = KeyboardEnhancementFlags::REPORT_EVENT_TYPES;
+    crossterm::execute!(std::io::stdout(), PushKeyboardEnhancementFlags(flags))
+        .wrap_err("Failed to push kb flags")?;
 
     let mut stdout = stdout();
     execute!(stdout, EnableMouseCapture).wrap_err("Failed to enable mouse capture")?;
@@ -79,10 +87,7 @@ fn set_panic_hook(init: ModelInit) {
 
 /// Restore the terminal to its original state
 pub fn restore_terminal(init: &ModelInit) -> io::Result<()> {
-    tracing::info!(
-        "Restoring terminal - inline_mode: {}",
-        init.inline_mode()
-    );
+    tracing::info!("Restoring terminal - inline_mode: {}", init.inline_mode());
 
     // Disable raw mode first
     if let Err(e) = disable_raw_mode() {
@@ -90,7 +95,7 @@ pub fn restore_terminal(init: &ModelInit) -> io::Result<()> {
     }
 
     let mut stdout = stdout();
-    
+
     // Disable mouse capture
     if let Err(e) = execute!(stdout, DisableMouseCapture) {
         tracing::error!("Failed to disable mouse capture during restore: {}", e);
@@ -105,7 +110,7 @@ pub fn restore_terminal(init: &ModelInit) -> io::Result<()> {
         // to prevent overlap with error messages
         if let Ok((cols, rows)) = crossterm::terminal::size() {
             let ui_height = init.height().unwrap_or(10);
-            
+
             // Clear from cursor position down to prevent overlap
             execute!(
                 stdout,

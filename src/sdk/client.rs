@@ -71,10 +71,18 @@ fn generate_id_with_direction(prefix: IdPrefix, descending: bool) -> String {
     // Handle counter increment with atomic operations to match Go/TypeScript logic
     let (timestamp_to_use, counter) = loop {
         let last_ts = LAST_TIMESTAMP.load(Ordering::SeqCst);
-        
+
         if current_timestamp != last_ts {
             // Try to update the timestamp and reset counter
-            if LAST_TIMESTAMP.compare_exchange(last_ts, current_timestamp, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+            if LAST_TIMESTAMP
+                .compare_exchange(
+                    last_ts,
+                    current_timestamp,
+                    Ordering::SeqCst,
+                    Ordering::SeqCst,
+                )
+                .is_ok()
+            {
                 COUNTER.store(1, Ordering::SeqCst);
                 break (current_timestamp, 1);
             }
@@ -395,10 +403,6 @@ impl OpenCodeClient {
             tools: None,
             parts: vec![part],
         };
-        let reqstr = serde_json::to_string_pretty(&request)?;
-
-        tracing::warn!("request...");
-        tracing::warn!(reqstr);
 
         let params = default_api::SessionPeriodChatParams {
             id: session_id.to_string(),

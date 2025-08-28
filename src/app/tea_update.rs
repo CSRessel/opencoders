@@ -196,6 +196,29 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             CmdOrBatch::Single(Cmd::None)
         }
 
+        Msg::TimeoutExpired(timeout_type) => {
+            match timeout_type {
+                TimeoutType::DebounceFindFiles(query) => {
+                    tracing::debug!("debounce finished! for {}", query);
+                    // Trigger find files search when debounce timeout expires
+                    if let Some(client) = model.client.clone() {
+                        if !query.is_empty() {
+                            CmdOrBatch::Single(Cmd::AsyncLoadFindFiles(client, query))
+                        } else {
+                            // Empty query - load file status instead
+                            CmdOrBatch::Single(Cmd::AsyncLoadFileStatus(client))
+                        }
+                    } else {
+                        CmdOrBatch::Single(Cmd::None)
+                    }
+                }
+                TimeoutType::RepeatShortcut(_) => {
+                    // This should be handled by the existing timeout system
+                    CmdOrBatch::Single(Cmd::None)
+                }
+            }
+        }
+
         Msg::SessionAbort => CmdOrBatch::Single(Cmd::AsyncSessionAbort),
 
         Msg::ToggleVerbosity => {
@@ -206,12 +229,10 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         Msg::SubmitTextInput => {
             let text = model.text_input_area.content().trim().to_string();
 
-            tracing::debug!("handling msg: {}", text);
             // Handle text submission like the legacy SubmitInput logic
             model.input_history.push(text.clone());
             model.last_input = Some(text.clone());
 
-            tracing::debug!("session: {:?}", model.session_state);
             // If we have a pending session, create it now with this message
             if let SessionState::Pending(pending_info) = &model.session_state {
                 if let Some(client) = model.client.clone() {
@@ -398,7 +419,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                 .modal
                 .handle_event(ModalSelectorEvent::SetItems(session_data));
 
-            tracing::debug!("set event for {} sessions!!!", model.sessions.len());
             CmdOrBatch::Single(Cmd::None)
         }
 
@@ -471,14 +491,24 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::ResponseFileStatusesLoad(Ok(files)) => {
-            model.file_status = files;
+        Msg::ResponseFindFiles(Ok(file_paths)) => {
+            // Convert file paths to File objects for the file selector
+            let files = file_paths
+                .into_iter()
+                .map(|path| opencode_sdk::models::File {
+                    path,
+                    added: 0,
+                    removed: 0,
+                    status: opencode_sdk::models::file::Status::Added,
+                })
+                .collect();
+            // Update the file selector with found files
+            model.modal_file_selector.set_files(files);
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::ResponseFileStatusesLoad(Err(error)) => {
-            tracing::error!("Failed to load file status: {}", error);
-            // Keep the current file status and don't show error to user
+        Msg::ResponseFindFiles(Err(error)) => {
+            tracing::error!("Failed to find files: {}", error);
             CmdOrBatch::Single(Cmd::None)
         }
     }

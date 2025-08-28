@@ -124,6 +124,14 @@ impl Program {
                     // Cleanup completed tasks periodically
                     self.task_manager.cleanup_completed_tasks();
 
+                    // Check for expired timeouts and process them
+                    let expired_timeouts = self.model.get_expired_timeouts();
+                    for timeout_type in expired_timeouts {
+                        let cmd = update(&mut self.model, Msg::TimeoutExpired(timeout_type));
+                        self.needs_render = true;
+                        self.spawn_commands(cmd).await?;
+                    }
+
                     // Only render if needed
                     if self.needs_render {
                         self.render_view().await?;
@@ -232,6 +240,7 @@ impl Program {
                         | Cmd::AsyncLoadModes(_)
                         | Cmd::AsyncLoadSessionMessages(_, _)
                         | Cmd::AsyncLoadFileStatus(_)
+                        | Cmd::AsyncLoadFindFiles(_, _)
                         | Cmd::AsyncSendUserMessage(_, _, _, _, _, _, _)
                         | Cmd::AsyncCancelTask(_)
                         | Cmd::AsyncSessionAbort
@@ -262,7 +271,7 @@ impl Program {
                     if let Some(terminal) = old_terminal.as_mut() {
                         // Clear the TUI when leaving inline mode, so it doesn't
                         // leave artifacts in the history
-                        tracing::debug!("clearing to switch from inline to altscreen");
+                        tracing::debug!("Clearing to switch from inline to altscreen");
                         terminal.draw(|f| view_clear(f))?;
                         // Move the cursor back to the top left of the TUI,
                         // so if we switch back and forth we don't offset
@@ -345,11 +354,11 @@ impl Program {
                     // If we have a selected session ID, save it as the last session first
                     if let Some(session_id) = selected_session_id {
                         if let Err(e) = client.switch_to_session(&session_id).await {
-                            tracing::error!("save session ID {} failed: {}", session_id, e);
+                            tracing::error!("Save session ID {} failed: {}", session_id, e);
                         }
                     } else {
                         if let Err(e) = client.clear_current_session().await {
-                            tracing::error!("clear session failed: {}", e);
+                            tracing::error!("Clear session failed: {}", e);
                         }
                     }
 
@@ -366,7 +375,7 @@ impl Program {
                 self.task_manager.spawn_task(async move {
                     // Clear any existing session first
                     if let Err(error) = client.clear_current_session().await {
-                        tracing::error!("clear session failed: {}", error);
+                        tracing::error!("Clear session failed: {}", error);
                         Msg::ResponseSessionCreateWithMessage(Err(error))
                     } else {
                         // Create new session
@@ -375,7 +384,7 @@ impl Program {
                                 Msg::ResponseSessionCreateWithMessage(Ok((session, first_message)))
                             }
                             Err(error) => {
-                                tracing::error!("create session failed: {}", error);
+                                tracing::error!("Create session failed: {}", error);
                                 Msg::ResponseSessionCreateWithMessage(Err(error))
                             }
                         }
@@ -399,6 +408,16 @@ impl Program {
                     match client.get_file_status().await {
                         Ok(file_status) => Msg::ResponseFileStatusesLoad(Ok(file_status)),
                         Err(error) => Msg::ResponseFileStatusesLoad(Err(error)),
+                    }
+                });
+            }
+
+            Cmd::AsyncLoadFindFiles(client, query) => {
+                // Spawn async find files task
+                self.task_manager.spawn_task(async move {
+                    match client.find_files(&query).await {
+                        Ok(file_paths) => Msg::ResponseFindFiles(Ok(file_paths)),
+                        Err(error) => Msg::ResponseFindFiles(Err(error)),
                     }
                 });
             }

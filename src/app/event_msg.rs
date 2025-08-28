@@ -33,6 +33,9 @@ pub enum Msg {
     // Unified repeat shortcut timeout events
     RepeatShortcutPressed(RepeatShortcutKey),
     ClearTimeout,
+    
+    // General timeout expiration
+    TimeoutExpired(crate::app::tea_model::TimeoutType),
 
     // Client initialization messages
     ResponseClientConnect(OpenCodeResponse<OpenCodeClient>),
@@ -43,6 +46,7 @@ pub enum Msg {
     ResponseSessionMessagesLoad(OpenCodeResponse<Vec<SessionMessages200ResponseInner>>),
     ResponseUserMessageSend(OpenCodeResponse<String>),
     ResponseFileStatusesLoad(OpenCodeResponse<Vec<opencode_sdk::models::File>>),
+    ResponseFindFiles(OpenCodeResponse<Vec<String>>),
 
     // Event stream messages
     EventReceived(Event),
@@ -84,6 +88,7 @@ pub enum Cmd {
     AsyncLoadModes(OpenCodeClient),
     AsyncLoadSessionMessages(OpenCodeClient, String),
     AsyncLoadFileStatus(OpenCodeClient),
+    AsyncLoadFindFiles(OpenCodeClient, String),
     AsyncSendUserMessage(
         OpenCodeClient,
         String,

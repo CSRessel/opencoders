@@ -11,8 +11,11 @@ use ratatui::{
 };
 use std::marker::PhantomData;
 
-use crate::app::tea_view::{clear_area_for_rect, MAX_UI_WIDTH};
 use crate::app::ui_components::Component;
+use crate::app::{
+    tea_view::{clear_area_for_rect, MAX_UI_WIDTH},
+    view_model_context::ViewModelContext,
+};
 
 /// Configuration for table columns
 #[derive(Debug, Clone, PartialEq)]
@@ -317,9 +320,12 @@ where
 
     // Rendering methods
     fn render_loading(&self, area: Rect, buf: &mut Buffer) {
+        let model = ViewModelContext::current();
+
         let mut block = Block::default()
             .padding(Padding::uniform(self.config.padding))
             .borders(self.config.borders)
+            .border_type(model.border_type())
             .border_style(Style::default().fg(self.config.border_color));
         if let Some(title) = &self.config.title {
             block = block.title_top(title.clone())
@@ -334,9 +340,12 @@ where
     }
 
     fn render_error(&self, area: Rect, buf: &mut Buffer, error: &str) {
+        let model = ViewModelContext::current();
+
         let mut block = Block::default()
             .padding(Padding::uniform(self.config.padding))
             .borders(self.config.borders)
+            .border_type(model.border_type())
             .border_style(Style::default().fg(Color::Red));
         if let Some(title) = &self.config.title {
             block = block.title_top(title.clone())
@@ -351,9 +360,12 @@ where
     }
 
     fn render_list(&self, area: Rect, buf: &mut Buffer) {
+        let model = ViewModelContext::current();
+
         let mut block = Block::default()
             .padding(Padding::uniform(self.config.padding))
             .borders(self.config.borders)
+            .border_type(model.border_type())
             .border_style(Style::default().fg(self.config.border_color));
         if let Some(title) = &self.config.title {
             block = block.title_top(title.clone())
@@ -397,9 +409,12 @@ where
     }
 
     fn render_table(&self, area: Rect, buf: &mut Buffer, columns: &[TableColumn]) {
+        let model = ViewModelContext::current();
+
         let mut block = Block::default()
             .padding(Padding::uniform(self.config.padding))
             .borders(self.config.borders)
+            .border_type(model.border_type())
             .border_style(Style::default().fg(self.config.border_color));
         if let Some(title) = &self.config.title {
             block = block.title_top(title.clone())

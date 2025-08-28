@@ -23,6 +23,19 @@ pub enum RepeatShortcutKey {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum TimeoutType {
+    RepeatShortcut(RepeatShortcutKey),
+    DebounceFindFiles(String), // query string
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Timeout {
+    pub timeout_type: TimeoutType,
+    pub started_at: SystemTime,
+    pub duration_ms: u64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct RepeatShortcutTimeout {
     pub key: RepeatShortcutKey,
     pub started_at: SystemTime,
@@ -88,6 +101,8 @@ pub struct Model {
     pub file_status: Vec<File>,
     // Unified repeat shortcut timeout system
     pub repeat_shortcut_timeout: Option<RepeatShortcutTimeout>,
+    // General timeout system for debouncing and other purposes
+    pub active_timeouts: Vec<Timeout>,
 }
 
 mod model_init {
@@ -209,6 +224,7 @@ impl Model {
             session_is_idle: true,
             file_status: Vec::new(),
             repeat_shortcut_timeout: None,
+            active_timeouts: Vec::new(),
         }
     }
 
@@ -412,6 +428,65 @@ impl Model {
             }
         }
         false
+    }
+
+    // General timeout management methods
+    pub fn set_timeout(&mut self, timeout_type: TimeoutType, duration_ms: u64) {
+        // Remove any existing timeout of the same type
+        self.active_timeouts.retain(|t| match timeout_type {
+            TimeoutType::DebounceFindFiles(_) => {
+                !matches!(t.timeout_type, TimeoutType::DebounceFindFiles(_))
+            }
+            _ => t.timeout_type != timeout_type,
+        });
+
+        // Add new timeout
+        self.active_timeouts.push(Timeout {
+            timeout_type,
+            started_at: SystemTime::now(),
+            duration_ms,
+        });
+    }
+
+    pub fn clear_timeout(&mut self, timeout_type: &TimeoutType) {
+        self.active_timeouts
+            .retain(|t| &t.timeout_type != timeout_type);
+    }
+
+    pub fn is_timeout_active(&self, timeout_type: &TimeoutType) -> bool {
+        self.active_timeouts.iter().any(|t| {
+            &t.timeout_type == timeout_type
+                && t.started_at
+                    .elapsed()
+                    .map(|elapsed| elapsed.as_millis() < t.duration_ms as u128)
+                    .unwrap_or(false)
+        })
+    }
+
+    pub fn get_expired_timeouts(&mut self) -> Vec<TimeoutType> {
+        let now = SystemTime::now();
+        let mut expired = Vec::new();
+
+        self.active_timeouts.retain(|timeout| {
+            if let Ok(elapsed) = timeout.started_at.elapsed() {
+                if elapsed.as_millis() >= timeout.duration_ms as u128 {
+                    tracing::debug!(
+                        "since {:?} has been {} >= {}",
+                        timeout.started_at,
+                        elapsed.as_millis(),
+                        timeout.duration_ms
+                    );
+                    expired.push(timeout.timeout_type.clone());
+                    false // Remove expired timeout
+                } else {
+                    true // Keep active timeout
+                }
+            } else {
+                false // Remove invalid timeout
+            }
+        });
+
+        expired
     }
 
     // Mode management

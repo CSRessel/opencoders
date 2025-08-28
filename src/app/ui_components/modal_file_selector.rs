@@ -1,8 +1,8 @@
 use std::u16;
 
 use crate::app::{
-    event_msg::CmdOrBatch,
-    tea_model::{AppModalState, Model},
+    event_msg::{Cmd, CmdOrBatch},
+    tea_model::{AppModalState, Model, TimeoutType},
     tea_view::MAX_UI_WIDTH,
     ui_components::{
         modal_selector::ModalSelectorUpdate, Component, ModalSelector, ModalSelectorEvent,
@@ -195,6 +195,14 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                                 model_clear(model);
                             } else {
                                 model.modal_file_selector.depth -= 1;
+                                // Update query and set timeout for debounced search
+                                if !model.modal_file_selector.query.is_empty() {
+                                    model.modal_file_selector.query.pop();
+                                    let query = model.modal_file_selector.query.clone();
+                                    let timeout_type =
+                                        TimeoutType::DebounceFindFiles(query.clone());
+                                    model.set_timeout(timeout_type, 2000); // 200ms debounce
+                                }
                             }
                             model.text_input_area.handle_input(key);
                         }
@@ -204,6 +212,11 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                             } else {
                                 model.modal_file_selector.depth += 1;
                                 model.modal_file_selector.query += &format!("{}", c);
+
+                                // Set timeout for debounced file search
+                                let query = model.modal_file_selector.query.clone();
+                                let timeout_type = TimeoutType::DebounceFindFiles(query.clone());
+                                model.set_timeout(timeout_type, 2000); // 200ms debounce
                             }
                             model.text_input_area.handle_input(key);
                         }
@@ -215,6 +228,7 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                 model_clear(model);
             }
         };
+        // File selector doesn't return Cmd, but the timeout system will trigger the search
         CmdOrBatch::Single(())
     }
 }

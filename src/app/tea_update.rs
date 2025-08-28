@@ -199,7 +199,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         Msg::TimeoutExpired(timeout_type) => {
             match timeout_type {
                 TimeoutType::DebounceFindFiles(query) => {
-                    tracing::debug!("debounce finished! for {}", query);
                     // Trigger find files search when debounce timeout expires
                     if let Some(client) = model.client.clone() {
                         if !query.is_empty() {
@@ -266,8 +265,22 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         }
 
         Msg::ModalFileSelector(submsg) => {
-            FileSelector::update(submsg, model);
-            CmdOrBatch::Single(Cmd::None)
+            FileSelector::update(submsg.clone(), model);
+            CmdOrBatch::Single(
+                if matches!(
+                    submsg,
+                    MsgModalFileSelector::Event(ModalSelectorEvent::Show)
+                ) {
+                    if let Some(client) = model.client.clone() {
+                        // Every time we reopen file search, update git status
+                        Cmd::AsyncLoadFileStatus(client)
+                    } else {
+                        Cmd::None
+                    }
+                } else {
+                    Cmd::None
+                },
+            )
         }
 
         Msg::TextArea(submsg) => {
@@ -300,7 +313,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
         Msg::ResponseClientConnect(Ok(client)) => {
             tracing::info!("Client connected successfully");
-            model.client = Some(client.clone());
+            model.client = Some(client);
             model.state = AppModalState::Connecting(ConnectionStatus::Connected);
             model.connection_status = ConnectionStatus::Connected;
             if !model.is_session_ready() {
@@ -308,7 +321,11 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                 model.change_session(Some(0));
             }
             // Load modes immediately when client connects
-            CmdOrBatch::Single(Cmd::AsyncLoadModes(client))
+            CmdOrBatch::Single(if let Some(client) = model.client.clone() {
+                Cmd::AsyncLoadModes(client)
+            } else {
+                Cmd::None
+            })
         }
 
         Msg::ResponseClientConnect(Err(error)) => {

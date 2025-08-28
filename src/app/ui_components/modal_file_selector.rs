@@ -201,7 +201,7 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                                     let query = model.modal_file_selector.query.clone();
                                     let timeout_type =
                                         TimeoutType::DebounceFindFiles(query.clone());
-                                    model.set_timeout(timeout_type, 2000); // 200ms debounce
+                                    model.set_timeout(timeout_type, 200); // 200ms debounce
                                 }
                             }
                             model.text_input_area.handle_input(key);
@@ -216,7 +216,7 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                                 // Set timeout for debounced file search
                                 let query = model.modal_file_selector.query.clone();
                                 let timeout_type = TimeoutType::DebounceFindFiles(query.clone());
-                                model.set_timeout(timeout_type, 2000); // 200ms debounce
+                                model.set_timeout(timeout_type, 200); // 200ms debounce
                             }
                             model.text_input_area.handle_input(key);
                         }

@@ -200,10 +200,12 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         Msg::SubmitTextInput => {
             let text = model.text_input_area.content().trim().to_string();
 
+            tracing::debug!("handling msg: {}", text);
             // Handle text submission like the legacy SubmitInput logic
             model.input_history.push(text.clone());
             model.last_input = Some(text.clone());
 
+            tracing::debug!("session: {:?}", model.session_state);
             // If we have a pending session, create it now with this message
             if let SessionState::Pending(pending_info) = &model.session_state {
                 if let Some(client) = model.client.clone() {
@@ -274,6 +276,10 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             model.client = Some(client.clone());
             model.state = AppModalState::Connecting(ConnectionStatus::Connected);
             model.connection_status = ConnectionStatus::Connected;
+            if !model.is_session_ready() {
+                // Same as selecting the "Create New" option (pending session)
+                model.change_session(Some(0));
+            }
             // Load modes immediately when client connects
             CmdOrBatch::Single(Cmd::AsyncLoadModes(client))
         }

@@ -39,6 +39,7 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 > - [x] ~~support multi-line textarea (shift+enter newlines, expanding height, scroll overflow)~~
 > - [ ] more input dropdowns (need slash commands: help, new, sessions, compact)
 > - [ ] better status bar styling (fix mode state for /agent, better colors, proper tokens/context, row items overflow to stacked)
+> - [ ] cleanup all of the scrollbars (selectors, message log, other?)
 > - [ ] basic env for non-interactive TTY execution with synthetic input for "golden tests" and for perf testing
 > - [ ] setup some basic perf tests with either divan or criterion
 > - [ ] prettify README, cleanup distribution steps, improve opencode dependency

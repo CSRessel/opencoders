@@ -277,13 +277,6 @@ impl Program {
                         .wrap_err("Failed to restore terminal")?;
                 }
                 let new_init = ModelInit::new(new_inline_mode);
-                if new_inline_mode {
-                    // Manual hack because cursor positioning stuff stopped working somehow...
-                    crossterm::execute!(
-                        io::stdout(),
-                        crossterm::cursor::MoveUp(self.model.config.height),
-                    );
-                };
                 let mut terminal = init_terminal(&new_init, self.model.config.height)?;
                 self.terminal = Some(terminal);
                 self.model.init = new_init;

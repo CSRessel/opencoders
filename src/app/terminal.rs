@@ -114,10 +114,8 @@ pub fn restore_terminal(init: &ModelInit, height: u16) -> io::Result<()> {
             // Clear from cursor position down to prevent overlap
             execute!(
                 stdout,
-                crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
                 crossterm::cursor::MoveTo(0, rows.saturating_sub(height)),
                 crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
-                crossterm::cursor::MoveTo(0, rows),
                 crossterm::cursor::Show
             )?;
         }

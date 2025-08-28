@@ -93,6 +93,9 @@ pub struct FileSelector {
     pub modal: ModalSelector<FileData>,
     query: String,
     depth: u16,
+    // Store both data sources separately
+    file_status: Vec<File>,
+    find_files_results: Vec<File>,
     // attachments
 }
 
@@ -127,10 +130,47 @@ impl FileSelector {
             modal: ModalSelector::new(config, SelectorMode::Table { columns }),
             query: "".to_string(),
             depth: 0,
+            file_status: Vec::new(),
+            find_files_results: Vec::new(),
         }
     }
 
     pub fn set_files(&mut self, files: Vec<File>) {
+        let file_data: Vec<FileData> = files.into_iter().map(FileData::from_file).collect();
+        self.modal.set_items(file_data);
+    }
+
+    pub fn set_file_status(&mut self, files: Vec<File>) {
+        self.file_status = files;
+        self.update_combined_files();
+    }
+
+    pub fn set_find_files_results(&mut self, files: Vec<File>) {
+        self.find_files_results = files;
+        self.update_combined_files();
+    }
+
+    fn update_combined_files(&mut self) {
+        use std::collections::HashMap;
+        
+        // Use HashMap to deduplicate by file path, with file_status taking precedence
+        let mut combined_files: HashMap<String, File> = HashMap::new();
+        
+        // First add find files results
+        for file in &self.find_files_results {
+            combined_files.insert(file.path.clone(), file.clone());
+        }
+        
+        // Then add file status, overwriting find files results for same paths
+        for file in &self.file_status {
+            combined_files.insert(file.path.clone(), file.clone());
+        }
+        
+        // Convert to Vec and sort by path for consistent ordering
+        let mut files: Vec<File> = combined_files.into_values().collect();
+        files.sort_by(|a, b| a.path.cmp(&b.path));
+        
+        // Convert to FileData and set in the modal
         let file_data: Vec<FileData> = files.into_iter().map(FileData::from_file).collect();
         self.modal.set_items(file_data);
     }
@@ -144,6 +184,9 @@ impl FileSelector {
     pub fn clear(&mut self) {
         self.depth = 0;
         self.query = "".to_string();
+        self.file_status.clear();
+        self.find_files_results.clear();
+        self.modal.set_items(Vec::new());
     }
 }
 

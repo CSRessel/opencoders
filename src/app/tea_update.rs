@@ -497,8 +497,8 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
         Msg::ResponseFileStatusesLoad(Ok(files)) => {
             model.file_status = files.clone();
-            // Update the file selector with new data
-            model.modal_file_selector.set_files(files);
+            // Update the file selector with file status data
+            model.modal_file_selector.set_file_status(files);
             CmdOrBatch::Single(Cmd::None)
         }
 
@@ -519,8 +519,8 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                     status: opencode_sdk::models::file::Status::Added,
                 })
                 .collect();
-            // Update the file selector with found files
-            model.modal_file_selector.set_files(files);
+            // Update the file selector with find files results
+            model.modal_file_selector.set_find_files_results(files);
             CmdOrBatch::Single(Cmd::None)
         }
 

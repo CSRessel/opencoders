@@ -82,12 +82,12 @@ pub enum Msg {
     // Verbosity control
     ToggleVerbosity,
 
-    // FilePicker messages
-    FilePickerOpen,
-    FilePickerClose,
-    FilePickerNavigateUp,
-    FilePickerNavigateDown,
-    FilePickerSelect,
+    // FileSelector messages
+    FileSelectorOpen,
+    FileSelectorClose,
+    FileSelectorNavigateUp,
+    FileSelectorNavigateDown,
+    FileSelectorSelect,
     FileStatusLoaded(Vec<opencode_sdk::models::File>),
     FileStatusLoadFailed(OpenCodeError),
 

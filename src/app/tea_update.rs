@@ -199,9 +199,9 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         // Session selector messages
         Msg::LeaderShowSessionSelector => {
             model.clear_repeat_leader_timeout();
-            model.state = AppModalState::SelectSession;
+            model.state = AppModalState::ModalSessionSelect;
             model
-                .session_selector
+                .modal_session_selector
                 .cache_render_height_for_terminal(model.config.height);
 
             // Set current session index if we have an active session
@@ -218,12 +218,12 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             };
 
             model
-                .session_selector
+                .modal_session_selector
                 .set_current_session_index(current_index);
 
             // Make the selector visible
             model
-                .session_selector
+                .modal_session_selector
                 .handle_event(PopoverSelectorEvent::Show);
 
             if let Some(client) = model.client.clone() {
@@ -235,7 +235,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             } else {
                 tracing::debug!("no client yet......");
                 model
-                    .session_selector
+                    .modal_session_selector
                     .handle_event(PopoverSelectorEvent::SetError(Some(
                         "No client connection".to_string(),
                     )));
@@ -245,7 +245,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
         Msg::SessionSelectorEvent(event) => {
             if let Some(client) = model.client.clone() {
-                let changed_index = model.session_selector.handle_event(event.clone());
+                let changed_index = model.modal_session_selector.handle_event(event.clone());
 
                 if model.change_session(changed_index) {
                     return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(client));
@@ -265,12 +265,12 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             let mut items = vec!["Create New Session".to_string()];
             items.extend(sessions.iter().map(|s| s.title.clone()));
             model
-                .session_selector
+                .modal_session_selector
                 .handle_event(PopoverSelectorEvent::SetItems(items));
             //
             // Re-cache the render height since popup size may have changed with new items
             model
-                .session_selector
+                .modal_session_selector
                 .cache_render_height_for_terminal(model.config.height);
 
             // Re-calculate and set current session index after items are loaded
@@ -285,7 +285,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             };
 
             model
-                .session_selector
+                .modal_session_selector
                 .set_current_session_index(current_index);
 
             CmdOrBatch::Single(Cmd::None)
@@ -294,7 +294,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         Msg::SessionsLoadFailed(error) => {
             tracing::error!("Failed to load sessions: {}", error);
             model
-                .session_selector
+                .modal_session_selector
                 .handle_event(PopoverSelectorEvent::SetError(Some(format!(
                     "Failed to load sessions: {}",
                     error
@@ -416,13 +416,16 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         Msg::TextArea(submsg) => {
             // Special handling for @ symbol when main screen is active
             if let MsgTextArea::KeyInput(key_event) = &submsg {
-                if key_event.code == crossterm::event::KeyCode::Char('@') 
-                    && !key_event.modifiers.contains(crossterm::event::KeyModifiers::SHIFT)
-                    && model.is_main_screen_active() {
+                if key_event.code == crossterm::event::KeyCode::Char('@')
+                    && !key_event
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT)
+                    && model.is_main_screen_active()
+                {
                     // Handle the key input first
                     model.text_input_area.handle_message(submsg);
                     // Then trigger file picker directly
-                    model.state = AppModalState::FilePicking;
+                    model.state = AppModalState::ModalFileSelect;
                     // Load file status if we have a client
                     if let Some(client) = model.client.clone() {
                         return CmdOrBatch::Single(Cmd::AsyncLoadFileStatus(client));
@@ -431,15 +434,15 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                     }
                 }
             }
-            
+
             // Handle component sub-messages using direct method call
             model.text_input_area.handle_message(submsg);
             CmdOrBatch::Single(Cmd::None)
         }
 
-        // FilePicker messages
-        Msg::FilePickerOpen => {
-            model.state = AppModalState::FilePicking;
+        // FileSelector messages
+        Msg::FileSelectorOpen => {
+            model.state = AppModalState::ModalFileSelect;
             // Load file status if we have a client
             if let Some(client) = model.client.clone() {
                 CmdOrBatch::Single(Cmd::AsyncLoadFileStatus(client))
@@ -448,23 +451,26 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             }
         }
 
-        Msg::FilePickerClose => {
+        Msg::FileSelectorClose => {
             model.state = AppModalState::None;
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::FilePickerNavigateUp => {
-            model.file_picker.navigate_up(&model.file_status);
+        Msg::FileSelectorNavigateUp => {
+            model.modal_file_selector.navigate_up(&model.file_status);
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::FilePickerNavigateDown => {
-            model.file_picker.navigate_down(&model.file_status);
+        Msg::FileSelectorNavigateDown => {
+            model.modal_file_selector.navigate_down(&model.file_status);
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::FilePickerSelect => {
-            if let Some(selected_file) = model.file_picker.get_selected_file(&model.file_status) {
+        Msg::FileSelectorSelect => {
+            if let Some(selected_file) = model
+                .modal_file_selector
+                .get_selected_file(&model.file_status)
+            {
                 // Insert the file path into the text input
                 let current_text = model.text_input_area.content();
                 let new_text = if current_text.ends_with("@") {
@@ -494,9 +500,9 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             CmdOrBatch::Single(Cmd::None)
         }
 
-        // FilePicker messages
-        Msg::FilePickerOpen => {
-            model.state = AppModalState::FilePicking;
+        // FileSelector messages
+        Msg::FileSelectorOpen => {
+            model.state = AppModalState::ModalFileSelect;
             // Load file status if we have a client
             if let Some(client) = model.client.clone() {
                 CmdOrBatch::Single(Cmd::AsyncLoadFileStatus(client))
@@ -505,23 +511,26 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             }
         }
 
-        Msg::FilePickerClose => {
+        Msg::FileSelectorClose => {
             model.state = AppModalState::None;
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::FilePickerNavigateUp => {
-            model.file_picker.navigate_up(&model.file_status);
+        Msg::FileSelectorNavigateUp => {
+            model.modal_file_selector.navigate_up(&model.file_status);
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::FilePickerNavigateDown => {
-            model.file_picker.navigate_down(&model.file_status);
+        Msg::FileSelectorNavigateDown => {
+            model.modal_file_selector.navigate_down(&model.file_status);
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::FilePickerSelect => {
-            if let Some(selected_file) = model.file_picker.get_selected_file(&model.file_status) {
+        Msg::FileSelectorSelect => {
+            if let Some(selected_file) = model
+                .modal_file_selector
+                .get_selected_file(&model.file_status)
+            {
                 // Insert the file path into the text input
                 let current_text = model.text_input_area.content();
                 let new_text = if current_text.ends_with("@") {

@@ -98,51 +98,62 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppModalState::None, KeyCode::PageUp, _, _) => Some(Msg::ScrollMessageLog(-5)),
                 (AppModalState::None, KeyCode::PageDown, _, _) => Some(Msg::ScrollMessageLog(5)),
 
-                (AppModalState::Help | AppModalState::SelectSession, KeyCode::Esc, _, __) => {
+                (
+                    AppModalState::ModalHelp | AppModalState::ModalSessionSelect,
+                    KeyCode::Esc,
+                    _,
+                    __,
+                ) => {
                     // Close modals
                     Some(Msg::ChangeState(AppModalState::None))
                 }
 
                 // Session selector events
-                (AppModalState::SelectSession, KeyCode::Up, _, _) => {
+                (AppModalState::ModalSessionSelect, KeyCode::Up, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
                 }
-                (AppModalState::SelectSession, KeyCode::Down, _, _)
-                | (AppModalState::SelectSession, KeyCode::Tab, _, _) => {
+                (AppModalState::ModalSessionSelect, KeyCode::Down, _, _)
+                | (AppModalState::ModalSessionSelect, KeyCode::Tab, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
                 }
-                (AppModalState::SelectSession, KeyCode::Char('k'), _, _) => {
+                (AppModalState::ModalSessionSelect, KeyCode::Char('k'), _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
                 }
-                (AppModalState::SelectSession, KeyCode::Char('j'), _, _) => {
+                (AppModalState::ModalSessionSelect, KeyCode::Char('j'), _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
                 }
-                (AppModalState::SelectSession, KeyCode::Enter, _, _) => {
+                (AppModalState::ModalSessionSelect, KeyCode::Enter, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Select))
                 }
-                (AppModalState::SelectSession, KeyCode::Esc, _, _) => {
+                (AppModalState::ModalSessionSelect, KeyCode::Esc, _, _) => {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Cancel))
                 }
 
-                // FilePicker events
-                (AppModalState::FilePicking, KeyCode::Up, _, _) => Some(Msg::FilePickerNavigateUp),
-                (AppModalState::FilePicking, KeyCode::Down, _, _) => {
-                    Some(Msg::FilePickerNavigateDown)
+                // FileSelector events
+                (AppModalState::ModalFileSelect, KeyCode::Up, _, _) => {
+                    Some(Msg::FileSelectorNavigateUp)
                 }
-                (AppModalState::FilePicking, KeyCode::Char('k'), _, _) => {
-                    Some(Msg::FilePickerNavigateUp)
+                (AppModalState::ModalFileSelect, KeyCode::Down, _, _) => {
+                    Some(Msg::FileSelectorNavigateDown)
                 }
-                (AppModalState::FilePicking, KeyCode::Char('j'), _, _) => {
-                    Some(Msg::FilePickerNavigateDown)
+                (AppModalState::ModalFileSelect, KeyCode::Char('k'), _, _) => {
+                    Some(Msg::FileSelectorNavigateUp)
                 }
-                (AppModalState::FilePicking, KeyCode::Tab, KeyModifiers::SHIFT, _) => {
-                    Some(Msg::FilePickerNavigateUp)
+                (AppModalState::ModalFileSelect, KeyCode::Char('j'), _, _) => {
+                    Some(Msg::FileSelectorNavigateDown)
                 }
-                (AppModalState::FilePicking, KeyCode::Tab, _, _) => {
-                    Some(Msg::FilePickerNavigateDown)
+                (AppModalState::ModalFileSelect, KeyCode::Tab, KeyModifiers::SHIFT, _) => {
+                    Some(Msg::FileSelectorNavigateUp)
                 }
-                (AppModalState::FilePicking, KeyCode::Enter, _, _) => Some(Msg::FilePickerSelect),
-                (AppModalState::FilePicking, KeyCode::Esc, _, _) => Some(Msg::FilePickerClose),
+                (AppModalState::ModalFileSelect, KeyCode::Tab, _, _) => {
+                    Some(Msg::FileSelectorNavigateDown)
+                }
+                (AppModalState::ModalFileSelect, KeyCode::Enter, _, _) => {
+                    Some(Msg::FileSelectorSelect)
+                }
+                (AppModalState::ModalFileSelect, KeyCode::Esc, _, _) => {
+                    Some(Msg::FileSelectorClose)
+                }
 
                 // Text input events (internally routed to TextArea component for most keys)
                 (AppModalState::None, _, _, _) => Some(Msg::TextArea(MsgTextArea::KeyInput(key))),

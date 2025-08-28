@@ -9,11 +9,11 @@ use ratatui::{
 };
 
 #[derive(Debug, Clone)]
-pub struct FilePicker {
+pub struct FileSelector {
     state: TableState,
 }
 
-impl FilePicker {
+impl FileSelector {
     pub fn new() -> Self {
         let mut state = TableState::default();
         state.select(Some(0));
@@ -58,14 +58,14 @@ impl FilePicker {
 
     fn format_changes(&self, file: &File) -> Vec<Span<'static>> {
         let mut spans = Vec::new();
-        
+
         if file.added > 0 {
             spans.push(Span::styled(
                 format!("+{}", file.added),
                 Style::default().fg(Color::Green),
             ));
         }
-        
+
         if file.removed > 0 {
             if !spans.is_empty() {
                 spans.push(Span::raw(" "));
@@ -84,14 +84,14 @@ impl FilePicker {
     }
 }
 
-impl Widget for &FilePicker {
+impl Widget for &FileSelector {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let model = ViewModelContext::current();
         let files = &model.get().file_status;
 
         if files.is_empty() {
             let block = Block::default()
-                .title("File Picker")
+                .title("File Selector")
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::Blue));
 
@@ -105,12 +105,9 @@ impl Widget for &FilePicker {
             return;
         }
 
-        let header = Row::new([
-            Cell::from("Changes"),
-            Cell::from("File Path"),
-        ])
-        .style(Style::default().fg(Color::Yellow))
-        .height(1);
+        let header = Row::new([Cell::from("Changes"), Cell::from("File Path")])
+            .style(Style::default().fg(Color::Yellow))
+            .height(1);
 
         let rows = files.iter().map(|file| {
             Row::new([
@@ -125,7 +122,7 @@ impl Widget for &FilePicker {
             .fg(Color::Blue);
 
         let block = Block::default()
-            .title("File Picker (↑↓ navigate, Enter select, Esc close)")
+            .title("File Selector (↑↓ navigate, Enter select, Esc close)")
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Blue));
 

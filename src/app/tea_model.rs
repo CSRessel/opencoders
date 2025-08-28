@@ -2,8 +2,8 @@ use crate::{
     app::{
         message_state::MessageState,
         ui_components::{
-            message_part::VerbosityLevel, MessageLog, PopoverSelector, PopoverSelectorEvent,
-            TextInputArea,
+            message_part::VerbosityLevel, FileSelector, MessageLog, PopoverSelector,
+            PopoverSelectorEvent, TextInputArea,
         },
     },
     sdk::{
@@ -69,8 +69,8 @@ pub struct Model {
     // Stateful components:
     pub message_log: MessageLog,
     pub text_input_area: TextInputArea, // New tui-textarea based input
-    pub session_selector: PopoverSelector,
-    pub file_picker: crate::app::ui_components::FilePicker,
+    pub modal_session_selector: PopoverSelector,
+    pub modal_file_selector: crate::app::ui_components::FileSelector,
     // Client and session state
     pub client: Option<OpenCodeClient>,
     pub session_state: SessionState,
@@ -128,10 +128,10 @@ pub use model_init::ModelInit;
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppModalState {
     None,
-    Help,
     Connecting(ConnectionStatus),
-    SelectSession,
-    FilePicking,
+    ModalHelp,
+    ModalFileSelect,
+    ModalSessionSelect,
     // SelectModel,
     // SelectAgent,
     // SelectFile,
@@ -175,8 +175,8 @@ impl Model {
         text_input_area.set_focus(true);
 
         let message_log = MessageLog::new();
-        let session_selector = PopoverSelector::new("Select Session");
-        let file_picker = crate::app::ui_components::FilePicker::new();
+        let modal_session_selector = PopoverSelector::new("Select Session");
+        let modal_file_selector = FileSelector::new();
 
         Model {
             init: ModelInit::new(true),
@@ -199,8 +199,8 @@ impl Model {
             verbosity_level: VerbosityLevel::Summary,
             message_log,
             text_input_area,
-            session_selector,
-            file_picker,
+            modal_session_selector,
+            modal_file_selector,
             client: None,
             session_state: SessionState::None,
             sessions: Vec::new(),
@@ -274,7 +274,9 @@ impl Model {
         matches!(
             self.state,
             // Add new modal/overlay states here
-            AppModalState::SelectSession | AppModalState::Help | AppModalState::FilePicking
+            AppModalState::ModalSessionSelect
+                | AppModalState::ModalHelp
+                | AppModalState::ModalFileSelect
         ) || self.is_connnection_modal_active()
     }
 
@@ -309,8 +311,8 @@ impl Model {
 
     pub fn change_session_by_index(&mut self, index: Option<usize>) {
         self.message_log.set_message_containers(vec![]);
-        self.session_selector.set_current_session_index(index);
-        self.session_selector
+        self.modal_session_selector.set_current_session_index(index);
+        self.modal_session_selector
             .handle_event(PopoverSelectorEvent::Hide);
     }
 
@@ -344,7 +346,7 @@ impl Model {
     }
 
     pub fn current_session_id(&self) -> Option<String> {
-        match &self.session_selector.current_session_index() {
+        match &self.modal_session_selector.current_session_index() {
             None => None,
             Some(0) => None,
             Some(n) => self.sessions.get(n - 1).map(|session| session.id.clone()),

@@ -231,6 +231,7 @@ impl Program {
                         | Cmd::AsyncLoadSessions(_)
                         | Cmd::AsyncLoadModes(_)
                         | Cmd::AsyncLoadSessionMessages(_, _)
+                        | Cmd::AsyncLoadFileStatus(_)
                         | Cmd::AsyncSendUserMessage(_, _, _, _, _, _, _)
                         | Cmd::AsyncCancelTask(_)
                         | Cmd::AsyncSessionAbort
@@ -393,6 +394,16 @@ impl Program {
                     match client.list_sessions().await {
                         Ok(sessions) => Msg::SessionsLoaded(sessions),
                         Err(error) => Msg::SessionsLoadFailed(error),
+                    }
+                });
+            }
+
+            Cmd::AsyncLoadFileStatus(client) => {
+                // Spawn async file status loading task
+                self.task_manager.spawn_task(async move {
+                    match client.get_file_status().await {
+                        Ok(file_status) => Msg::FileStatusLoaded(file_status),
+                        Err(error) => Msg::FileStatusLoadFailed(error),
                     }
                 });
             }

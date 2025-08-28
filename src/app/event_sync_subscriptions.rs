@@ -122,6 +122,26 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                     Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Cancel))
                 }
 
+                // FilePicker events
+                (AppModalState::FilePicking, KeyCode::Up, _, _) => Some(Msg::FilePickerNavigateUp),
+                (AppModalState::FilePicking, KeyCode::Down, _, _) => {
+                    Some(Msg::FilePickerNavigateDown)
+                }
+                (AppModalState::FilePicking, KeyCode::Char('k'), _, _) => {
+                    Some(Msg::FilePickerNavigateUp)
+                }
+                (AppModalState::FilePicking, KeyCode::Char('j'), _, _) => {
+                    Some(Msg::FilePickerNavigateDown)
+                }
+                (AppModalState::FilePicking, KeyCode::Tab, KeyModifiers::SHIFT, _) => {
+                    Some(Msg::FilePickerNavigateUp)
+                }
+                (AppModalState::FilePicking, KeyCode::Tab, _, _) => {
+                    Some(Msg::FilePickerNavigateDown)
+                }
+                (AppModalState::FilePicking, KeyCode::Enter, _, _) => Some(Msg::FilePickerSelect),
+                (AppModalState::FilePicking, KeyCode::Esc, _, _) => Some(Msg::FilePickerClose),
+
                 // Text input events (internally routed to TextArea component for most keys)
                 (AppModalState::None, _, _, _) => Some(Msg::TextArea(MsgTextArea::KeyInput(key))),
 

@@ -157,14 +157,36 @@ fn render_base_screen(frame: &mut Frame) {
     let input_status = input_section_chunks[1];
 
     if model.init().inline_mode() {
-        render_main_body(frame, spacer_chunk);
+        // Render file picker on top of spacer_chunk if in FilePicking state
+        if matches!(model.state(), AppModalState::FilePicking) {
+            frame.render_widget(&model.get().file_picker, spacer_chunk);
+        } else {
+            render_main_body(frame, spacer_chunk);
+        }
         frame.render_widget(&model.get().text_input_area, input_textarea);
         let status_bar = StatusBar::new();
         frame.render_widget(&status_bar, input_status);
     } else {
         // Note: We can't send messages from the view layer in TEA architecture
         // Scroll validation will happen during scroll events and when content changes
-        render_main_body(frame, fullscreen_chunk);
+        
+        // In fullscreen mode, we have more space - render file picker above the text input
+        if matches!(model.state(), AppModalState::FilePicking) {
+            // Split fullscreen area to accommodate file picker
+            let fullscreen_with_picker_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Min(0),                           // Message log
+                    Constraint::Length(10),                      // File picker (fixed height)
+                ])
+                .split(fullscreen_chunk);
+            
+            render_main_body(frame, fullscreen_with_picker_chunks[0]);
+            frame.render_widget(&model.get().file_picker, fullscreen_with_picker_chunks[1]);
+        } else {
+            render_main_body(frame, fullscreen_chunk);
+        }
+        
         frame.render_widget(&model.get().text_input_area, input_textarea);
         let status_bar = StatusBar::new();
         frame.render_widget(&status_bar, input_status);

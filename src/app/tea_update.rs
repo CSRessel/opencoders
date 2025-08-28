@@ -414,13 +414,135 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         }
 
         Msg::TextArea(submsg) => {
+            // Special handling for @ symbol when main screen is active
+            if let MsgTextArea::KeyInput(key_event) = &submsg {
+                if key_event.code == crossterm::event::KeyCode::Char('@') 
+                    && !key_event.modifiers.contains(crossterm::event::KeyModifiers::SHIFT)
+                    && model.is_main_screen_active() {
+                    // Handle the key input first
+                    model.text_input_area.handle_message(submsg);
+                    // Then trigger file picker directly
+                    model.state = AppModalState::FilePicking;
+                    // Load file status if we have a client
+                    if let Some(client) = model.client.clone() {
+                        return CmdOrBatch::Single(Cmd::AsyncLoadFileStatus(client));
+                    } else {
+                        return CmdOrBatch::Single(Cmd::None);
+                    }
+                }
+            }
+            
             // Handle component sub-messages using direct method call
             model.text_input_area.handle_message(submsg);
             CmdOrBatch::Single(Cmd::None)
         }
 
+        // FilePicker messages
+        Msg::FilePickerOpen => {
+            model.state = AppModalState::FilePicking;
+            // Load file status if we have a client
+            if let Some(client) = model.client.clone() {
+                CmdOrBatch::Single(Cmd::AsyncLoadFileStatus(client))
+            } else {
+                CmdOrBatch::Single(Cmd::None)
+            }
+        }
+
+        Msg::FilePickerClose => {
+            model.state = AppModalState::None;
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FilePickerNavigateUp => {
+            model.file_picker.navigate_up(&model.file_status);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FilePickerNavigateDown => {
+            model.file_picker.navigate_down(&model.file_status);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FilePickerSelect => {
+            if let Some(selected_file) = model.file_picker.get_selected_file(&model.file_status) {
+                // Insert the file path into the text input
+                let current_text = model.text_input_area.content();
+                let new_text = if current_text.ends_with("@") {
+                    current_text.trim_end_matches("@").to_string() + &selected_file.path
+                } else {
+                    current_text + &selected_file.path
+                };
+                model.text_input_area.set_content(&new_text);
+                model.state = AppModalState::None;
+            }
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FileStatusLoaded(files) => {
+            model.file_status = files;
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FileStatusLoadFailed(error) => {
+            tracing::error!("Failed to load file status: {}", error);
+            // Keep the current file status and don't show error to user
+            CmdOrBatch::Single(Cmd::None)
+        }
+
         Msg::RecordActiveTaskCount(count) => {
             model.active_task_count = count;
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        // FilePicker messages
+        Msg::FilePickerOpen => {
+            model.state = AppModalState::FilePicking;
+            // Load file status if we have a client
+            if let Some(client) = model.client.clone() {
+                CmdOrBatch::Single(Cmd::AsyncLoadFileStatus(client))
+            } else {
+                CmdOrBatch::Single(Cmd::None)
+            }
+        }
+
+        Msg::FilePickerClose => {
+            model.state = AppModalState::None;
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FilePickerNavigateUp => {
+            model.file_picker.navigate_up(&model.file_status);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FilePickerNavigateDown => {
+            model.file_picker.navigate_down(&model.file_status);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FilePickerSelect => {
+            if let Some(selected_file) = model.file_picker.get_selected_file(&model.file_status) {
+                // Insert the file path into the text input
+                let current_text = model.text_input_area.content();
+                let new_text = if current_text.ends_with("@") {
+                    current_text.trim_end_matches("@").to_string() + &selected_file.path
+                } else {
+                    current_text + &selected_file.path
+                };
+                model.text_input_area.set_content(&new_text);
+                model.state = AppModalState::None;
+            }
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FileStatusLoaded(files) => {
+            model.file_status = files;
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::FileStatusLoadFailed(error) => {
+            tracing::error!("Failed to load file status: {}", error);
+            // Keep the current file status and don't show error to user
             CmdOrBatch::Single(Cmd::None)
         }
 

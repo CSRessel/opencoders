@@ -82,6 +82,15 @@ pub enum Msg {
     // Verbosity control
     ToggleVerbosity,
 
+    // FilePicker messages
+    FilePickerOpen,
+    FilePickerClose,
+    FilePickerNavigateUp,
+    FilePickerNavigateDown,
+    FilePickerSelect,
+    FileStatusLoaded(Vec<opencode_sdk::models::File>),
+    FileStatusLoadFailed(OpenCodeError),
+
     // Component messages
     TextArea(MsgTextArea),
 }
@@ -102,6 +111,7 @@ pub enum Cmd {
     AsyncLoadSessions(OpenCodeClient),
     AsyncLoadModes(OpenCodeClient),
     AsyncLoadSessionMessages(OpenCodeClient, String),
+    AsyncLoadFileStatus(OpenCodeClient),
     AsyncSendUserMessage(
         OpenCodeClient,
         String,

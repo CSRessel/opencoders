@@ -12,7 +12,7 @@ use crate::{
         OpenCodeClient,
     },
 };
-use opencode_sdk::models::{AgentConfig, ConfigAgent, Session};
+use opencode_sdk::models::{AgentConfig, ConfigAgent, File, Session};
 use std::{fmt::Display, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -70,6 +70,7 @@ pub struct Model {
     pub message_log: MessageLog,
     pub text_input_area: TextInputArea, // New tui-textarea based input
     pub session_selector: PopoverSelector,
+    pub file_picker: crate::app::ui_components::FilePicker,
     // Client and session state
     pub client: Option<OpenCodeClient>,
     pub session_state: SessionState,
@@ -84,6 +85,8 @@ pub struct Model {
     pub active_task_count: usize,
     // Session state for UI indicators
     pub session_is_idle: bool,
+    // File picker state
+    pub file_status: Vec<File>,
     // Unified repeat shortcut timeout system
     pub repeat_shortcut_timeout: Option<RepeatShortcutTimeout>,
 }
@@ -128,6 +131,7 @@ pub enum AppModalState {
     Help,
     Connecting(ConnectionStatus),
     SelectSession,
+    FilePicking,
     // SelectModel,
     // SelectAgent,
     // SelectFile,
@@ -172,6 +176,7 @@ impl Model {
 
         let message_log = MessageLog::new();
         let session_selector = PopoverSelector::new("Select Session");
+        let file_picker = crate::app::ui_components::FilePicker::new();
 
         Model {
             init: ModelInit::new(true),
@@ -195,6 +200,7 @@ impl Model {
             message_log,
             text_input_area,
             session_selector,
+            file_picker,
             client: None,
             session_state: SessionState::None,
             sessions: Vec::new(),
@@ -206,6 +212,7 @@ impl Model {
             event_stream_state: EventStreamState::Disconnected,
             active_task_count: 0,
             session_is_idle: true,
+            file_status: Vec::new(),
             repeat_shortcut_timeout: None,
         }
     }
@@ -267,7 +274,7 @@ impl Model {
         matches!(
             self.state,
             // Add new modal/overlay states here
-            AppModalState::SelectSession | AppModalState::Help
+            AppModalState::SelectSession | AppModalState::Help | AppModalState::FilePicking
         ) || self.is_connnection_modal_active()
     }
 

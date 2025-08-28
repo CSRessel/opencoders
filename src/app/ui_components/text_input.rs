@@ -93,6 +93,14 @@ impl TextInputArea {
         self.textarea.lines().join("\n")
     }
 
+    pub fn set_content(&mut self, content: &str) {
+        self.textarea = TextArea::from(content.lines());
+        self.textarea.set_cursor_line_style(Style::default());
+        self.textarea.set_placeholder_text(&self.placeholder);
+        let new_height = self.calculate_required_height();
+        self.current_height = new_height;
+    }
+
     pub fn is_empty(&self) -> bool {
         self.textarea.lines().len() == 1 && self.textarea.lines()[0].is_empty()
     }
@@ -145,6 +153,10 @@ impl TextInputArea {
                         new_height: self.current_height,
                     };
                 }
+            }
+            (KeyCode::Char('@'), false) => {
+                // Handle @ symbol - this will be processed by the parent update function
+                Input::from(Event::Key(key_event))
             }
             _ => Input::from(Event::Key(key_event)),
         };

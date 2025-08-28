@@ -1,5 +1,6 @@
 pub mod banner;
 pub mod block;
+pub mod file_picker;
 pub mod message_log;
 pub mod message_part;
 pub mod paragraph;
@@ -9,6 +10,7 @@ pub mod text_input;
 
 pub use banner::create_welcome_text;
 pub use block::Block;
+pub use file_picker::FilePicker;
 pub use message_log::MessageLog;
 pub use message_part::{MessageContext, MessagePart, MessageRenderer};
 pub use paragraph::Paragraph;

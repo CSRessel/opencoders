@@ -21,6 +21,8 @@ use ratatui::{
 };
 use std::io;
 
+pub const MAX_UI_WIDTH: u16 = 140;
+
 // Config:
 // - inline_mode          := true
 // - ui_block_is_rounded  := true
@@ -102,8 +104,7 @@ fn render_base_screen(frame: &mut Frame) {
     let model = ViewModelContext::current();
     let terminal_width = frame.area().width;
     let content_width = match model.init().inline_mode() {
-        // Inline is max width 120 for status box
-        true => terminal_width.max(120),
+        true => terminal_width.max(MAX_UI_WIDTH),
         // Full screen is 1 character padding
         false => terminal_width.saturating_sub(2),
     };

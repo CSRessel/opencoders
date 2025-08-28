@@ -1,11 +1,13 @@
 use crate::app::{
     event_msg::CmdOrBatch,
     tea_model::{AppModalState, Model},
+    tea_view::MAX_UI_WIDTH,
     ui_components::{
         Component, ModalSelector, ModalSelectorEvent, MsgModalSessionSelector, SelectableData,
         SelectorConfig, SelectorMode, TableColumn,
     },
 };
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use opencode_sdk::models::File;
 use ratatui::{
     buffer::Buffer,
@@ -78,6 +80,7 @@ impl SelectableData for FileData {
 #[derive(Debug, Clone, PartialEq)]
 pub enum MsgModalFileSelector {
     Event(ModalSelectorEvent<FileData>),
+    KeyInput(KeyEvent),
     FileSelected(File),
     Cancel,
 }
@@ -93,7 +96,7 @@ impl FileSelector {
         let config = SelectorConfig {
             title: "File Selector".to_string(),
             footer: Some("↑↓ navigate, Enter select, Esc close".to_string()),
-            max_width: Some(80),
+            max_width: Some(MAX_UI_WIDTH),
             max_height: Some(20),
             show_scrollbar: true,
             alternating_rows: false,
@@ -149,6 +152,12 @@ impl FileSelector {
     pub fn hide(&mut self) {
         self.modal.hide();
     }
+
+    pub fn is_file_selector_input(key: KeyEvent) -> bool {
+        !key.modifiers.contains(KeyModifiers::CONTROL)
+            && !key.modifiers.contains(KeyModifiers::ALT)
+            && matches!(key.code, KeyCode::Char(_) | KeyCode::Backspace)
+    }
 }
 
 impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
@@ -189,6 +198,15 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                 };
                 model.text_input_area.set_content(&new_text);
                 model.state = AppModalState::None;
+            }
+            MsgModalFileSelector::KeyInput(key) => {
+                if FileSelector::is_file_selector_input(key) {
+                    model.text_input_area.handle_input(key);
+                }
+
+                if key.code == KeyCode::Char(' ') {
+                    model.state = AppModalState::None;
+                }
             }
             MsgModalFileSelector::Cancel => {
                 model.state = AppModalState::None;

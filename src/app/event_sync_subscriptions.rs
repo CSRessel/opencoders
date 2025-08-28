@@ -1,7 +1,10 @@
 use crate::app::{
     event_msg::{Msg, Sub},
     tea_model::{AppModalState, ConnectionStatus, EventStreamState, Model, RepeatShortcutKey},
-    ui_components::{MsgTextArea, MsgModalSessionSelector, MsgModalFileSelector, ModalSelectorEvent},
+    ui_components::{
+        modal_file_selector::FileData, ModalSelector, ModalSelectorEvent, MsgModalFileSelector,
+        MsgModalSessionSelector, MsgTextArea,
+    },
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
@@ -100,7 +103,7 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 }
 
                 // Requires session connected
-                (AppModalState::None, KeyCode::Esc, __, _) => {
+                (AppModalState::None, KeyCode::Esc, _, _) => {
                     // Leave session for main screen
                     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
                         Some(Msg::SessionAbort)
@@ -127,29 +130,39 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                     AppModalState::ModalHelp | AppModalState::ModalSessionSelect,
                     KeyCode::Esc,
                     _,
-                    __,
+                    _,
                 ) => {
                     // Close modals
                     // TODO move to modal specific msg's
                     Some(Msg::ChangeState(AppModalState::None))
                 }
                 (AppModalState::ModalHelp, _, _, _) => None,
+
                 // Session selector events
                 (AppModalState::ModalSessionSelect, key_code, key_modifiers, _) => {
-                    let key_event = crossterm::event::KeyEvent::new(key_code, key_modifiers);
-                    Some(Msg::ModalSessionSelector(MsgModalSessionSelector::Event(
-                        ModalSelectorEvent::KeyInput(key_event)
-                    )))
+                    if true {
+                        let key_event = crossterm::event::KeyEvent::new(key_code, key_modifiers);
+                        Some(Msg::ModalSessionSelector(MsgModalSessionSelector::Event(
+                            ModalSelectorEvent::KeyInput(key_event),
+                        )))
+                    } else {
+                        None
+                    }
                 }
-                (AppModalState::ModalSessionSelect, _, _, _) => None,
+
                 // FileSelector events
                 (AppModalState::ModalFileSelect, key_code, key_modifiers, _) => {
                     let key_event = crossterm::event::KeyEvent::new(key_code, key_modifiers);
-                    Some(Msg::ModalFileSelector(MsgModalFileSelector::Event(
-                        ModalSelectorEvent::KeyInput(key_event)
-                    )))
+                    if ModalSelector::<FileData>::is_modal_selector_input(key_code) {
+                        Some(Msg::ModalFileSelector(MsgModalFileSelector::Event(
+                            ModalSelectorEvent::KeyInput(key_event),
+                        )))
+                    } else {
+                        Some(Msg::ModalFileSelector(MsgModalFileSelector::KeyInput(
+                            key_event,
+                        )))
+                    }
                 }
-                (AppModalState::ModalFileSelect, _, _, _) => None,
 
                 // Retry connection
                 (

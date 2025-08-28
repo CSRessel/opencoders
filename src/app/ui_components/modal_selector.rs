@@ -1,12 +1,15 @@
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Cell, List, ListItem, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table, TableState, Widget},
+    widgets::{
+        Block, Borders, Cell, List, ListItem, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        Table, TableState, Widget,
+    },
 };
 use std::marker::PhantomData;
-use crossterm::event::{KeyCode, KeyEvent};
 
 /// Configuration for table columns
 #[derive(Debug, Clone, PartialEq)]
@@ -57,7 +60,9 @@ impl Default for SelectorConfig {
             show_scrollbar: true,
             alternating_rows: false,
             border_color: Color::Blue,
-            selected_style: Style::default().add_modifier(Modifier::REVERSED).fg(Color::Blue),
+            selected_style: Style::default()
+                .add_modifier(Modifier::REVERSED)
+                .fg(Color::Blue),
             header_style: Style::default().fg(Color::Yellow),
             row_style: Style::default().fg(Color::White),
             alt_row_style: None,
@@ -69,10 +74,10 @@ impl Default for SelectorConfig {
 pub trait SelectableData: Clone {
     /// Convert the data item to table cells
     fn to_cells(&self) -> Vec<Cell>;
-    
+
     /// Get a simple string representation (for list mode)
     fn to_string(&self) -> String;
-    
+
     /// Optional: return styled spans for more complex formatting
     fn to_spans(&self) -> Option<Vec<Span>> {
         None
@@ -88,8 +93,8 @@ pub enum SelectorMode {
 
 /// Generic events that can be handled by any modal selector
 #[derive(Debug, Clone, PartialEq)]
-pub enum ModalSelectorEvent<T> 
-where 
+pub enum ModalSelectorEvent<T>
+where
     T: SelectableData + Clone,
 {
     Show,
@@ -104,8 +109,8 @@ where
 
 /// Generic modal selector that can display different types of data
 #[derive(Debug, Clone)]
-pub struct ModalSelector<T> 
-where 
+pub struct ModalSelector<T>
+where
     T: SelectableData + Clone,
 {
     pub config: SelectorConfig,
@@ -120,13 +125,13 @@ where
 }
 
 impl<T> ModalSelector<T>
-where 
+where
     T: SelectableData + Clone,
 {
     pub fn new(config: SelectorConfig, mode: SelectorMode) -> Self {
         let mut state = TableState::default();
         state.select(Some(0));
-        
+
         Self {
             config,
             mode,
@@ -188,7 +193,8 @@ where
     pub fn set_items(&mut self, items: Vec<T>) {
         self.items = items;
         self.scroll_state = ScrollbarState::new(self.items.len());
-        self.state.select(if self.items.is_empty() { None } else { Some(0) });
+        self.state
+            .select(if self.items.is_empty() { None } else { Some(0) });
         self.loading = false;
         self.error = None;
     }
@@ -257,19 +263,22 @@ where
                 self.set_error(error);
                 None
             }
-            ModalSelectorEvent::KeyInput(key) => {
-                self.handle_key_input(key)
-            }
+            ModalSelectorEvent::KeyInput(key) => self.handle_key_input(key),
             ModalSelectorEvent::SelectionChanged(_) => None, // Handled elsewhere
-            ModalSelectorEvent::ItemSelected(_) => None, // Handled elsewhere
+            ModalSelectorEvent::ItemSelected(_) => None,     // Handled elsewhere
         }
+    }
+
+    pub fn is_modal_selector_input(key_code: KeyCode) -> bool {
+        matches!(
+            key_code,
+            KeyCode::Esc | KeyCode::Up | KeyCode::Down | KeyCode::Tab | KeyCode::Enter
+        )
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Option<ModalSelectorEvent<T>> {
         match key.code {
-            KeyCode::Esc => {
-                Some(ModalSelectorEvent::Hide)
-            }
+            KeyCode::Esc => Some(ModalSelectorEvent::Hide),
             KeyCode::Up => {
                 let old_selection = self.selected_index();
                 self.navigate_up();
@@ -434,7 +443,8 @@ where
         ratatui::widgets::StatefulWidget::render(table, area, buf, &mut mutable_state);
 
         // Render scrollbar if enabled
-        if self.config.show_scrollbar && self.items.len() > (area.height.saturating_sub(3)) as usize {
+        if self.config.show_scrollbar && self.items.len() > (area.height.saturating_sub(3)) as usize
+        {
             let scrollbar_area = Rect {
                 x: area.x + area.width - 1,
                 y: area.y + 1,
@@ -447,7 +457,12 @@ where
                 .orientation(ScrollbarOrientation::VerticalRight)
                 .begin_symbol(None)
                 .end_symbol(None);
-            ratatui::widgets::StatefulWidget::render(scrollbar, scrollbar_area, buf, &mut scroll_state);
+            ratatui::widgets::StatefulWidget::render(
+                scrollbar,
+                scrollbar_area,
+                buf,
+                &mut scroll_state,
+            );
         }
     }
 
@@ -457,16 +472,14 @@ where
             .max_width
             .unwrap_or(area.width.saturating_sub(4))
             .min(area.width.saturating_sub(4));
-        
+
         let popup_height = self
             .config
             .max_height
-            .unwrap_or(
-                match &self.mode {
-                    SelectorMode::List => (self.items.len() as u16).saturating_add(4),
-                    SelectorMode::Table { .. } => (self.items.len() as u16).saturating_add(4),
-                }
-            )
+            .unwrap_or(match &self.mode {
+                SelectorMode::List => (self.items.len() as u16).saturating_add(4),
+                SelectorMode::Table { .. } => (self.items.len() as u16).saturating_add(4),
+            })
             .min(area.height);
 
         // Center the popup
@@ -515,3 +528,4 @@ where
         }
     }
 }
+

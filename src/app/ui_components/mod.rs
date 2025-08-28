@@ -13,7 +13,7 @@ pub use block::Block;
 pub use message_log::MessageLog;
 pub use message_part::{MessageContext, MessagePart, MessageRenderer};
 pub use modal_file_selector::FileSelector;
-pub use modal_selector::{PopoverSelector, PopoverSelectorEvent};
+pub use modal_selector::{ModalSelector, PopoverSelector, PopoverSelectorEvent, SelectableData, SelectorConfig, SelectorMode, TableColumn};
 pub use paragraph::Paragraph;
 pub use status_bar::StatusBar;
 pub use text_input::{InputResult, MsgTextArea, TextInputArea};

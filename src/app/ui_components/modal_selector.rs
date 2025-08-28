@@ -1,216 +1,233 @@
-use crate::app::ui_components::{Block, Paragraph};
-use crate::app::view_model_context::ViewModelContext;
 use ratatui::{
     buffer::Buffer,
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
-    text::{Line, Span},
-    widgets::{Borders, List, ListItem, Widget},
+    layout::{Constraint, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span, Text},
+    widgets::{Block, Borders, Cell, List, ListItem, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table, TableState, Widget},
 };
+use std::marker::PhantomData;
 
+/// Configuration for table columns
 #[derive(Debug, Clone, PartialEq)]
-pub struct PopoverSelector {
-    title: String,
-    items: Vec<String>,
-    selected_index: usize,
-    scroll_offset: usize,
-    last_render_height: Option<usize>,
-    current_session_index: Option<usize>,
-    is_visible: bool,
-    loading: bool,
-    error: Option<String>,
-    max_height: Option<u16>,
-    max_width: Option<u16>,
+pub struct TableColumn {
+    pub header: String,
+    pub constraint: Constraint,
+    pub alignment: Option<ratatui::layout::Alignment>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum PopoverSelectorEvent {
-    Up,
-    Down,
-    Select,
-    Cancel,
-    SetItems(Vec<String>),
-    SetLoading(bool),
-    SetError(Option<String>),
-    Show,
-    Hide,
-}
-
-impl PopoverSelector {
-    pub fn new(title: &str) -> Self {
+impl TableColumn {
+    pub fn new<S: Into<String>>(header: S, constraint: Constraint) -> Self {
         Self {
-            title: title.to_string(),
+            header: header.into(),
+            constraint,
+            alignment: None,
+        }
+    }
+
+    pub fn with_alignment(mut self, alignment: ratatui::layout::Alignment) -> Self {
+        self.alignment = Some(alignment);
+        self
+    }
+}
+
+/// Configuration for the modal selector appearance
+#[derive(Debug, Clone)]
+pub struct SelectorConfig {
+    pub title: String,
+    pub footer: Option<String>,
+    pub max_width: Option<u16>,
+    pub max_height: Option<u16>,
+    pub show_scrollbar: bool,
+    pub alternating_rows: bool,
+    pub border_color: Color,
+    pub selected_style: Style,
+    pub header_style: Style,
+    pub row_style: Style,
+    pub alt_row_style: Option<Style>,
+}
+
+impl Default for SelectorConfig {
+    fn default() -> Self {
+        Self {
+            title: "Select".to_string(),
+            footer: Some("↑↓ navigate, Enter select, Esc close".to_string()),
+            max_width: Some(80),
+            max_height: Some(20),
+            show_scrollbar: true,
+            alternating_rows: false,
+            border_color: Color::Blue,
+            selected_style: Style::default().add_modifier(Modifier::REVERSED).fg(Color::Blue),
+            header_style: Style::default().fg(Color::Yellow),
+            row_style: Style::default().fg(Color::White),
+            alt_row_style: None,
+        }
+    }
+}
+
+/// Trait for data that can be displayed in the modal selector
+pub trait SelectableData: Clone {
+    /// Convert the data item to table cells
+    fn to_cells(&self) -> Vec<Cell>;
+    
+    /// Get a simple string representation (for list mode)
+    fn to_string(&self) -> String;
+    
+    /// Optional: return styled spans for more complex formatting
+    fn to_spans(&self) -> Option<Vec<Span>> {
+        None
+    }
+}
+
+/// Display mode for the selector
+#[derive(Debug, Clone, PartialEq)]
+pub enum SelectorMode {
+    List,
+    Table { columns: Vec<TableColumn> },
+}
+
+/// Generic modal selector that can display different types of data
+#[derive(Debug, Clone)]
+pub struct ModalSelector<T> 
+where 
+    T: SelectableData + Clone,
+{
+    pub config: SelectorConfig,
+    pub mode: SelectorMode,
+    pub items: Vec<T>,
+    pub state: TableState, // Used for both table and list selection
+    pub scroll_state: ScrollbarState,
+    pub is_visible: bool,
+    pub loading: bool,
+    pub error: Option<String>,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> ModalSelector<T>
+where 
+    T: SelectableData + Clone,
+{
+    pub fn new(config: SelectorConfig, mode: SelectorMode) -> Self {
+        let mut state = TableState::default();
+        state.select(Some(0));
+        
+        Self {
+            config,
+            mode,
             items: Vec::new(),
-            selected_index: 0,
-            scroll_offset: 0,
-            last_render_height: None,
-            current_session_index: None,
+            state,
+            scroll_state: ScrollbarState::new(0),
             is_visible: false,
             loading: false,
             error: None,
-            max_height: None,
-            max_width: None,
+            _phantom: PhantomData,
         }
     }
 
-    pub fn with_items(title: &str, items: Vec<String>) -> Self {
-        Self {
-            title: title.to_string(),
-            items,
-            selected_index: 0,
-            scroll_offset: 0,
-            last_render_height: None,
-            current_session_index: None,
-            is_visible: false,
-            loading: false,
-            error: None,
-            max_height: None,
-            max_width: None,
-        }
+    pub fn list(title: &str) -> Self {
+        Self::new(
+            SelectorConfig {
+                title: title.to_string(),
+                ..Default::default()
+            },
+            SelectorMode::List,
+        )
     }
 
-    pub fn handle_event(&mut self, event: PopoverSelectorEvent) -> Option<usize> {
-        match event {
-            PopoverSelectorEvent::Up => {
-                if !self.items.is_empty() {
-                    self.selected_index = if self.selected_index == 0 {
-                        self.items.len() - 1
-                    } else {
-                        self.selected_index - 1
-                    };
-                    self.update_scroll_position();
-                }
-                None
-            }
-            PopoverSelectorEvent::Down => {
-                if !self.items.is_empty() {
-                    self.selected_index = (self.selected_index + 1) % self.items.len();
-                    self.update_scroll_position();
-                }
-                None
-            }
-            PopoverSelectorEvent::Select => {
-                if !self.items.is_empty() && self.is_visible {
-                    Some(self.selected_index)
-                } else {
-                    None
-                }
-            }
-            PopoverSelectorEvent::Cancel => {
-                self.is_visible = false;
-                None
-            }
-            PopoverSelectorEvent::SetItems(items) => {
-                self.items = items;
-                self.selected_index = 0;
-                self.scroll_offset = 0;
-                self.current_session_index = None; // Reset when items change
-                self.loading = false;
-                self.error = None;
-                None
-            }
-            PopoverSelectorEvent::SetLoading(loading) => {
-                self.loading = loading;
-                if loading {
-                    self.error = None;
-                }
-                None
-            }
-            PopoverSelectorEvent::SetError(error) => {
-                self.error = error;
-                self.loading = false;
-                None
-            }
-            PopoverSelectorEvent::Show => {
-                self.is_visible = true;
-                None
-            }
-            PopoverSelectorEvent::Hide => {
-                self.is_visible = false;
-                None
-            }
-        }
+    pub fn table(title: &str, columns: Vec<TableColumn>) -> Self {
+        Self::new(
+            SelectorConfig {
+                title: title.to_string(),
+                ..Default::default()
+            },
+            SelectorMode::Table { columns },
+        )
+    }
+
+    // State management methods
+    pub fn show(&mut self) {
+        self.is_visible = true;
+    }
+
+    pub fn hide(&mut self) {
+        self.is_visible = false;
     }
 
     pub fn is_visible(&self) -> bool {
         self.is_visible
     }
 
-    pub fn selected_index(&self) -> usize {
-        self.selected_index
+    pub fn set_loading(&mut self, loading: bool) {
+        self.loading = loading;
+        if loading {
+            self.error = None;
+        }
     }
 
-    pub fn items(&self) -> &[String] {
-        &self.items
+    pub fn set_error(&mut self, error: Option<String>) {
+        self.error = error;
+        self.loading = false;
     }
 
-    pub fn is_loading(&self) -> bool {
-        self.loading
+    pub fn set_items(&mut self, items: Vec<T>) {
+        self.items = items;
+        self.scroll_state = ScrollbarState::new(self.items.len());
+        self.state.select(if self.items.is_empty() { None } else { Some(0) });
+        self.loading = false;
+        self.error = None;
     }
 
-    pub fn error(&self) -> Option<&String> {
-        self.error.as_ref()
-    }
-
-    pub fn scroll_offset(&self) -> usize {
-        self.scroll_offset
-    }
-
-    pub fn cache_render_height_for_terminal(&mut self, terminal_height: u16) {
-        // Calculate what the popup height would be
-        let popup_height = self
-            .max_height
-            .unwrap_or(self.items.len() as u16 + 4)
-            .min(terminal_height);
-        let content_height = popup_height.saturating_sub(2) as usize;
-        self.last_render_height = Some(content_height);
-    }
-
-    pub fn set_current_session_index(&mut self, index: Option<usize>) {
-        self.current_session_index = index;
-    }
-
-    pub fn current_session_index(&self) -> Option<usize> {
-        self.current_session_index
-    }
-
-    pub fn set_max_dimensions(&mut self, max_width: Option<u16>, max_height: Option<u16>) {
-        self.max_width = max_width;
-        self.max_height = max_height;
-    }
-
-    pub fn update_scroll_position(&mut self) {
-        let visible_height = self.last_render_height.unwrap_or_else(|| 3);
-        if self.items.is_empty() || visible_height == 0 {
+    // Navigation methods
+    pub fn navigate_up(&mut self) {
+        if self.items.is_empty() {
             return;
         }
 
-        // Ensure selected item is visible within the scroll window
-        if self.selected_index < self.scroll_offset {
-            // Selected item is above the visible area, scroll up
-            self.scroll_offset = self.selected_index;
-        } else if self.selected_index >= self.scroll_offset + visible_height {
-            // Selected item is below the visible area, scroll down
-            self.scroll_offset = self.selected_index.saturating_sub(visible_height - 1);
-        }
-
-        // Ensure scroll offset doesn't exceed bounds
-        let max_scroll = self.items.len().saturating_sub(visible_height);
-        self.scroll_offset = self.scroll_offset.min(max_scroll);
+        let current = self.state.selected().unwrap_or(0);
+        let new_index = if current == 0 {
+            self.items.len() - 1
+        } else {
+            current - 1
+        };
+        self.state.select(Some(new_index));
     }
 
+    pub fn navigate_down(&mut self) {
+        if self.items.is_empty() {
+            return;
+        }
+
+        let current = self.state.selected().unwrap_or(0);
+        let new_index = if current >= self.items.len() - 1 {
+            0
+        } else {
+            current + 1
+        };
+        self.state.select(Some(new_index));
+    }
+
+    pub fn selected_index(&self) -> Option<usize> {
+        self.state.selected()
+    }
+
+    pub fn selected_item(&self) -> Option<&T> {
+        self.selected_index().and_then(|i| self.items.get(i))
+    }
+
+    pub fn items(&self) -> &[T] {
+        &self.items
+    }
+
+    // Rendering methods
     fn render_loading(&self, area: Rect, buf: &mut Buffer) {
         let block = Block::default()
             .borders(Borders::ALL)
-            .title(self.title.clone())
-            .border_style(Style::default().fg(Color::Blue));
+            .title(self.config.title.as_str())
+            .border_style(Style::default().fg(self.config.border_color));
 
-        let loading_text = "Loading...";
-        let paragraph = Paragraph::new(Line::from(Span::styled(
-            loading_text,
-            Style::default().fg(Color::Yellow),
-        )))
-        .block(block);
+        let loading_text = Text::from("Loading...");
+        let paragraph = ratatui::widgets::Paragraph::new(loading_text)
+            .style(Style::default().fg(Color::Yellow))
+            .block(block);
 
         paragraph.render(area, buf);
     }
@@ -218,112 +235,179 @@ impl PopoverSelector {
     fn render_error(&self, area: Rect, buf: &mut Buffer, error: &str) {
         let block = Block::default()
             .borders(Borders::ALL)
-            .title(self.title.clone())
+            .title(self.config.title.as_str())
             .border_style(Style::default().fg(Color::Red));
 
-        let error_text = format!("Error: {}", error);
-        let paragraph = Paragraph::new(Line::from(Span::styled(
-            error_text,
-            Style::default().fg(Color::Red),
-        )))
-        .block(block);
+        let error_text = Text::from(format!("Error: {}", error));
+        let paragraph = ratatui::widgets::Paragraph::new(error_text)
+            .style(Style::default().fg(Color::Red))
+            .block(block);
 
         paragraph.render(area, buf);
     }
 
-    fn render_items(&self, area: Rect, buf: &mut Buffer) {
-        let content_height = area.height.saturating_sub(2) as usize;
-
-        // Create title with scroll indicators
-        let has_items_above = self.scroll_offset > 0;
-        let visible_height = content_height.min(self.items.len());
-        let has_items_below = self.scroll_offset + visible_height < self.items.len();
-
-        let title = if has_items_above && has_items_below {
-            format!("{} ↑↓", self.title)
-        } else if has_items_above {
-            format!("{} ↑", self.title)
-        } else if has_items_below {
-            format!("{} ↓", self.title)
+    fn render_list(&self, area: Rect, buf: &mut Buffer) {
+        let title = if let Some(footer) = &self.config.footer {
+            format!("{} ({})", self.config.title, footer)
         } else {
-            self.title.clone()
+            self.config.title.clone()
         };
 
         let block = Block::default()
             .borders(Borders::ALL)
             .title(title)
-            .border_style(Style::default().fg(Color::Blue));
+            .border_style(Style::default().fg(self.config.border_color));
 
-        // Calculate visible range based on current scroll offset
-        let start_index = self
-            .scroll_offset
-            .min(self.items.len().saturating_sub(visible_height));
-        let end_index = start_index + visible_height;
+        if self.items.is_empty() {
+            let empty_text = Text::from("No items found");
+            let paragraph = ratatui::widgets::Paragraph::new(empty_text)
+                .style(self.config.row_style)
+                .block(block);
+            paragraph.render(area, buf);
+            return;
+        }
 
         let items: Vec<ListItem> = self
             .items
             .iter()
             .enumerate()
-            .skip(start_index)
-            .take(end_index - start_index)
             .map(|(i, item)| {
-                let (style, prefix) = if i == self.selected_index {
-                    // Currently selected item (navigation cursor)
-                    let style = Style::default().fg(Color::Black).bg(Color::White);
-                    let prefix = if Some(i) == self.current_session_index {
-                        ">*" // Selected AND current session
-                    } else {
-                        "> " // Just selected
-                    };
-                    (style, prefix)
-                } else if Some(i) == self.current_session_index {
-                    // Current active session (not selected)
-                    let style = Style::default().fg(Color::Blue);
-                    (style, " *")
+                let style = if Some(i) == self.selected_index() {
+                    self.config.selected_style
                 } else {
-                    // Regular item
-                    let style = Style::default().fg(Color::White);
-                    (style, "  ")
+                    self.config.row_style
                 };
 
-                ListItem::new(Line::from(Span::styled(
-                    format!("{}{}", prefix, item),
-                    style,
-                )))
+                let content = if let Some(spans) = item.to_spans() {
+                    Line::from(spans)
+                } else {
+                    Line::from(item.to_string())
+                };
+
+                ListItem::new(content).style(style)
             })
             .collect();
 
-        let list = List::new(items).block(block.into_inner());
+        let list = List::new(items).block(block);
         list.render(area, buf);
     }
-}
 
-impl Widget for &PopoverSelector {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        if !self.is_visible {
+    fn render_table(&self, area: Rect, buf: &mut Buffer, columns: &[TableColumn]) {
+        let title = if let Some(footer) = &self.config.footer {
+            format!("{} ({})", self.config.title, footer)
+        } else {
+            self.config.title.clone()
+        };
+
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title(title)
+            .border_style(Style::default().fg(self.config.border_color));
+
+        if self.items.is_empty() {
+            let empty_table = Table::new(
+                [Row::new([Cell::from("No items found")])],
+                [Constraint::Percentage(100)],
+            )
+            .block(block);
+            empty_table.render(area, buf);
             return;
         }
 
-        // Calculate popup dimensions
+        // Create header
+        let header = Row::new(
+            columns
+                .iter()
+                .map(|col| Cell::from(col.header.clone()))
+                .collect::<Vec<_>>(),
+        )
+        .style(self.config.header_style)
+        .height(1);
+
+        // Create rows
+        let rows = self.items.iter().enumerate().map(|(i, item)| {
+            let style = if Some(i) == self.selected_index() {
+                self.config.selected_style
+            } else if self.config.alternating_rows && i % 2 == 1 {
+                self.config.alt_row_style.unwrap_or(self.config.row_style)
+            } else {
+                self.config.row_style
+            };
+
+            Row::new(item.to_cells()).style(style).height(1)
+        });
+
+        // Extract constraints from columns
+        let constraints: Vec<Constraint> = columns.iter().map(|col| col.constraint).collect();
+
+        let table = Table::new(rows, constraints)
+            .header(header)
+            .block(block)
+            .row_highlight_style(self.config.selected_style);
+
+        // Need to render with mutable state
+        let mut mutable_state = self.state.clone();
+        ratatui::widgets::StatefulWidget::render(table, area, buf, &mut mutable_state);
+
+        // Render scrollbar if enabled
+        if self.config.show_scrollbar && self.items.len() > (area.height.saturating_sub(3)) as usize {
+            let scrollbar_area = Rect {
+                x: area.x + area.width - 1,
+                y: area.y + 1,
+                width: 1,
+                height: area.height - 2,
+            };
+
+            let mut scroll_state = self.scroll_state.clone();
+            let scrollbar = Scrollbar::default()
+                .orientation(ScrollbarOrientation::VerticalRight)
+                .begin_symbol(None)
+                .end_symbol(None);
+            ratatui::widgets::StatefulWidget::render(scrollbar, scrollbar_area, buf, &mut scroll_state);
+        }
+    }
+
+    fn calculate_popup_area(&self, area: Rect) -> Rect {
         let popup_width = self
+            .config
             .max_width
-            .unwrap_or(60)
+            .unwrap_or(area.width.saturating_sub(4))
             .min(area.width.saturating_sub(4));
+        
         let popup_height = self
+            .config
             .max_height
-            .unwrap_or(self.items.len() as u16 + 4)
+            .unwrap_or(
+                match &self.mode {
+                    SelectorMode::List => (self.items.len() as u16).saturating_add(4),
+                    SelectorMode::Table { .. } => (self.items.len() as u16).saturating_add(4),
+                }
+            )
             .min(area.height);
 
         // Center the popup
         let popup_x = (area.width.saturating_sub(popup_width)) / 2;
         let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
-        let popup_area = Rect {
+        Rect {
             x: area.x + popup_x,
             y: area.y + popup_y,
             width: popup_width,
             height: popup_height,
-        };
+        }
+    }
+}
+
+impl<T> Widget for &ModalSelector<T>
+where
+    T: SelectableData + Clone,
+{
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        if !self.is_visible {
+            return;
+        }
+
+        let popup_area = self.calculate_popup_area(area);
 
         // Clear the popup area (overlay effect)
         for y in popup_area.y..popup_area.y + popup_area.height {
@@ -340,13 +424,10 @@ impl Widget for &PopoverSelector {
         } else if let Some(error) = &self.error {
             self.render_error(popup_area, buf, error);
         } else {
-            self.render_items(popup_area, buf);
+            match &self.mode {
+                SelectorMode::List => self.render_list(popup_area, buf),
+                SelectorMode::Table { columns } => self.render_table(popup_area, buf, columns),
+            }
         }
-    }
-}
-
-impl Default for PopoverSelector {
-    fn default() -> Self {
-        Self::new("Select")
     }
 }

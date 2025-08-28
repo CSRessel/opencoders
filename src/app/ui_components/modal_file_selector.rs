@@ -1,4 +1,7 @@
-use crate::app::view_model_context::ViewModelContext;
+use crate::app::{
+    view_model_context::ViewModelContext,
+    ui_components::{ModalSelector, SelectableData, SelectorConfig, SelectorMode, TableColumn},
+};
 use opencode_sdk::models::File;
 use ratatui::{
     buffer::Buffer,

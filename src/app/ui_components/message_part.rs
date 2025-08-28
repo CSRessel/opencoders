@@ -1,4 +1,3 @@
-use crate::app::ui_components::Paragraph;
 use opencode_sdk::models::{
     FilePart, Part, SessionMessages200ResponseInner, TextPart, ToolPart, ToolState,
 };
@@ -7,7 +6,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Style},
     text::{Line, Span, Text},
-    widgets::Widget,
+    widgets::{Paragraph, Widget},
 };
 use std::collections::HashSet;
 
@@ -128,7 +127,7 @@ impl MessageRenderer {
         } else {
             StepRenderingMode::Immediate
         };
-        
+
         Self::from_message_container_with_step_mode(container, context, verbosity, step_mode)
     }
 

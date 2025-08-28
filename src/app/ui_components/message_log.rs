@@ -1,9 +1,6 @@
 use crate::app::{
     message_state::MessageContainer,
-    ui_components::{
-        message_part::{MessageContext, MessageRenderer, VerbosityLevel},
-        Block, Paragraph,
-    },
+    ui_components::message_part::{MessageContext, MessageRenderer, VerbosityLevel},
     view_model_context::ViewModelContext,
 };
 use opencode_sdk::models::{Message, Part};
@@ -13,7 +10,10 @@ use ratatui::{
     style::{Color, Style, Stylize},
     symbols::scrollbar,
     text::{Line, Span, Text},
-    widgets::{Borders, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget},
+    widgets::{
+        Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget,
+        Widget,
+    },
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -334,6 +334,7 @@ impl Widget for &MessageLog {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
+                    .border_type(model.border_type())
                     .title("Message Log".bold())
                     .gray(),
             )

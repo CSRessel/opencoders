@@ -1,16 +1,13 @@
 pub mod banner;
-pub mod block;
 pub mod message_log;
 pub mod message_part;
 pub mod modal_file_selector;
 pub mod modal_selector;
 pub mod modal_session_selector;
-pub mod paragraph;
 pub mod status_bar;
 pub mod text_input;
 
 pub use banner::create_welcome_text;
-pub use block::Block;
 pub use message_log::MessageLog;
 pub use message_part::{MessageContext, MessagePart, MessageRenderer};
 pub use modal_file_selector::{FileSelector, MsgModalFileSelector};
@@ -18,7 +15,6 @@ pub use modal_selector::{
     ModalSelector, ModalSelectorEvent, SelectableData, SelectorConfig, SelectorMode, TableColumn,
 };
 pub use modal_session_selector::{MsgModalSessionSelector, SessionSelector};
-pub use paragraph::Paragraph;
 pub use status_bar::StatusBar;
 pub use text_input::{InputResult, MsgTextArea, TextInputArea};
 

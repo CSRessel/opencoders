@@ -1,3 +1,5 @@
+use ratatui::widgets::BorderType;
+
 use crate::app::tea_model::Model;
 use std::cell::RefCell;
 
@@ -73,6 +75,14 @@ impl ModelRef {
 
     pub fn client_base_url(&self) -> &str {
         self.get().client_base_url()
+    }
+
+    pub fn border_type(&self) -> BorderType {
+        if self.get().config.ui_block_is_rounded {
+            BorderType::Rounded
+        } else {
+            BorderType::Plain
+        }
     }
 }
 

@@ -66,7 +66,9 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 // /themes                   list themes               ctrl+x t
                 // /details                  toggle tool details       ctrl+x d
                 // TODO the others, once those messages are supported
+                (_, KeyCode::Char('h'), _, true) => Some(Msg::LeaderShowHelp),
                 (_, KeyCode::Char('l'), _, true) => Some(Msg::LeaderShowSessionSelector),
+                (_, KeyCode::Char('n'), _, true) => Some(Msg::SessionAbort),
                 (_, KeyCode::Tab, _, true) => Some(Msg::LeaderChangeInline),
                 (_, KeyCode::Char('q'), _, true) => Some(Msg::Quit),
 
@@ -106,7 +108,9 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppModalState::None, KeyCode::Esc, _, _) => {
                     // Leave session for main screen
                     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
-                        Some(Msg::SessionAbort)
+                        // Some(Msg::SessionAbort)
+                        // TODO: interrupt execution
+                        None
                     } else {
                         Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Esc))
                     }

@@ -96,6 +96,12 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             CmdOrBatch::Single(Cmd::TerminalRebootWithInline(new_inline))
         }
 
+        Msg::LeaderShowHelp => {
+            model.clear_repeat_leader_timeout();
+            model.state = AppModalState::ModalHelp;
+            CmdOrBatch::Single(Cmd::None)
+        }
+
         // Session selector messages
         Msg::LeaderShowSessionSelector => {
             model.clear_repeat_leader_timeout();

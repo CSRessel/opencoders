@@ -1,12 +1,11 @@
 use crate::app::tea_model::{Model, RepeatShortcutKey};
-use crate::app::ui_components::Paragraph;
 use crate::app::view_model_context::ViewModelContext;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::Widget,
+    widgets::{Paragraph, Widget},
 };
 use throbber_widgets_tui::Throbber;
 
@@ -112,4 +111,3 @@ impl Widget for &StatusBar {
         mode_paragraph.render(chunks[3], buf);
     }
 }
-

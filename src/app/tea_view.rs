@@ -4,30 +4,38 @@ use crate::app::{
         banner::{create_welcome_text, welcome_text_height},
         message_part::StepRenderingMode,
         text_input::TEXT_INPUT_HEIGHT,
-        Block, MessageContext, MessageLog, MessageRenderer, Paragraph, SessionSelector, StatusBar,
+        MessageContext, MessageLog, MessageRenderer, SessionSelector, StatusBar,
     },
     view_model_context::ViewModelContext,
 };
 use eyre::WrapErr;
 use ratatui::{
     backend::CrosstermBackend,
+    buffer::Buffer,
     crossterm,
     layout::{Constraint, Direction, Layout, Rect},
     prelude::Widget,
     style::{Color, Style},
     text::{Line, Text, ToText},
-    widgets::{Borders, Wrap},
+    widgets::{Block, Borders, Paragraph, Wrap},
     Frame, Terminal,
 };
 use std::io;
 
 pub const MAX_UI_WIDTH: u16 = 140;
+const HELP_TEXT: &str = "
+    ^x h     help
+    ^x l     select session
+    ^x n     new session
+    ^x tab   toggle view
+    ^x q     quit
+    ";
+const HELP_WIDTH: u16 = 50;
+const HELP_HEIGHT: u16 = 8;
 
 // Config:
 // - inline_mode          := true
 // - ui_block_is_rounded  := true
-// - ui_block_is_bordered := true
-// - ui_block_padding     := 0
 // - ui_status_is_bottom  := true
 // - ui_status_use_labels := true
 //
@@ -46,6 +54,17 @@ pub const MAX_UI_WIDTH: u16 = 140;
 // ╭──────────╮
 // │ > /quit  │
 // ╰──────────╯
+
+pub fn clear_area_for_rect(buf: &mut Buffer, area: Rect) {
+    // Clear the area (overlay effect)
+    for y in area.y..area.y + area.height {
+        for x in area.x..area.x + area.width {
+            if x < buf.area.width && y < buf.area.height {
+                buf[(x, y)].reset();
+            }
+        }
+    }
+}
 
 pub fn render_manual_inline_history(
     model: &Model,
@@ -83,11 +102,22 @@ pub fn view(model: &Model, frame: &mut Frame) {
                     // Then render the popover selector on top
                     frame.render_widget(&model.modal_session_selector, frame.area());
                 }
-                AppModalState::ModalHelp => frame.render_widget(
-                    Paragraph::new("help!!!!!")
-                        .block(Block::default().borders(Borders::ALL).title("Help")),
-                    frame.area(),
-                ),
+                AppModalState::ModalHelp => {
+                    let frame_area = frame.area();
+                    let help_area = Rect {
+                        x: frame_area.x + (frame_area.width - HELP_WIDTH) / 2,
+                        y: frame_area.y + (frame_area.height - HELP_HEIGHT) / 2,
+                        width: HELP_WIDTH,
+                        height: HELP_HEIGHT,
+                    };
+                    clear_area_for_rect(frame.buffer_mut(), help_area);
+
+                    frame.render_widget(
+                        Paragraph::new(HELP_TEXT)
+                            .block(Block::default().borders(Borders::ALL).title("Help")),
+                        help_area,
+                    )
+                }
                 // No modals/overlays/notifications needed
                 _ => {}
             };
@@ -202,13 +232,7 @@ fn render_main_body(frame: &mut Frame, buf: Rect) {
             frame.render_widget(&model.get().message_log, buf);
         }
     } else {
-        let help_text = "\n
-    ^x l     select session
-    ^x tab   toggle view
-    ^x q     quit
-    ";
-
-        let welcome_text = Text::from(format!("\n{}{}", model.connection_status(), help_text));
+        let welcome_text = Text::from(format!("\n{}{}", model.connection_status(), HELP_TEXT));
         let line_height = (welcome_text.to_text().lines.len().saturating_add(2) as u16)
             .max(model.get().config.height);
         let paragraph = Paragraph::new(welcome_text);

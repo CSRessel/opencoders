@@ -114,8 +114,6 @@ mod model_init {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserConfig {
     pub ui_block_is_rounded: bool,
-    pub ui_block_is_bordered: bool,
-    pub ui_block_padding: u16,
     pub ui_status_is_bottom: bool,
     pub ui_status_use_labels: bool,
     pub height: u16,
@@ -180,9 +178,7 @@ impl Model {
         Model {
             init: ModelInit::new(true),
             config: UserConfig {
-                ui_block_is_rounded: false,
-                ui_block_is_bordered: true,
-                ui_block_padding: 0,
+                ui_block_is_rounded: true,
                 ui_status_is_bottom: true,
                 ui_status_use_labels: true,
                 height: INLINE_HEIGHT,

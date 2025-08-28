@@ -21,8 +21,6 @@ impl MockModel {
         Self {
             config: UserConfig {
                 ui_block_is_rounded: false,
-                ui_block_is_bordered: true,
-                ui_block_padding: 0,
                 ui_status_is_bottom: true,
                 ui_status_use_labels: true,
                 height: INLINE_HEIGHT,
@@ -77,4 +75,3 @@ impl MockModel {
         f()
     }
 }
-

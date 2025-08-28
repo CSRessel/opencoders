@@ -1,15 +1,16 @@
 use crate::app::event_msg::{Cmd, CmdOrBatch, Msg};
 use crate::app::tea_model::{Model, RepeatShortcutKey, SessionState, INLINE_HEIGHT};
-use crate::app::ui_components::{Block, Component, Paragraph};
+use crate::app::ui_components::Component;
 use crate::app::view_model_context::ViewModelContext;
 use crate::sdk::client::{generate_id, IdPrefix};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use ratatui::widgets::BorderType;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Borders, Widget},
+    widgets::{Block, Borders, Paragraph, Widget},
 };
 use throbber_widgets_tui::{Throbber, ThrobberState};
 use tui_textarea::{Input, Key, TextArea};
@@ -583,12 +584,15 @@ impl Default for TextInputArea {
 // Widget implementation for TextInputArea
 impl Widget for &TextInputArea {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        let model = ViewModelContext::current();
+
         // Create a mutable textarea for rendering with proper styling
         let mut textarea = self.textarea.clone();
 
         // Set up the block with focus-dependent styling
-        let block = ratatui::widgets::Block::default()
+        let block = Block::default()
             .borders(Borders::ALL)
+            .border_type(model.border_type())
             .border_style(if self.is_focused {
                 Style::default().fg(Color::Blue)
             } else {

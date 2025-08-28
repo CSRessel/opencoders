@@ -91,7 +91,7 @@ impl SessionSelector {
             footer: Some("↑↓/Tab navigate, Enter select, Esc cancel".to_string()),
             max_width: Some(60),
             max_height: Some(15),
-            padding: 2,
+            padding: 1,
             show_scrollbar: false,
             alternating_rows: true,
             borders: Borders::ALL,

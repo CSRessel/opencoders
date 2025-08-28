@@ -25,8 +25,9 @@ pub enum Msg {
     SubmitTextInput,
     CycleModeState,
     ToggleVerbosity,
-    LeaderChangeInline,
+    LeaderShowHelp,
     LeaderShowSessionSelector,
+    LeaderChangeInline,
     MarkMessagesViewed,
 
     // Unified repeat shortcut timeout events

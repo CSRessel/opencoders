@@ -1,17 +1,18 @@
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, ModifierKeyCode};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
-        Block, Borders, Cell, List, ListItem, Padding, Row, Scrollbar, ScrollbarOrientation,
-        ScrollbarState, Table, TableState, Widget,
+        Block, Borders, Cell, List, ListItem, Padding, Paragraph, Row, Scrollbar,
+        ScrollbarOrientation, ScrollbarState, Table, TableState, Widget,
     },
 };
 use std::marker::PhantomData;
 
-use crate::app::tea_view::MAX_UI_WIDTH;
+use crate::app::tea_view::{clear_area_for_rect, MAX_UI_WIDTH};
+use crate::app::ui_components::Component;
 
 /// Configuration for table columns
 #[derive(Debug, Clone, PartialEq)]
@@ -287,12 +288,20 @@ where
     fn handle_key_input(&mut self, key: KeyEvent) -> ModalSelectorUpdate<T> {
         match key.code {
             KeyCode::Esc => ModalSelectorUpdate::Hide,
-            KeyCode::BackTab | KeyCode::Up => {
+            KeyCode::Up => {
                 self.navigate_up();
                 ModalSelectorUpdate::None
             }
-            KeyCode::Tab | KeyCode::Down => {
+            KeyCode::Down => {
                 self.navigate_down();
+                ModalSelectorUpdate::None
+            }
+            KeyCode::Tab => {
+                if key.modifiers.contains(KeyModifiers::SHIFT) {
+                    self.navigate_up();
+                } else {
+                    self.navigate_down();
+                };
                 ModalSelectorUpdate::None
             }
             KeyCode::Enter => {
@@ -475,16 +484,16 @@ where
 
     fn calculate_popup_area(&self, area: Rect) -> Rect {
         let popup_width = self.config.max_width.unwrap_or(area.width).min(area.width);
-
         let popup_height = match &self.mode {
-            SelectorMode::List => (self.items.len() as u16)
-                .saturating_add(2)
-                .saturating_add(self.config.padding * 2),
-            SelectorMode::Table { .. } => (self.items.len() as u16)
-                .saturating_add(2)
-                .saturating_add(self.config.padding * 2),
+            SelectorMode::List => (self.items.len() as u16).saturating_add(self.config.padding * 2),
+            SelectorMode::Table { .. } => {
+                (self.items.len() as u16).saturating_add(self.config.padding * 2)
+            }
         }
-        .min(self.config.max_height.unwrap_or(area.height));
+        .min(
+            area.height
+                .min(self.config.max_height.unwrap_or(u16::max_value())),
+        );
 
         // Center the popup
         let popup_x = (area.width.saturating_sub(popup_width)) / 2;
@@ -509,15 +518,7 @@ where
         }
 
         let popup_area = self.calculate_popup_area(area);
-
-        // Clear the popup area (overlay effect)
-        for y in popup_area.y..popup_area.y + popup_area.height {
-            for x in popup_area.x..popup_area.x + popup_area.width {
-                if x < buf.area.width && y < buf.area.height {
-                    buf[(x, y)].reset();
-                }
-            }
-        }
+        clear_area_for_rect(buf, popup_area);
 
         // Render content based on state
         if self.loading {
@@ -532,4 +533,3 @@ where
         }
     }
 }
-

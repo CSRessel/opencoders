@@ -106,7 +106,7 @@ impl FileSelector {
             max_width: Some(MAX_UI_WIDTH),
             max_height: Some(20),
             padding: 0,
-            show_scrollbar: true,
+            show_scrollbar: false,
             alternating_rows: true,
             borders: Borders::NONE,
             border_color: Color::Blue,

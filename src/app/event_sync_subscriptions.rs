@@ -48,19 +48,20 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (_, KeyCode::Char('x'), KeyModifiers::CONTROL, _) => {
                     Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Leader))
                 }
+
                 // Leader shortcuts:
-                // /new                      new session               ctrl+x n                ┃
-                // /help                     show help                 ctrl+x h                ┃
-                // /share                    share session             ctrl+x s                ┃
-                // /models                   list models               ctrl+x m                ┃
-                // /editor                   open editor               ctrl+x e                ┃
-                // /init                     create/update AGENTS.md   ctrl+x i                ┃
-                // /compact                  compact the session       ctrl+x c                ┃
-                // /export                   export conversation       ctrl+x x                ┃
-                // /sessions                 list sessions             ctrl+x l                ┃
-                // /unshare                  unshare session           ctrl+x u                ┃
-                // /themes                   list themes               ctrl+x t                ┃
-                // /details                  toggle tool details       ctrl+x d                ┃
+                // /new                      new session               ctrl+x n
+                // /help                     show help                 ctrl+x h
+                // /share                    share session             ctrl+x s
+                // /models                   list models               ctrl+x m
+                // /editor                   open editor               ctrl+x e
+                // /init                     create/update AGENTS.md   ctrl+x i
+                // /compact                  compact the session       ctrl+x c
+                // /export                   export conversation       ctrl+x x
+                // /sessions                 list sessions             ctrl+x l
+                // /unshare                  unshare session           ctrl+x u
+                // /themes                   list themes               ctrl+x t
+                // /details                  toggle tool details       ctrl+x d
                 // TODO the others, once those messages are supported
                 (_, KeyCode::Char('l'), _, true) => Some(Msg::LeaderShowSessionSelector),
                 (_, KeyCode::Tab, _, true) => Some(Msg::LeaderChangeInline),
@@ -73,17 +74,13 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                         Some(Msg::TextArea(MsgTextArea::Clear))
                     }
                 }
-                // (AppModalState::None, KeyCode::Esc, __, _) => {
-                //     // Leave session for main screen
-                //     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
-                //         Some(Msg::SessionAbort)
-                //     } else {
-                //         Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Esc))
-                //     }
-                // }
-                (AppModalState::Help | AppModalState::SelectSession, KeyCode::Esc, _, __) => {
-                    // Close modals
-                    Some(Msg::ChangeState(AppModalState::None))
+                (AppModalState::None, KeyCode::Esc, __, _) => {
+                    // Leave session for main screen
+                    if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
+                        Some(Msg::SessionAbort)
+                    } else {
+                        Some(Msg::RepeatShortcutPressed(RepeatShortcutKey::Esc))
+                    }
                 }
                 (AppModalState::None, KeyCode::Char('r'), KeyModifiers::CONTROL, _) => {
                     Some(Msg::ToggleVerbosity)
@@ -97,9 +94,14 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 }
                 (AppModalState::None, KeyCode::Tab, _, _) => Some(Msg::CycleModeState),
 
-                // Message log scrolling (keeping Page Up/Down for message history)
+                // Message log scrolling (keeping Page Up/Down for fullscreen message history)
                 (AppModalState::None, KeyCode::PageUp, _, _) => Some(Msg::ScrollMessageLog(-5)),
                 (AppModalState::None, KeyCode::PageDown, _, _) => Some(Msg::ScrollMessageLog(5)),
+
+                (AppModalState::Help | AppModalState::SelectSession, KeyCode::Esc, _, __) => {
+                    // Close modals
+                    Some(Msg::ChangeState(AppModalState::None))
+                }
 
                 // Session selector events
                 (AppModalState::SelectSession, KeyCode::Up, _, _) => {

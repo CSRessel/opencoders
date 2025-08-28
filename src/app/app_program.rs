@@ -458,11 +458,10 @@ impl Program {
             }
 
             Cmd::AsyncSessionAbort => {
-                self.task_manager
-                    // TODO eventually call proper API to cancel loop
-                    .spawn_task(async move {
-                        Msg::ChangeState(AppModalState::Connecting(ConnectionStatus::Disconnected))
-                    });
+                self.task_manager.spawn_task(async move {
+                    Msg::ChangeState(AppModalState::Connecting(ConnectionStatus::Connected))
+                    // Will reset other necessary state to delect session
+                });
             }
 
             Cmd::AsyncCancelTask(task_id) => {

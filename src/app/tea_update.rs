@@ -37,98 +37,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             CmdOrBatch::Single(Cmd::AsyncSpawnClientDiscovery)
         }
 
-        Msg::ResponseClientConnect(Ok(client)) => {
-            tracing::info!("Client connected successfully");
-            model.client = Some(client.clone());
-            model.state = AppModalState::Connecting(ConnectionStatus::Connected);
-            model.connection_status = ConnectionStatus::Connected;
-            // Load modes immediately when client connects
-            CmdOrBatch::Single(Cmd::AsyncLoadModes(client))
-        }
-
-        Msg::ResponseClientConnect(Err(error)) => {
-            let error_msg = format!("Failed to connect to OpenCode server: {}", error);
-            model.state = AppModalState::Connecting(ConnectionStatus::Error(error.to_string()));
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        // Session management messages
-        Msg::ResponseSessionInit(Ok(session)) => {
-            let session_id = session.id.clone();
-            model.state = AppModalState::None;
-
-            // Set session data
-            model.session_state = SessionState::Ready(session);
-            model.connection_status = ConnectionStatus::SessionReady;
-            model.message_log.touch_scroll();
-
-            // Set session ID in message state
-            model.message_state.set_session_id(Some(session_id.clone()));
-
-            // Fetch session messages and start event stream once session is ready
-            if let Some(client) = model.client.clone() {
-                CmdOrBatch::Batch(vec![
-                    Cmd::AsyncLoadSessionMessages(client.clone(), session_id),
-                    Cmd::AsyncStartEventStream(client),
-                ])
-            } else {
-                CmdOrBatch::Single(Cmd::None)
-            }
-        }
-
-        Msg::ResponseSessionCreateWithMessage(Ok((session, first_message))) => {
-            let session_id = session.id.clone();
-            model.state = AppModalState::None;
-
-            // Set session data
-            model.session_state = SessionState::Ready(session.clone());
-            model.connection_status = ConnectionStatus::SessionReady;
-            model.message_log.touch_scroll();
-
-            // Set session ID in message state
-            model.message_state.set_session_id(Some(session_id.clone()));
-
-            // Clear pending message
-            model.pending_first_message = None;
-
-            // Fetch session messages and start event stream once session is ready
-            if let Some(client) = model.client.clone() {
-                let session_id = session.id.clone();
-                let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
-                let message_id = generate_id(IdPrefix::Message);
-                model.session_is_idle = false;
-                CmdOrBatch::Batch(vec![
-                    Cmd::AsyncLoadSessionMessages(client.clone(), session_id.clone()),
-                    Cmd::AsyncStartEventStream(client.clone()),
-                    Cmd::AsyncSendUserMessage(
-                        client.clone(),
-                        session_id.clone(),
-                        message_id.clone(),
-                        first_message.clone(),
-                        provider_id,
-                        model_id,
-                        mode,
-                    ),
-                ])
-            } else {
-                CmdOrBatch::Single(Cmd::None)
-            }
-        }
-
-        Msg::ResponseSessionCreateWithMessage(Err(error)) => {
-            let error_msg = format!("Failed to create session: {}", error);
-            model.session_state = SessionState::None;
-            model.pending_first_message = None;
-            model.state = AppModalState::Connecting(ConnectionStatus::Error(error_msg));
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseSessionInit(Err(error)) => {
-            let error_msg = format!("Failed to initialize session: {}", error);
-            model.state = AppModalState::Connecting(ConnectionStatus::Error(error_msg));
-            CmdOrBatch::Single(Cmd::None)
-        }
-
         Msg::Quit => {
             model.state = AppModalState::Quit;
             CmdOrBatch::Single(Cmd::None)
@@ -217,115 +125,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         }
 
         Msg::ModalSessionSelector(submsg) => SessionSelector::update(submsg, model),
-
-        Msg::ResponseSessionsLoad(Ok(sessions)) => {
-            model.sessions = sessions;
-
-            // Convert sessions to SessionData
-            let mut session_data =
-                vec![crate::app::ui_components::modal_session_selector::SessionData::new_session()];
-
-            // Re-calculate current session index
-            let current_session_id = model.session().map(|s| &s.id);
-
-            for (i, session) in model.sessions.iter().enumerate() {
-                let is_current = current_session_id == Some(&session.id);
-                session_data.push(
-                    crate::app::ui_components::modal_session_selector::SessionData::from_session(
-                        session, is_current,
-                    ),
-                );
-            }
-
-            // Set items using the generic event
-            let _ = model
-                .modal_session_selector
-                .modal
-                .handle_event(ModalSelectorEvent::SetItems(session_data));
-
-            tracing::debug!("set event for {} sessions!!!", model.sessions.len());
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseSessionsLoad(Err(error)) => {
-            tracing::error!("Failed to load sessions: {}", error);
-            let _ = model
-                .modal_session_selector
-                .modal
-                .handle_event(ModalSelectorEvent::SetError(Some(format!(
-                    "Failed to load sessions: {}",
-                    error
-                ))));
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseModesLoad(Ok(modes)) => {
-            model.set_modes(modes);
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseModesLoad(Err(error)) => {
-            tracing::error!("Failed to load modes: {}", error);
-            // Don't show error to user for modes loading failure, just log it
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseSessionMessagesLoad(Ok(messages)) => {
-            // Log debug output for fetched messages
-            tracing::debug!("Fetched {} session messages", messages.len());
-            model.message_state.load_messages(messages.clone());
-            let message_containers = model
-                .message_state
-                .get_all_message_containers()
-                .into_iter()
-                .cloned()
-                .collect();
-            model.message_log.set_message_containers(message_containers);
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseSessionMessagesLoad(Err(error)) => {
-            tracing::debug!("Failed to load session messages: {}", error);
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseUserMessageSend(Ok(text)) => {
-            tracing::debug!("User message sent successfully: {}", text);
-            // Reset idle state since we just sent a message
-            model.session_is_idle = false;
-            // The message will be received via SSE events and added to message state
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseUserMessageSend(Err(error)) => {
-            tracing::debug!("Failed to send user message: {}", error);
-            // Could show error in UI or retry
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseFileStatusesLoad(Ok(files)) => {
-            model.file_status = files.clone();
-            // Update the file selector with new data
-            model.modal_file_selector.set_files(files);
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseFileStatusesLoad(Err(error)) => {
-            tracing::error!("Failed to load file status: {}", error);
-            // Keep the current file status and don't show error to user
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseFileStatusesLoad(Ok(files)) => {
-            model.file_status = files;
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ResponseFileStatusesLoad(Err(error)) => {
-            tracing::error!("Failed to load file status: {}", error);
-            // Keep the current file status and don't show error to user
-            CmdOrBatch::Single(Cmd::None)
-        }
 
         Msg::CycleModeState => {
             if matches!(model.modes, None) {
@@ -467,6 +266,207 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
             // Handle component sub-messages using direct method call
             TextInputArea::update(submsg, &mut model);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseClientConnect(Ok(client)) => {
+            tracing::info!("Client connected successfully");
+            model.client = Some(client.clone());
+            model.state = AppModalState::Connecting(ConnectionStatus::Connected);
+            model.connection_status = ConnectionStatus::Connected;
+            // Load modes immediately when client connects
+            CmdOrBatch::Single(Cmd::AsyncLoadModes(client))
+        }
+
+        Msg::ResponseClientConnect(Err(error)) => {
+            let error_msg = format!("Failed to connect to OpenCode server: {}", error);
+            model.state = AppModalState::Connecting(ConnectionStatus::Error(error.to_string()));
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        // Session management messages
+        Msg::ResponseSessionInit(Ok(session)) => {
+            let session_id = session.id.clone();
+            model.state = AppModalState::None;
+
+            // Set session data
+            model.session_state = SessionState::Ready(session);
+            model.connection_status = ConnectionStatus::SessionReady;
+            model.message_log.touch_scroll();
+
+            // Set session ID in message state
+            model.message_state.set_session_id(Some(session_id.clone()));
+
+            // Fetch session messages and start event stream once session is ready
+            if let Some(client) = model.client.clone() {
+                CmdOrBatch::Batch(vec![
+                    Cmd::AsyncLoadSessionMessages(client.clone(), session_id),
+                    Cmd::AsyncStartEventStream(client),
+                ])
+            } else {
+                CmdOrBatch::Single(Cmd::None)
+            }
+        }
+
+        Msg::ResponseSessionCreateWithMessage(Ok((session, first_message))) => {
+            let session_id = session.id.clone();
+            model.state = AppModalState::None;
+
+            // Set session data
+            model.session_state = SessionState::Ready(session.clone());
+            model.connection_status = ConnectionStatus::SessionReady;
+            model.message_log.touch_scroll();
+
+            // Set session ID in message state
+            model.message_state.set_session_id(Some(session_id.clone()));
+
+            // Clear pending message
+            model.pending_first_message = None;
+
+            // Fetch session messages and start event stream once session is ready
+            if let Some(client) = model.client.clone() {
+                let session_id = session.id.clone();
+                let (provider_id, model_id, mode) = model.get_mode_and_model_settings();
+                let message_id = generate_id(IdPrefix::Message);
+                model.session_is_idle = false;
+                CmdOrBatch::Batch(vec![
+                    Cmd::AsyncLoadSessionMessages(client.clone(), session_id.clone()),
+                    Cmd::AsyncStartEventStream(client.clone()),
+                    Cmd::AsyncSendUserMessage(
+                        client.clone(),
+                        session_id.clone(),
+                        message_id.clone(),
+                        first_message.clone(),
+                        provider_id,
+                        model_id,
+                        mode,
+                    ),
+                ])
+            } else {
+                CmdOrBatch::Single(Cmd::None)
+            }
+        }
+
+        Msg::ResponseSessionCreateWithMessage(Err(error)) => {
+            let error_msg = format!("Failed to create session: {}", error);
+            model.session_state = SessionState::None;
+            model.pending_first_message = None;
+            model.state = AppModalState::Connecting(ConnectionStatus::Error(error_msg));
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseSessionInit(Err(error)) => {
+            let error_msg = format!("Failed to initialize session: {}", error);
+            model.state = AppModalState::Connecting(ConnectionStatus::Error(error_msg));
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseSessionsLoad(Ok(sessions)) => {
+            model.sessions = sessions;
+
+            // Convert sessions to SessionData
+            let mut session_data =
+                vec![crate::app::ui_components::modal_session_selector::SessionData::new_session()];
+
+            // Re-calculate current session index
+            let current_session_id = model.session().map(|s| &s.id);
+
+            for (i, session) in model.sessions.iter().enumerate() {
+                let is_current = current_session_id == Some(&session.id);
+                session_data.push(
+                    crate::app::ui_components::modal_session_selector::SessionData::from_session(
+                        session, is_current,
+                    ),
+                );
+            }
+
+            // Set items using the generic event
+            let _ = model
+                .modal_session_selector
+                .modal
+                .handle_event(ModalSelectorEvent::SetItems(session_data));
+
+            tracing::debug!("set event for {} sessions!!!", model.sessions.len());
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseSessionsLoad(Err(error)) => {
+            tracing::error!("Failed to load sessions: {}", error);
+            let _ = model
+                .modal_session_selector
+                .modal
+                .handle_event(ModalSelectorEvent::SetError(Some(format!(
+                    "Failed to load sessions: {}",
+                    error
+                ))));
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseModesLoad(Ok(modes)) => {
+            model.set_modes(modes);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseModesLoad(Err(error)) => {
+            tracing::error!("Failed to load modes: {}", error);
+            // Don't show error to user for modes loading failure, just log it
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseSessionMessagesLoad(Ok(messages)) => {
+            // Log debug output for fetched messages
+            tracing::debug!("Fetched {} session messages", messages.len());
+            model.message_state.load_messages(messages.clone());
+            let message_containers = model
+                .message_state
+                .get_all_message_containers()
+                .into_iter()
+                .cloned()
+                .collect();
+            model.message_log.set_message_containers(message_containers);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseSessionMessagesLoad(Err(error)) => {
+            tracing::debug!("Failed to load session messages: {}", error);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseUserMessageSend(Ok(text)) => {
+            tracing::debug!("User message sent successfully: {}", text);
+            // Reset idle state since we just sent a message
+            model.session_is_idle = false;
+            // The message will be received via SSE events and added to message state
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseUserMessageSend(Err(error)) => {
+            tracing::debug!("Failed to send user message: {}", error);
+            // Could show error in UI or retry
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseFileStatusesLoad(Ok(files)) => {
+            model.file_status = files.clone();
+            // Update the file selector with new data
+            model.modal_file_selector.set_files(files);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseFileStatusesLoad(Err(error)) => {
+            tracing::error!("Failed to load file status: {}", error);
+            // Keep the current file status and don't show error to user
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseFileStatusesLoad(Ok(files)) => {
+            model.file_status = files;
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ResponseFileStatusesLoad(Err(error)) => {
+            tracing::error!("Failed to load file status: {}", error);
+            // Keep the current file status and don't show error to user
             CmdOrBatch::Single(Cmd::None)
         }
     }

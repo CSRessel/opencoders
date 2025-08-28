@@ -5,8 +5,8 @@ use crate::app::{
     tea_model::{AppModalState, Model},
     tea_view::MAX_UI_WIDTH,
     ui_components::{
-        Component, ModalSelector, ModalSelectorEvent, MsgModalSessionSelector, SelectableData,
-        SelectorConfig, SelectorMode, TableColumn,
+        modal_selector::ModalSelectorUpdate, Component, ModalSelector, ModalSelectorEvent,
+        MsgModalSessionSelector, SelectableData, SelectorConfig, SelectorMode, TableColumn,
     },
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -93,6 +93,7 @@ pub struct FileSelector {
     pub modal: ModalSelector<FileData>,
     query: String,
     depth: u16,
+    // attachments
 }
 
 impl FileSelector {
@@ -135,6 +136,27 @@ impl FileSelector {
             && !key.modifiers.contains(KeyModifiers::ALT)
             && matches!(key.code, KeyCode::Char(_) | KeyCode::Backspace)
     }
+
+    pub fn clear(&mut self) {
+        self.depth = 0;
+        self.query = "".to_string();
+    }
+}
+
+fn model_select_file(file: File, model: &mut Model) {
+    let current_text = model.text_input_area.content();
+    let new_text = current_text.replace(&model.modal_file_selector.query, &file.path);
+    model.text_input_area.set_content(&new_text);
+    for _ in new_text.chars() {
+        model
+            .text_input_area
+            .handle_input(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
+    }
+}
+
+fn model_clear(model: &mut Model) {
+    model.modal_file_selector.clear();
+    model.state = AppModalState::None;
 }
 
 impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
@@ -143,46 +165,27 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
         match msg {
             MsgModalFileSelector::Event(event) => {
                 // Forward generic events to the file selector component
-                if let Some(response_event) = model.modal_file_selector.modal.handle_event(event) {
-                    // Handle response events
-                    match response_event {
-                        ModalSelectorEvent::Hide => {
-                            model.state = AppModalState::None;
-                        }
-                        ModalSelectorEvent::ItemSelected(file_data) => {
-                            // Insert the file path into the text input
-                            let current_text = model.text_input_area.content();
-                            let new_text = if current_text.ends_with("@") {
-                                current_text.trim_end_matches("@").to_string()
-                                    + &file_data.file.path
-                            } else {
-                                current_text + &file_data.file.path
-                            };
-                            model.text_input_area.set_content(&new_text);
-                            model.state = AppModalState::None;
-                        }
-                        _ => {}
+                match model.modal_file_selector.modal.handle_event(event) {
+                    ModalSelectorUpdate::Hide => {
+                        model_clear(model);
                     }
+                    ModalSelectorUpdate::ItemSelected(file_data) => {
+                        model_select_file(file_data.file, model);
+                        model_clear(model);
+                    }
+                    _ => {}
                 }
             }
             MsgModalFileSelector::FileSelected(file) => {
-                // Insert the file path into the text input
-                let current_text = model.text_input_area.content();
-                let new_text = if current_text.ends_with("@") {
-                    current_text.trim_end_matches("@").to_string() + &file.path
-                } else {
-                    current_text + &file.path
-                };
-                // TODO handle proper attachment
-                model.text_input_area.set_content(&new_text);
-                model.state = AppModalState::None;
+                model_select_file(file, model);
+                model_clear(model);
             }
             MsgModalFileSelector::KeyInput(key) => {
                 if FileSelector::is_file_selector_input(key) {
                     match key.code {
                         KeyCode::Backspace => {
                             if model.modal_file_selector.depth == 0 {
-                                model.state = AppModalState::None;
+                                model_clear(model);
                             } else {
                                 model.modal_file_selector.depth -= 1;
                             }
@@ -190,7 +193,7 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                         }
                         KeyCode::Char(c) => {
                             if c == ' ' {
-                                model.state = AppModalState::None;
+                                model_clear(model);
                             } else {
                                 model.modal_file_selector.depth += 1;
                                 model.modal_file_selector.query += &format!("{}", c);
@@ -202,7 +205,7 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                 }
             }
             MsgModalFileSelector::Cancel => {
-                model.state = AppModalState::None;
+                model_clear(model);
             }
         };
         CmdOrBatch::Single(())

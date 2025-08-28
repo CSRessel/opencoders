@@ -103,8 +103,16 @@ where
     SetItems(Vec<T>),
     SetLoading(bool),
     SetError(Option<String>),
-    SelectionChanged(Option<usize>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ModalSelectorUpdate<T>
+where
+    T: SelectableData + Clone,
+{
+    Hide,
     ItemSelected(T),
+    None,
 }
 
 /// Generic modal selector that can display different types of data
@@ -241,32 +249,26 @@ where
     }
 
     // Generic event handling
-    pub fn handle_event(&mut self, event: ModalSelectorEvent<T>) -> Option<ModalSelectorEvent<T>> {
+    pub fn handle_event(&mut self, event: ModalSelectorEvent<T>) -> ModalSelectorUpdate<T> {
         match event {
             ModalSelectorEvent::Show => {
                 self.show();
-                None
             }
             ModalSelectorEvent::Hide => {
                 self.hide();
-                None
             }
             ModalSelectorEvent::SetItems(items) => {
                 self.set_items(items);
-                None
             }
             ModalSelectorEvent::SetLoading(loading) => {
                 self.set_loading(loading);
-                None
             }
             ModalSelectorEvent::SetError(error) => {
                 self.set_error(error);
-                None
             }
-            ModalSelectorEvent::KeyInput(key) => self.handle_key_input(key),
-            ModalSelectorEvent::SelectionChanged(_) => None, // Handled elsewhere
-            ModalSelectorEvent::ItemSelected(_) => None,     // Handled elsewhere
-        }
+            ModalSelectorEvent::KeyInput(key) => return self.handle_key_input(key),
+        };
+        ModalSelectorUpdate::None
     }
 
     pub fn is_modal_selector_input(key_code: KeyCode) -> bool {
@@ -276,37 +278,26 @@ where
         )
     }
 
-    fn handle_key_input(&mut self, key: KeyEvent) -> Option<ModalSelectorEvent<T>> {
+    fn handle_key_input(&mut self, key: KeyEvent) -> ModalSelectorUpdate<T> {
         match key.code {
-            KeyCode::Esc => Some(ModalSelectorEvent::Hide),
+            KeyCode::Esc => ModalSelectorUpdate::Hide,
             KeyCode::Up => {
-                let old_selection = self.selected_index();
                 self.navigate_up();
-                let new_selection = self.selected_index();
-                if old_selection != new_selection {
-                    Some(ModalSelectorEvent::SelectionChanged(new_selection))
-                } else {
-                    None
-                }
+                ModalSelectorUpdate::None
             }
             KeyCode::Down => {
                 let old_selection = self.selected_index();
                 self.navigate_down();
-                let new_selection = self.selected_index();
-                if old_selection != new_selection {
-                    Some(ModalSelectorEvent::SelectionChanged(new_selection))
-                } else {
-                    None
-                }
+                ModalSelectorUpdate::None
             }
             KeyCode::Enter => {
                 if let Some(item) = self.selected_item() {
-                    Some(ModalSelectorEvent::ItemSelected(item.clone()))
+                    ModalSelectorUpdate::ItemSelected(item.clone())
                 } else {
-                    None
+                    ModalSelectorUpdate::None
                 }
             }
-            _ => None,
+            _ => ModalSelectorUpdate::None,
         }
     }
 

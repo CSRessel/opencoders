@@ -103,13 +103,13 @@ pub fn restore_terminal(init: &ModelInit, height: u16) -> io::Result<()> {
         tracing::error!("Failed to disable mouse capture during restore: {}", e);
     }
 
-    // Handle screen mode restoration
     if !init.inline_mode() {
+        // Handle screen mode restoration
         tracing::debug!("Leaving alternate screen mode");
         execute!(stdout, LeaveAlternateScreen)?;
     } else {
         // For inline mode, ensure proper cursor positioning and screen clearing
-        // to prevent overlap with error messages
+        // to maintain position during inline toggle
         if let Ok((cols, rows)) = crossterm::terminal::size() {
             // Clear from cursor position down to prevent overlap
             execute!(

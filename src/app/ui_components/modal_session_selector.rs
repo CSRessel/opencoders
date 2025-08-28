@@ -2,7 +2,8 @@ use crate::app::{
     event_msg::{Cmd, CmdOrBatch},
     tea_model::{AppModalState, Model},
     ui_components::{
-        Component, ModalSelector, ModalSelectorEvent, SelectableData, SelectorConfig, SelectorMode,
+        modal_selector::ModalSelectorUpdate, Component, ModalSelector, ModalSelectorEvent,
+        SelectableData, SelectorConfig, SelectorMode,
     },
 };
 use opencode_sdk::models::Session;
@@ -178,44 +179,37 @@ impl Component<Model, MsgModalSessionSelector, Cmd> for SessionSelector {
         match msg {
             MsgModalSessionSelector::Event(event) => {
                 // Forward generic events to the session selector component
-                // and handle any events it emits back
-                if let Some(response_event) = model.modal_session_selector.modal.handle_event(event)
-                {
-                    // Handle response events
-                    match response_event {
-                        ModalSelectorEvent::Hide => {
-                            model.state = AppModalState::None;
-                        }
-                        ModalSelectorEvent::ItemSelected(session_data) => {
-                            // Convert session data back to index
-                            if session_data.session.is_none() {
-                                // "Create New" selected - index 0
+                // and handle any responses it emits back
+                match model.modal_session_selector.modal.handle_event(event) {
+                    ModalSelectorUpdate::Hide => {
+                        model.state = AppModalState::None;
+                    }
+                    ModalSelectorUpdate::ItemSelected(session_data) => {
+                        // Convert session data back to index
+                        if session_data.session.is_none() {
+                            // "Create New" selected - index 0
+                            if let Some(client) = model.client.clone() {
+                                if model.change_session(Some(0)) {
+                                    return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(client));
+                                }
+                            }
+                        } else {
+                            // Find the session index
+                            if let Some(session) = &session_data.session {
+                                let index = model.sessions.iter().position(|s| s.id == session.id);
                                 if let Some(client) = model.client.clone() {
-                                    if model.change_session(Some(0)) {
+                                    if model.change_session(index.map(|i| i + 1)) {
+                                        // +1 for "Create New"
                                         return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(
                                             client,
                                         ));
                                     }
                                 }
-                            } else {
-                                // Find the session index
-                                if let Some(session) = &session_data.session {
-                                    let index =
-                                        model.sessions.iter().position(|s| s.id == session.id);
-                                    if let Some(client) = model.client.clone() {
-                                        if model.change_session(index.map(|i| i + 1)) {
-                                            // +1 for "Create New"
-                                            return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(
-                                                client,
-                                            ));
-                                        }
-                                    }
-                                }
                             }
-                            model.state = AppModalState::None;
                         }
-                        _ => {}
+                        model.state = AppModalState::None;
                     }
+                    _ => {}
                 }
             }
             MsgModalSessionSelector::SessionSelected(index) => {

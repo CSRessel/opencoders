@@ -31,12 +31,12 @@ and Rust wasm build targets can hook in `crossterm` against `xterm.js` for brows
 > - [x] ~~fix live message loading~~
 > - [x] ~~dynamic text input box (text wrapping, vertical resizing, shortcut navigation)~~
 > - [x] ~~unify "new session" and "welcome" pages to one state~~
-> - [ ] basic input dropdown for files
+> - [x] ~~basic input dropdown for files~~
 >
 > **Minimum Releasable**
 > - [x] ~~fix inline mode walking down the page~~
 > - [ ] cleanup message/part/tool styling and colorization
-> - [ ] support multi-line textarea (shift+enter newlines, expanding height, scroll overflow)
+> - [x] ~~support multi-line textarea (shift+enter newlines, expanding height, scroll overflow)~~
 > - [ ] more input dropdowns (need slash commands: help, new, sessions, compact)
 > - [ ] better status bar styling (fix mode state for /agent, better colors, proper tokens/context, row items overflow to stacked)
 > - [ ] basic env for non-interactive TTY execution with synthetic input for "golden tests" and for perf testing

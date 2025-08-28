@@ -2,7 +2,10 @@ use crate::{
     app::{
         event_msg::*,
         tea_model::*,
-        ui_components::{Component, MsgTextArea, MsgModalSessionSelector, MsgModalFileSelector, ModalSelectorEvent},
+        ui_components::{
+            Component, FileSelector, ModalSelectorEvent, MsgModalFileSelector,
+            MsgModalSessionSelector, MsgTextArea, SessionSelector, TextInputArea,
+        },
     },
     sdk::client::{generate_id, IdPrefix},
 };
@@ -200,102 +203,56 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         Msg::LeaderShowSessionSelector => {
             model.clear_repeat_leader_timeout();
             model.state = AppModalState::ModalSessionSelect;
-            
+
             // Show the selector using generic event
-            let _ = model.modal_session_selector.modal.handle_event(ModalSelectorEvent::Show);
+            let _ = model
+                .modal_session_selector
+                .modal
+                .handle_event(ModalSelectorEvent::Show);
 
             if let Some(client) = model.client.clone() {
-                tracing::debug!("waiting for session load");
                 CmdOrBatch::Batch(vec![
                     Cmd::AsyncLoadSessions(client.clone()),
                     Cmd::AsyncLoadModes(client),
                 ])
             } else {
-                tracing::debug!("no client yet!");
-                let _ = model.modal_session_selector.modal.handle_event(
-                    ModalSelectorEvent::SetError(Some("No client connection".to_string()))
-                );
+                let _ =
+                    model
+                        .modal_session_selector
+                        .modal
+                        .handle_event(ModalSelectorEvent::SetError(Some(
+                            "No client connection".to_string(),
+                        )));
                 CmdOrBatch::Single(Cmd::None)
             }
         }
 
-        Msg::ModalSessionSelector(submsg) => {
-            match submsg {
-                MsgModalSessionSelector::Event(event) => {
-                    // Forward generic events to the session selector component
-                    if let Some(response_event) = model.modal_session_selector.modal.handle_event(event) {
-                        // Handle response events
-                        match response_event {
-                            ModalSelectorEvent::Hide => {
-                                model.state = AppModalState::None;
-                            }
-                            ModalSelectorEvent::ItemSelected(session_data) => {
-                                // Convert session data back to index
-                                if session_data.session.is_none() {
-                                    // "Create New" selected - index 0
-                                    if let Some(client) = model.client.clone() {
-                                        if model.change_session(Some(0)) {
-                                            return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(client));
-                                        }
-                                    }
-                                } else {
-                                    // Find the session index
-                                    if let Some(session) = &session_data.session {
-                                        let index = model.sessions.iter().position(|s| s.id == session.id);
-                                        if let Some(client) = model.client.clone() {
-                                            if model.change_session(index.map(|i| i + 1)) { // +1 for "Create New"
-                                                return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(client));
-                                            }
-                                        }
-                                    }
-                                }
-                                model.state = AppModalState::None;
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                MsgModalSessionSelector::SessionSelected(index) => {
-                    if let Some(client) = model.client.clone() {
-                        if model.change_session(Some(index)) {
-                            return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(client));
-                        }
-                    }
-                    model.state = AppModalState::None;
-                }
-                MsgModalSessionSelector::CreateNew => {
-                    if let Some(client) = model.client.clone() {
-                        if model.change_session(Some(0)) {
-                            return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(client));
-                        }
-                    }
-                    model.state = AppModalState::None;
-                }
-                MsgModalSessionSelector::Cancel => {
-                    model.state = AppModalState::None;
-                }
-            }
-            CmdOrBatch::Single(Cmd::None)
-        }
+        Msg::ModalSessionSelector(submsg) => SessionSelector::update(submsg, model),
 
         Msg::SessionsLoaded(sessions) => {
             model.sessions = sessions;
 
             // Convert sessions to SessionData
-            let mut session_data = vec![crate::app::ui_components::modal_session_selector::SessionData::new_session()]; 
-            
+            let mut session_data =
+                vec![crate::app::ui_components::modal_session_selector::SessionData::new_session()];
+
             // Re-calculate current session index
             let current_session_id = model.session().map(|s| &s.id);
-            
+
             for (i, session) in model.sessions.iter().enumerate() {
                 let is_current = current_session_id == Some(&session.id);
-                session_data.push(crate::app::ui_components::modal_session_selector::SessionData::from_session(session, is_current));
+                session_data.push(
+                    crate::app::ui_components::modal_session_selector::SessionData::from_session(
+                        session, is_current,
+                    ),
+                );
             }
 
             // Set items using the generic event
-            let _ = model.modal_session_selector.modal.handle_event(
-                ModalSelectorEvent::SetItems(session_data)
-            );
+            let _ = model
+                .modal_session_selector
+                .modal
+                .handle_event(ModalSelectorEvent::SetItems(session_data));
 
             tracing::debug!("set event for {} sessions!!!", model.sessions.len());
             CmdOrBatch::Single(Cmd::None)
@@ -303,12 +260,13 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
         Msg::SessionsLoadFailed(error) => {
             tracing::error!("Failed to load sessions: {}", error);
-            let _ = model.modal_session_selector.modal.handle_event(
-                ModalSelectorEvent::SetError(Some(format!(
+            let _ = model
+                .modal_session_selector
+                .modal
+                .handle_event(ModalSelectorEvent::SetError(Some(format!(
                     "Failed to load sessions: {}",
                     error
-                )))
-            );
+                ))));
             CmdOrBatch::Single(Cmd::None)
         }
 
@@ -423,34 +381,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             CmdOrBatch::Single(Cmd::None)
         }
 
-        Msg::TextArea(submsg) => {
-            // Special handling for @ symbol when main screen is active
-            if let MsgTextArea::KeyInput(key_event) = &submsg {
-                if key_event.code == crossterm::event::KeyCode::Char('@')
-                    && !key_event
-                        .modifiers
-                        .contains(crossterm::event::KeyModifiers::SHIFT)
-                    && model.is_main_screen_active()
-                {
-                    // Handle the key input first
-                    model.text_input_area.handle_message(submsg);
-                    // Then show file picker and load files
-                    model.modal_file_selector.show();
-                    model.state = AppModalState::ModalFileSelect;
-                    // Load file status if we have a client
-                    if let Some(client) = model.client.clone() {
-                        return CmdOrBatch::Single(Cmd::AsyncLoadFileStatus(client));
-                    } else {
-                        return CmdOrBatch::Single(Cmd::None);
-                    }
-                }
-            }
-
-            // Handle component sub-messages using direct method call
-            model.text_input_area.handle_message(submsg);
-            CmdOrBatch::Single(Cmd::None)
-        }
-
         Msg::FileStatusLoaded(files) => {
             model.file_status = files.clone();
             // Update the file selector with new data
@@ -466,49 +396,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
 
         Msg::RecordActiveTaskCount(count) => {
             model.active_task_count = count;
-            CmdOrBatch::Single(Cmd::None)
-        }
-
-        Msg::ModalFileSelector(submsg) => {
-            match submsg {
-                MsgModalFileSelector::Event(event) => {
-                    // Forward generic events to the file selector component
-                    if let Some(response_event) = model.modal_file_selector.modal.handle_event(event) {
-                        // Handle response events
-                        match response_event {
-                            ModalSelectorEvent::Hide => {
-                                model.state = AppModalState::None;
-                            }
-                            ModalSelectorEvent::ItemSelected(file_data) => {
-                                // Insert the file path into the text input
-                                let current_text = model.text_input_area.content();
-                                let new_text = if current_text.ends_with("@") {
-                                    current_text.trim_end_matches("@").to_string() + &file_data.file.path
-                                } else {
-                                    current_text + &file_data.file.path
-                                };
-                                model.text_input_area.set_content(&new_text);
-                                model.state = AppModalState::None;
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                MsgModalFileSelector::FileSelected(file) => {
-                    // Insert the file path into the text input
-                    let current_text = model.text_input_area.content();
-                    let new_text = if current_text.ends_with("@") {
-                        current_text.trim_end_matches("@").to_string() + &file.path
-                    } else {
-                        current_text + &file.path
-                    };
-                    model.text_input_area.set_content(&new_text);
-                    model.state = AppModalState::None;
-                }
-                MsgModalFileSelector::Cancel => {
-                    model.state = AppModalState::None;
-                }
-            }
             CmdOrBatch::Single(Cmd::None)
         }
 
@@ -559,6 +446,39 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                 ));
             }
 
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::ModalFileSelector(submsg) => {
+            FileSelector::update(submsg, model);
+            CmdOrBatch::Single(Cmd::None)
+        }
+
+        Msg::TextArea(submsg) => {
+            // Special handling for @ symbol when main screen is active
+            if let MsgTextArea::KeyInput(key_event) = &submsg {
+                if key_event.code == crossterm::event::KeyCode::Char('@')
+                    && !key_event
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::SHIFT)
+                    && model.is_main_screen_active()
+                {
+                    // Handle the key input first
+                    TextInputArea::update(submsg, &mut model);
+                    // Then show file picker and load files
+                    model.modal_file_selector.show();
+                    model.state = AppModalState::ModalFileSelect;
+                    // Load file status if we have a client
+                    if let Some(client) = model.client.clone() {
+                        return CmdOrBatch::Single(Cmd::AsyncLoadFileStatus(client));
+                    } else {
+                        return CmdOrBatch::Single(Cmd::None);
+                    }
+                }
+            }
+
+            // Handle component sub-messages using direct method call
+            TextInputArea::update(submsg, &mut model);
             CmdOrBatch::Single(Cmd::None)
         }
     }

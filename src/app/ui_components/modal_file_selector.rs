@@ -1,10 +1,17 @@
-use crate::app::ui_components::{ModalSelector, ModalSelectorEvent, SelectableData, SelectorConfig, SelectorMode, TableColumn};
+use crate::app::{
+    event_msg::CmdOrBatch,
+    tea_model::{AppModalState, Model},
+    ui_components::{
+        Component, ModalSelector, ModalSelectorEvent, MsgModalSessionSelector, SelectableData,
+        SelectorConfig, SelectorMode, TableColumn,
+    },
+};
 use opencode_sdk::models::File;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
     style::{Color, Modifier, Style},
-    text::{Span},
+    text::Span,
     widgets::{Cell, Widget},
 };
 
@@ -141,6 +148,53 @@ impl FileSelector {
 
     pub fn hide(&mut self) {
         self.modal.hide();
+    }
+}
+
+impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
+    fn update(msg: MsgModalFileSelector, state: &mut Model) -> CmdOrBatch<()> {
+        let model = state;
+        match msg {
+            MsgModalFileSelector::Event(event) => {
+                // Forward generic events to the file selector component
+                if let Some(response_event) = model.modal_file_selector.modal.handle_event(event) {
+                    // Handle response events
+                    match response_event {
+                        ModalSelectorEvent::Hide => {
+                            model.state = AppModalState::None;
+                        }
+                        ModalSelectorEvent::ItemSelected(file_data) => {
+                            // Insert the file path into the text input
+                            let current_text = model.text_input_area.content();
+                            let new_text = if current_text.ends_with("@") {
+                                current_text.trim_end_matches("@").to_string()
+                                    + &file_data.file.path
+                            } else {
+                                current_text + &file_data.file.path
+                            };
+                            model.text_input_area.set_content(&new_text);
+                            model.state = AppModalState::None;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            MsgModalFileSelector::FileSelected(file) => {
+                // Insert the file path into the text input
+                let current_text = model.text_input_area.content();
+                let new_text = if current_text.ends_with("@") {
+                    current_text.trim_end_matches("@").to_string() + &file.path
+                } else {
+                    current_text + &file.path
+                };
+                model.text_input_area.set_content(&new_text);
+                model.state = AppModalState::None;
+            }
+            MsgModalFileSelector::Cancel => {
+                model.state = AppModalState::None;
+            }
+        };
+        CmdOrBatch::Single(())
     }
 }
 

@@ -21,7 +21,6 @@ const MODE_DEFAULT_COLOR: Color = Color::Gray;
 pub enum MsgTextArea {
     KeyInput(KeyEvent),
     Newline,
-    SetFocus(bool),
     Clear,
 }
 
@@ -74,14 +73,6 @@ impl TextInputArea {
         instance
     }
 
-    pub fn set_focus(&mut self, focused: bool) {
-        self.is_focused = focused;
-    }
-
-    pub fn is_focused(&self) -> bool {
-        self.is_focused
-    }
-
     pub fn clear(&mut self) {
         self.textarea = TextArea::default();
         self.textarea.set_cursor_line_style(Style::default());
@@ -91,6 +82,14 @@ impl TextInputArea {
 
     pub fn content(&self) -> String {
         self.textarea.lines().join("\n")
+    }
+
+    pub fn is_focused(&self) -> bool {
+        self.is_focused
+    }
+
+    pub fn set_focus(&mut self, focused: bool) {
+        self.is_focused = focused;
     }
 
     pub fn set_content(&mut self, content: &str) {
@@ -556,25 +555,22 @@ impl TextInputArea {
 }
 
 // Component trait implementation for TextInputArea
-impl TextInputArea {
-    pub fn handle_message(&mut self, msg: MsgTextArea) {
-        return match msg {
+impl Component<Model, MsgTextArea, ()> for TextInputArea {
+    fn update(msg: MsgTextArea, model: &mut Model) -> CmdOrBatch<()> {
+        match msg {
             MsgTextArea::Newline => {
-                self.textarea.insert_newline();
-                self.current_height = self.current_height.saturating_add(1);
+                model.text_input_area.textarea.insert_newline();
+                model.text_input_area.current_height =
+                    model.text_input_area.current_height.saturating_add(1);
             }
             MsgTextArea::KeyInput(key_event) => {
-                self.handle_input(key_event);
-            }
-            MsgTextArea::SetFocus(focused) => {
-                if self.is_focused != focused {
-                    self.set_focus(focused);
-                }
+                model.text_input_area.handle_input(key_event);
             }
             MsgTextArea::Clear => {
-                self.clear();
+                model.text_input_area.clear();
             }
         };
+        CmdOrBatch::Single(())
     }
 }
 

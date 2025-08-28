@@ -14,8 +14,10 @@ pub use block::Block;
 pub use message_log::MessageLog;
 pub use message_part::{MessageContext, MessagePart, MessageRenderer};
 pub use modal_file_selector::{FileSelector, MsgModalFileSelector};
-pub use modal_selector::{ModalSelector, ModalSelectorEvent, SelectableData, SelectorConfig, SelectorMode, TableColumn};
-pub use modal_session_selector::{SessionSelector, SessionEvent, MsgModalSessionSelector};
+pub use modal_selector::{
+    ModalSelector, ModalSelectorEvent, SelectableData, SelectorConfig, SelectorMode, TableColumn,
+};
+pub use modal_session_selector::{MsgModalSessionSelector, SessionSelector};
 pub use paragraph::Paragraph;
 pub use status_bar::StatusBar;
 pub use text_input::{InputResult, MsgTextArea, TextInputArea};
@@ -28,13 +30,7 @@ use crate::app::event_msg::CmdOrBatch;
 /// commands that get translated to main application messages.
 pub trait Component<State, SubMsg, SubCmd> {
     /// Handle a sub-message and update component state
-    fn update(&mut self, msg: SubMsg, state: &State) -> CmdOrBatch<SubCmd>;
-
-    /// Get focus state for rendering
-    fn is_focused(&self) -> bool;
-
-    /// Set focus state
-    fn set_focus(&mut self, focused: bool);
+    fn update(msg: SubMsg, state: &mut State) -> CmdOrBatch<SubCmd>;
 }
 
 /// Behavioral traits for components

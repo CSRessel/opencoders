@@ -1,4 +1,10 @@
-use crate::app::ui_components::{ModalSelector, ModalSelectorEvent, SelectableData, SelectorConfig, SelectorMode};
+use crate::app::{
+    event_msg::{Cmd, CmdOrBatch},
+    tea_model::{AppModalState, Model},
+    ui_components::{
+        Component, ModalSelector, ModalSelectorEvent, SelectableData, SelectorConfig, SelectorMode,
+    },
+};
 use opencode_sdk::models::Session;
 use ratatui::{
     buffer::Buffer,
@@ -60,20 +66,6 @@ impl SelectableData for SessionData {
     }
 }
 
-/// Events that can be sent to the SessionSelector
-#[derive(Debug, Clone, PartialEq)]
-pub enum SessionEvent {
-    Up,
-    Down,
-    Select,
-    Cancel,
-    SetItems(Vec<Session>, Option<usize>),
-    SetLoading(bool),
-    SetError(Option<String>),
-    Show,
-    Hide,
-}
-
 /// Submessage enum for the session selector that wraps generic events
 #[derive(Debug, Clone, PartialEq)]
 pub enum MsgModalSessionSelector {
@@ -117,69 +109,6 @@ impl SessionSelector {
         }
     }
 
-    // Event handling similar to the original PopoverSelector
-    pub fn handle_event(&mut self, event: SessionEvent) -> Option<usize> {
-        match event {
-            SessionEvent::Up => {
-                self.modal.navigate_up();
-                None
-            }
-            SessionEvent::Down => {
-                self.modal.navigate_down();
-                None
-            }
-            SessionEvent::Select => {
-                if self.modal.is_visible() {
-                    self.modal.selected_index()
-                } else {
-                    None
-                }
-            }
-            SessionEvent::Cancel => {
-                self.modal.hide();
-                None
-            }
-            SessionEvent::SetItems(sessions, current_index) => {
-                // Convert string items to SessionData
-                let mut session_data = vec![SessionData::new_session()]; // Always include "Create New"
-
-                tracing::debug!(
-                    "handling {} sessions (current {:?})!!!",
-                    sessions.len(),
-                    current_index
-                );
-
-                for (i, session) in sessions.iter().enumerate() {
-                    let is_current = current_index == Some(i);
-                    self.current_session_index = Some(i + 1); // +1 because of "Create New"
-                    session_data.push(SessionData::from_session(session, is_current));
-                }
-
-                self.modal.set_items(session_data);
-                self.modal.set_loading(false);
-                self.modal.set_error(None);
-                None
-            }
-            SessionEvent::SetLoading(loading) => {
-                self.modal.set_loading(loading);
-                None
-            }
-            SessionEvent::SetError(error) => {
-                self.modal.set_error(error);
-                None
-            }
-            SessionEvent::Show => {
-                self.modal.show();
-                None
-            }
-            SessionEvent::Hide => {
-                self.modal.hide();
-                None
-            }
-        }
-    }
-
-    // Compatibility methods from original PopoverSelector
     pub fn is_visible(&self) -> bool {
         self.modal.is_visible()
     }
@@ -243,9 +172,78 @@ impl SessionSelector {
     // }
 }
 
+impl Component<Model, MsgModalSessionSelector, Cmd> for SessionSelector {
+    fn update(msg: MsgModalSessionSelector, state: &mut Model) -> CmdOrBatch<Cmd> {
+        let model = state;
+        match msg {
+            MsgModalSessionSelector::Event(event) => {
+                // Forward generic events to the session selector component
+                // and handle any events it emits back
+                if let Some(response_event) = model.modal_session_selector.modal.handle_event(event)
+                {
+                    // Handle response events
+                    match response_event {
+                        ModalSelectorEvent::Hide => {
+                            model.state = AppModalState::None;
+                        }
+                        ModalSelectorEvent::ItemSelected(session_data) => {
+                            // Convert session data back to index
+                            if session_data.session.is_none() {
+                                // "Create New" selected - index 0
+                                if let Some(client) = model.client.clone() {
+                                    if model.change_session(Some(0)) {
+                                        return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(
+                                            client,
+                                        ));
+                                    }
+                                }
+                            } else {
+                                // Find the session index
+                                if let Some(session) = &session_data.session {
+                                    let index =
+                                        model.sessions.iter().position(|s| s.id == session.id);
+                                    if let Some(client) = model.client.clone() {
+                                        if model.change_session(index.map(|i| i + 1)) {
+                                            // +1 for "Create New"
+                                            return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(
+                                                client,
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
+                            model.state = AppModalState::None;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            MsgModalSessionSelector::SessionSelected(index) => {
+                if let Some(client) = model.client.clone() {
+                    if model.change_session(Some(index)) {
+                        return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(client));
+                    }
+                }
+                model.state = AppModalState::None;
+            }
+            MsgModalSessionSelector::CreateNew => {
+                if let Some(client) = model.client.clone() {
+                    if model.change_session(Some(0)) {
+                        return CmdOrBatch::Single(Cmd::AsyncSpawnSessionInit(client));
+                    }
+                }
+                model.state = AppModalState::None;
+            }
+            MsgModalSessionSelector::Cancel => {
+                model.state = AppModalState::None;
+            }
+        };
+        CmdOrBatch::Single(Cmd::None)
+    }
+}
+
 impl Widget for &SessionSelector {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.modal.render(area, buf);
     }
 }
-

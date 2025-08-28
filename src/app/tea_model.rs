@@ -2,8 +2,7 @@ use crate::{
     app::{
         message_state::MessageState,
         ui_components::{
-            message_part::VerbosityLevel, FileSelector, MessageLog, SessionSelector,
-            SessionEvent, TextInputArea,
+            message_part::VerbosityLevel, FileSelector, MessageLog, SessionSelector, TextInputArea,
         },
     },
     sdk::{
@@ -312,8 +311,7 @@ impl Model {
     pub fn change_session_by_index(&mut self, index: Option<usize>) {
         self.message_log.set_message_containers(vec![]);
         self.modal_session_selector.set_current_session_index(index);
-        self.modal_session_selector
-            .handle_event(SessionEvent::Hide);
+        self.state = AppModalState::None;
     }
 
     pub fn change_session(&mut self, index: Option<usize>) -> bool {

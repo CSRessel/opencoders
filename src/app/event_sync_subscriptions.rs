@@ -67,13 +67,39 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (_, KeyCode::Tab, _, true) => Some(Msg::LeaderChangeInline),
                 (_, KeyCode::Char('q'), _, true) => Some(Msg::Quit),
 
-                (AppModalState::None, KeyCode::Char('c'), KeyModifiers::CONTROL, _) => {
+                // Works both without session (pending creation) and with explicit session
+                (
+                    AppModalState::None | AppModalState::Connecting(ConnectionStatus::Connected),
+                    KeyCode::Enter,
+                    modifiers,
+                    _,
+                ) => {
+                    if modifiers.contains(KeyModifiers::SHIFT) {
+                        Some(Msg::TextArea(MsgTextArea::Newline))
+                    } else {
+                        Some(Msg::SubmitTextInput)
+                    }
+                }
+                (
+                    AppModalState::None | AppModalState::Connecting(ConnectionStatus::Connected),
+                    KeyCode::Tab,
+                    _,
+                    _,
+                ) => Some(Msg::CycleModeState),
+                (
+                    AppModalState::None | AppModalState::Connecting(ConnectionStatus::Connected),
+                    KeyCode::Char('c'),
+                    KeyModifiers::CONTROL,
+                    _,
+                ) => {
                     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::CtrlC) {
                         Some(Msg::Quit)
                     } else {
                         Some(Msg::TextArea(MsgTextArea::Clear))
                     }
                 }
+
+                // Requires session connected
                 (AppModalState::None, KeyCode::Esc, __, _) => {
                     // Leave session for main screen
                     if model.is_repeat_shortcut_timeout_active(RepeatShortcutKey::Esc) {
@@ -85,19 +111,18 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppModalState::None, KeyCode::Char('r'), KeyModifiers::CONTROL, _) => {
                     Some(Msg::ToggleVerbosity)
                 }
-                (AppModalState::None, KeyCode::Enter, modifiers, _) => {
-                    if modifiers.contains(KeyModifiers::SHIFT) {
-                        Some(Msg::TextArea(MsgTextArea::Newline))
-                    } else {
-                        Some(Msg::SubmitTextInput)
-                    }
-                }
-                (AppModalState::None, KeyCode::Tab, _, _) => Some(Msg::CycleModeState),
-
                 // Message log scrolling (keeping Page Up/Down for fullscreen message history)
                 (AppModalState::None, KeyCode::PageUp, _, _) => Some(Msg::ScrollMessageLog(-5)),
                 (AppModalState::None, KeyCode::PageDown, _, _) => Some(Msg::ScrollMessageLog(5)),
+                // Fall through for all other input
+                (
+                    AppModalState::None | AppModalState::Connecting(ConnectionStatus::Connected),
+                    _,
+                    _,
+                    _,
+                ) => Some(Msg::TextArea(MsgTextArea::KeyInput(key))),
 
+                // Modal gated input handling
                 (
                     AppModalState::ModalHelp | AppModalState::ModalSessionSelect,
                     KeyCode::Esc,
@@ -105,9 +130,10 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                     __,
                 ) => {
                     // Close modals
+                    // TODO move to modal specific msg's
                     Some(Msg::ChangeState(AppModalState::None))
                 }
-
+                (AppModalState::ModalHelp, _, _, _) => None,
                 // Session selector events
                 (AppModalState::ModalSessionSelect, KeyCode::Up, _, _) => {
                     Some(Msg::SessionSelectorEvent(SessionEvent::Up))
@@ -128,7 +154,7 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppModalState::ModalSessionSelect, KeyCode::Esc, _, _) => {
                     Some(Msg::SessionSelectorEvent(SessionEvent::Cancel))
                 }
-
+                (AppModalState::ModalSessionSelect, _, _, _) => None,
                 // FileSelector events
                 (AppModalState::ModalFileSelect, KeyCode::Up, _, _) => {
                     Some(Msg::FileSelectorNavigateUp)
@@ -154,9 +180,7 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 (AppModalState::ModalFileSelect, KeyCode::Esc, _, _) => {
                     Some(Msg::FileSelectorClose)
                 }
-
-                // Text input events (internally routed to TextArea component for most keys)
-                (AppModalState::None, _, _, _) => Some(Msg::TextArea(MsgTextArea::KeyInput(key))),
+                (AppModalState::ModalFileSelect, _, _, _) => None,
 
                 // Retry connection
                 (
@@ -178,14 +202,15 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                     }
                 }
 
-                _ => {
-                    // Clear timeout state when any other key is pressed
-                    if model.has_active_timeout() {
-                        Some(Msg::ClearTimeout)
-                    } else {
-                        None
-                    }
-                }
+                (
+                    AppModalState::Connecting(ConnectionStatus::Disconnected)
+                    | AppModalState::Connecting(ConnectionStatus::Error(_)),
+                    KeyCode::Char('q'),
+                    _,
+                    _,
+                ) => Some(Msg::Quit),
+                (AppModalState::Quit, _, _, _) => Some(Msg::Quit),
+                (AppModalState::Connecting(_), _, _, _) => None,
             }
         }
         Event::Mouse(mouse) => match (&model.state, mouse.kind) {

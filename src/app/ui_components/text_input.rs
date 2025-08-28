@@ -124,12 +124,12 @@ impl TextInputArea {
             key_event.modifiers.contains(KeyModifiers::SHIFT),
         ) {
             (KeyCode::Enter, true) => {
+                self.textarea.insert_newline();
                 let new_height = self
                     .current_height
                     .saturating_add(1)
                     .min(TEXT_INPUT_AREA_MAX_HEIGHT);
                 self.current_height = new_height;
-                self.textarea.insert_newline();
                 return InputResult {
                     submitted_text: None,
                     height_changed: self.current_height != old_height,

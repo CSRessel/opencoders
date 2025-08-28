@@ -16,7 +16,7 @@ use ratatui::{
     layout::{Constraint, Rect},
     style::{Color, Modifier, Style},
     text::Span,
-    widgets::{Cell, Widget},
+    widgets::{Borders, Cell, Widget},
 };
 
 /// Data wrapper for file selection
@@ -99,19 +99,23 @@ pub struct FileSelector {
 impl FileSelector {
     pub fn new() -> Self {
         let config = SelectorConfig {
-            title: "File Selector".to_string(),
-            footer: Some("↑↓ navigate, Enter select, Esc close".to_string()),
+            // title: "Files".to_string(),
+            // footer: Some("↑↓/Tab navigate, Enter select, Esc cancel".to_string()),
+            title: None,
+            footer: None,
             max_width: Some(MAX_UI_WIDTH),
             max_height: Some(20),
+            padding: 0,
             show_scrollbar: true,
-            alternating_rows: false,
+            alternating_rows: true,
+            borders: Borders::NONE,
             border_color: Color::Blue,
             selected_style: Style::default()
                 .add_modifier(Modifier::REVERSED)
                 .fg(Color::Blue),
-            header_style: Style::default().fg(Color::Yellow),
+            header_style: Style::default().fg(Color::Gray),
             row_style: Style::default().fg(Color::White),
-            alt_row_style: None,
+            alt_row_style: None, // Some(Style::default().bg(Color::DarkGray)),
         };
 
         let columns = vec![
@@ -152,6 +156,9 @@ fn model_select_file(file: File, model: &mut Model) {
             .text_input_area
             .handle_input(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
     }
+
+    // TODO add attachment to here or to text input?
+    // TODO how does deleting attachments work?
 }
 
 fn model_clear(model: &mut Model) {

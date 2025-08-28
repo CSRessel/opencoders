@@ -5,11 +5,13 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
-        Block, Borders, Cell, List, ListItem, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
-        Table, TableState, Widget,
+        Block, Borders, Cell, List, ListItem, Padding, Row, Scrollbar, ScrollbarOrientation,
+        ScrollbarState, Table, TableState, Widget,
     },
 };
 use std::marker::PhantomData;
+
+use crate::app::tea_view::MAX_UI_WIDTH;
 
 /// Configuration for table columns
 #[derive(Debug, Clone, PartialEq)]
@@ -37,12 +39,14 @@ impl TableColumn {
 /// Configuration for the modal selector appearance
 #[derive(Debug, Clone)]
 pub struct SelectorConfig {
-    pub title: String,
+    pub title: Option<String>,
     pub footer: Option<String>,
     pub max_width: Option<u16>,
     pub max_height: Option<u16>,
+    pub padding: u16,
     pub show_scrollbar: bool,
     pub alternating_rows: bool,
+    pub borders: Borders,
     pub border_color: Color,
     pub selected_style: Style,
     pub header_style: Style,
@@ -53,19 +57,21 @@ pub struct SelectorConfig {
 impl Default for SelectorConfig {
     fn default() -> Self {
         Self {
-            title: "Select".to_string(),
+            title: Some("Select".to_string()),
             footer: Some("↑↓ navigate, Enter select, Esc close".to_string()),
-            max_width: Some(80),
+            max_width: Some(MAX_UI_WIDTH),
             max_height: Some(20),
+            padding: 0,
             show_scrollbar: true,
             alternating_rows: false,
+            borders: Borders::ALL,
             border_color: Color::Blue,
             selected_style: Style::default()
-                .add_modifier(Modifier::REVERSED)
+                // .add_modifier(Modifier::REVERSED)
                 .fg(Color::Blue),
-            header_style: Style::default().fg(Color::Yellow),
+            header_style: Style::default().fg(Color::Gray),
             row_style: Style::default().fg(Color::White),
-            alt_row_style: None,
+            alt_row_style: Some(Style::default().bg(Color::DarkGray)),
         }
     }
 }
@@ -156,7 +162,7 @@ where
     pub fn list(title: &str) -> Self {
         Self::new(
             SelectorConfig {
-                title: title.to_string(),
+                title: Some(title.to_string()),
                 ..Default::default()
             },
             SelectorMode::List,
@@ -166,7 +172,7 @@ where
     pub fn table(title: &str, columns: Vec<TableColumn>) -> Self {
         Self::new(
             SelectorConfig {
-                title: title.to_string(),
+                title: Some(title.to_string()),
                 ..Default::default()
             },
             SelectorMode::Table { columns },
@@ -281,12 +287,11 @@ where
     fn handle_key_input(&mut self, key: KeyEvent) -> ModalSelectorUpdate<T> {
         match key.code {
             KeyCode::Esc => ModalSelectorUpdate::Hide,
-            KeyCode::Up => {
+            KeyCode::BackTab | KeyCode::Up => {
                 self.navigate_up();
                 ModalSelectorUpdate::None
             }
-            KeyCode::Down => {
-                let old_selection = self.selected_index();
+            KeyCode::Tab | KeyCode::Down => {
                 self.navigate_down();
                 ModalSelectorUpdate::None
             }
@@ -303,10 +308,13 @@ where
 
     // Rendering methods
     fn render_loading(&self, area: Rect, buf: &mut Buffer) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(self.config.title.as_str())
+        let mut block = Block::default()
+            .padding(Padding::uniform(self.config.padding))
+            .borders(self.config.borders)
             .border_style(Style::default().fg(self.config.border_color));
+        if let Some(title) = &self.config.title {
+            block = block.title_top(title.clone())
+        }
 
         let loading_text = Text::from("Loading...");
         let paragraph = ratatui::widgets::Paragraph::new(loading_text)
@@ -317,10 +325,13 @@ where
     }
 
     fn render_error(&self, area: Rect, buf: &mut Buffer, error: &str) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(self.config.title.as_str())
+        let mut block = Block::default()
+            .padding(Padding::uniform(self.config.padding))
+            .borders(self.config.borders)
             .border_style(Style::default().fg(Color::Red));
+        if let Some(title) = &self.config.title {
+            block = block.title_top(title.clone())
+        }
 
         let error_text = Text::from(format!("Error: {}", error));
         let paragraph = ratatui::widgets::Paragraph::new(error_text)
@@ -331,16 +342,16 @@ where
     }
 
     fn render_list(&self, area: Rect, buf: &mut Buffer) {
-        let title = if let Some(footer) = &self.config.footer {
-            format!("{} ({})", self.config.title, footer)
-        } else {
-            self.config.title.clone()
-        };
-
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(title)
+        let mut block = Block::default()
+            .padding(Padding::uniform(self.config.padding))
+            .borders(self.config.borders)
             .border_style(Style::default().fg(self.config.border_color));
+        if let Some(title) = &self.config.title {
+            block = block.title_top(title.clone())
+        }
+        if let Some(footer) = &self.config.footer {
+            block = block.title_bottom(footer.clone())
+        }
 
         if self.items.is_empty() {
             let empty_text = Text::from("No items found");
@@ -377,20 +388,20 @@ where
     }
 
     fn render_table(&self, area: Rect, buf: &mut Buffer, columns: &[TableColumn]) {
-        let title = if let Some(footer) = &self.config.footer {
-            format!("{} ({})", self.config.title, footer)
-        } else {
-            self.config.title.clone()
-        };
-
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(title)
+        let mut block = Block::default()
+            .padding(Padding::uniform(self.config.padding))
+            .borders(self.config.borders)
             .border_style(Style::default().fg(self.config.border_color));
+        if let Some(title) = &self.config.title {
+            block = block.title_top(title.clone())
+        }
+        if let Some(footer) = &self.config.footer {
+            block = block.title_bottom(footer.clone())
+        }
 
         if self.items.is_empty() {
             let empty_table = Table::new(
-                [Row::new([Cell::from("No items found")])],
+                [Row::new([Cell::from("No matching items")])],
                 [Constraint::Percentage(100)],
             )
             .block(block);
@@ -434,7 +445,12 @@ where
         ratatui::widgets::StatefulWidget::render(table, area, buf, &mut mutable_state);
 
         // Render scrollbar if enabled
-        if self.config.show_scrollbar && self.items.len() > (area.height.saturating_sub(3)) as usize
+        if self.config.show_scrollbar
+            && self.items.len()
+                > (area
+                    .height
+                    .saturating_sub(2)
+                    .saturating_sub(self.config.padding * 2)) as usize
         {
             let scrollbar_area = Rect {
                 x: area.x + area.width - 1,
@@ -458,20 +474,17 @@ where
     }
 
     fn calculate_popup_area(&self, area: Rect) -> Rect {
-        let popup_width = self
-            .config
-            .max_width
-            .unwrap_or(area.width.saturating_sub(4))
-            .min(area.width.saturating_sub(4));
+        let popup_width = self.config.max_width.unwrap_or(area.width).min(area.width);
 
-        let popup_height = self
-            .config
-            .max_height
-            .unwrap_or(match &self.mode {
-                SelectorMode::List => (self.items.len() as u16).saturating_add(4),
-                SelectorMode::Table { .. } => (self.items.len() as u16).saturating_add(4),
-            })
-            .min(area.height);
+        let popup_height = match &self.mode {
+            SelectorMode::List => (self.items.len() as u16)
+                .saturating_add(2)
+                .saturating_add(self.config.padding * 2),
+            SelectorMode::Table { .. } => (self.items.len() as u16)
+                .saturating_add(2)
+                .saturating_add(self.config.padding * 2),
+        }
+        .min(self.config.max_height.unwrap_or(area.height));
 
         // Center the popup
         let popup_x = (area.width.saturating_sub(popup_width)) / 2;

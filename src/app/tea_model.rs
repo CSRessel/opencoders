@@ -174,7 +174,7 @@ impl Model {
         text_input_area.set_focus(true);
 
         let message_log = MessageLog::new();
-        let modal_session_selector = SessionSelector::new("Select Session");
+        let modal_session_selector = SessionSelector::new();
         let modal_file_selector = FileSelector::new();
 
         Model {

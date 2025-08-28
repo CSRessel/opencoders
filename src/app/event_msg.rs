@@ -2,7 +2,7 @@ use crate::{
     app::{
         event_async_task_manager::TaskId,
         tea_model::{AppModalState, RepeatShortcutKey},
-        ui_components::{MsgTextArea, PopoverSelectorEvent},
+        ui_components::{MsgTextArea, SessionEvent},
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
@@ -34,7 +34,7 @@ pub enum Msg {
     LeaderShowSessionSelector,
 
     // Session selector messages
-    SessionSelectorEvent(PopoverSelectorEvent),
+    SessionSelectorEvent(SessionEvent),
     SessionsLoaded(Vec<Session>),
     SessionsLoadFailed(OpenCodeError),
 

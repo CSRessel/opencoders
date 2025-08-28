@@ -2,8 +2,8 @@ use crate::{
     app::{
         message_state::MessageState,
         ui_components::{
-            message_part::VerbosityLevel, FileSelector, MessageLog, PopoverSelector,
-            PopoverSelectorEvent, TextInputArea,
+            message_part::VerbosityLevel, FileSelector, MessageLog, SessionSelector,
+            SessionEvent, TextInputArea,
         },
     },
     sdk::{
@@ -69,7 +69,7 @@ pub struct Model {
     // Stateful components:
     pub message_log: MessageLog,
     pub text_input_area: TextInputArea, // New tui-textarea based input
-    pub modal_session_selector: PopoverSelector,
+    pub modal_session_selector: SessionSelector,
     pub modal_file_selector: crate::app::ui_components::FileSelector,
     // Client and session state
     pub client: Option<OpenCodeClient>,
@@ -175,7 +175,7 @@ impl Model {
         text_input_area.set_focus(true);
 
         let message_log = MessageLog::new();
-        let modal_session_selector = PopoverSelector::new("Select Session");
+        let modal_session_selector = SessionSelector::new("Select Session");
         let modal_file_selector = FileSelector::new();
 
         Model {
@@ -313,7 +313,7 @@ impl Model {
         self.message_log.set_message_containers(vec![]);
         self.modal_session_selector.set_current_session_index(index);
         self.modal_session_selector
-            .handle_event(PopoverSelectorEvent::Hide);
+            .handle_event(SessionEvent::Hide);
     }
 
     pub fn change_session(&mut self, index: Option<usize>) -> bool {

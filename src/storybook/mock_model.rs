@@ -1,6 +1,6 @@
 use crate::app::{
     tea_model::{UserConfig, INLINE_HEIGHT},
-    ui_components::{message_part::VerbosityLevel, MessageLog, PopoverSelector, TextInputArea},
+    ui_components::{message_part::VerbosityLevel, MessageLog, SessionSelector, TextInputArea},
 };
 
 #[derive(Debug, Clone)]
@@ -9,7 +9,7 @@ pub struct MockModel {
     pub verbosity_level: VerbosityLevel,
     pub message_log: MessageLog,
     pub text_input_area: TextInputArea,
-    pub session_selector: PopoverSelector,
+    pub session_selector: SessionSelector,
     
     // Mock simple states
     pub mock_session_ready: bool,
@@ -31,7 +31,7 @@ impl MockModel {
             verbosity_level: VerbosityLevel::Summary,
             message_log: MessageLog::new(),
             text_input_area: TextInputArea::with_placeholder("Mock input..."),
-            session_selector: PopoverSelector::new("Mock Session"),
+            session_selector: SessionSelector::new("Mock Session"),
             mock_session_ready: true,
             mock_client_ready: true,
         }

@@ -1,7 +1,7 @@
 use crate::app::{
     event_msg::{Msg, Sub},
     tea_model::{AppModalState, ConnectionStatus, EventStreamState, Model, RepeatShortcutKey},
-    ui_components::{MsgTextArea, PopoverSelectorEvent},
+    ui_components::{MsgTextArea, SessionEvent},
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
@@ -110,23 +110,23 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
 
                 // Session selector events
                 (AppModalState::ModalSessionSelect, KeyCode::Up, _, _) => {
-                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
+                    Some(Msg::SessionSelectorEvent(SessionEvent::Up))
                 }
                 (AppModalState::ModalSessionSelect, KeyCode::Down, _, _)
                 | (AppModalState::ModalSessionSelect, KeyCode::Tab, _, _) => {
-                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
+                    Some(Msg::SessionSelectorEvent(SessionEvent::Down))
                 }
                 (AppModalState::ModalSessionSelect, KeyCode::Char('k'), _, _) => {
-                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Up))
+                    Some(Msg::SessionSelectorEvent(SessionEvent::Up))
                 }
                 (AppModalState::ModalSessionSelect, KeyCode::Char('j'), _, _) => {
-                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Down))
+                    Some(Msg::SessionSelectorEvent(SessionEvent::Down))
                 }
                 (AppModalState::ModalSessionSelect, KeyCode::Enter, _, _) => {
-                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Select))
+                    Some(Msg::SessionSelectorEvent(SessionEvent::Select))
                 }
                 (AppModalState::ModalSessionSelect, KeyCode::Esc, _, _) => {
-                    Some(Msg::SessionSelectorEvent(PopoverSelectorEvent::Cancel))
+                    Some(Msg::SessionSelectorEvent(SessionEvent::Cancel))
                 }
 
                 // FileSelector events

@@ -4,7 +4,7 @@ use crate::app::{
         banner::{create_welcome_text, welcome_text_height},
         message_part::StepRenderingMode,
         text_input::TEXT_INPUT_HEIGHT,
-        Block, MessageContext, MessageLog, MessageRenderer, Paragraph, PopoverSelector, StatusBar,
+        Block, MessageContext, MessageLog, MessageRenderer, Paragraph, SessionSelector, StatusBar,
     },
     view_model_context::ViewModelContext,
 };

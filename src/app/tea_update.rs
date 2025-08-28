@@ -2,7 +2,7 @@ use crate::{
     app::{
         event_msg::*,
         tea_model::*,
-        ui_components::{Component, MsgTextArea, PopoverSelectorEvent},
+        ui_components::{Component, MsgTextArea, SessionEvent},
     },
     sdk::client::{generate_id, IdPrefix},
 };
@@ -200,10 +200,6 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         Msg::LeaderShowSessionSelector => {
             model.clear_repeat_leader_timeout();
             model.state = AppModalState::ModalSessionSelect;
-            model
-                .modal_session_selector
-                .cache_render_height_for_terminal(model.config.height);
-
             // Set current session index if we have an active session
             let current_index = if let Some(current_session) = model.session() {
                 // Find the current session in the sessions list
@@ -224,19 +220,19 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             // Make the selector visible
             model
                 .modal_session_selector
-                .handle_event(PopoverSelectorEvent::Show);
+                .handle_event(SessionEvent::Show);
 
             if let Some(client) = model.client.clone() {
-                tracing::debug!("waiting for session load......");
+                tracing::debug!("waiting for session load");
                 CmdOrBatch::Batch(vec![
                     Cmd::AsyncLoadSessions(client.clone()),
                     Cmd::AsyncLoadModes(client),
                 ])
             } else {
-                tracing::debug!("no client yet......");
+                tracing::debug!("no client yet!");
                 model
                     .modal_session_selector
-                    .handle_event(PopoverSelectorEvent::SetError(Some(
+                    .handle_event(SessionEvent::SetError(Some(
                         "No client connection".to_string(),
                     )));
                 CmdOrBatch::Single(Cmd::None)
@@ -253,7 +249,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             }
 
             // Handle cancel
-            if matches!(event, PopoverSelectorEvent::Cancel) {
+            if matches!(event, SessionEvent::Cancel) {
                 model.state = AppModalState::None;
             }
 
@@ -261,32 +257,25 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
         }
 
         Msg::SessionsLoaded(sessions) => {
-            model.sessions = sessions.clone();
-            let mut items = vec!["Create New Session".to_string()];
-            items.extend(sessions.iter().map(|s| s.title.clone()));
-            model
-                .modal_session_selector
-                .handle_event(PopoverSelectorEvent::SetItems(items));
-            //
-            // Re-cache the render height since popup size may have changed with new items
-            model
-                .modal_session_selector
-                .cache_render_height_for_terminal(model.config.height);
+            model.sessions = sessions;
 
             // Re-calculate and set current session index after items are loaded
-            let current_index = if let Some(current_session) = model.session() {
-                model
-                    .sessions
-                    .iter()
-                    .position(|s| s.id == current_session.id)
-                    .map(|pos| pos + 1)
-            } else {
-                None
-            };
-
+            let current_index = model
+                .session()
+                .map(|current_session| {
+                    model
+                        .sessions
+                        .iter()
+                        .position(|s| s.id == current_session.id)
+                })
+                .flatten();
             model
                 .modal_session_selector
-                .set_current_session_index(current_index);
+                .handle_event(SessionEvent::SetItems(
+                    model.sessions.clone(),
+                    current_index,
+                ));
+            tracing::debug!("set event for {} sessions!!!", model.sessions.len());
 
             CmdOrBatch::Single(Cmd::None)
         }
@@ -295,7 +284,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
             tracing::error!("Failed to load sessions: {}", error);
             model
                 .modal_session_selector
-                .handle_event(PopoverSelectorEvent::SetError(Some(format!(
+                .handle_event(SessionEvent::SetError(Some(format!(
                     "Failed to load sessions: {}",
                     error
                 ))));

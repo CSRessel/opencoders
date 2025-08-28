@@ -69,7 +69,7 @@ pub struct Model {
     pub message_log: MessageLog,
     pub text_input_area: TextInputArea, // New tui-textarea based input
     pub modal_session_selector: SessionSelector,
-    pub modal_file_selector: crate::app::ui_components::FileSelector,
+    pub modal_file_selector: FileSelector,
     // Client and session state
     pub client: Option<OpenCodeClient>,
     pub session_state: SessionState,

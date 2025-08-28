@@ -1,3 +1,5 @@
+use std::u16;
+
 use crate::app::{
     event_msg::CmdOrBatch,
     tea_model::{AppModalState, Model},
@@ -89,6 +91,8 @@ pub enum MsgModalFileSelector {
 #[derive(Debug, Clone)]
 pub struct FileSelector {
     pub modal: ModalSelector<FileData>,
+    query: String,
+    depth: u16,
 }
 
 impl FileSelector {
@@ -116,41 +120,14 @@ impl FileSelector {
 
         Self {
             modal: ModalSelector::new(config, SelectorMode::Table { columns }),
+            query: "".to_string(),
+            depth: 0,
         }
     }
 
     pub fn set_files(&mut self, files: Vec<File>) {
         let file_data: Vec<FileData> = files.into_iter().map(FileData::from_file).collect();
         self.modal.set_items(file_data);
-    }
-
-    // Compatibility methods
-    pub fn selected_index(&self) -> Option<usize> {
-        self.modal.selected_index()
-    }
-
-    pub fn navigate_up(&mut self) {
-        self.modal.navigate_up();
-    }
-
-    pub fn navigate_down(&mut self) {
-        self.modal.navigate_down();
-    }
-
-    pub fn get_selected_file(&self) -> Option<&File> {
-        self.modal.selected_item().map(|data| &data.file)
-    }
-
-    pub fn is_visible(&self) -> bool {
-        self.modal.is_visible()
-    }
-
-    pub fn show(&mut self) {
-        self.modal.show();
-    }
-
-    pub fn hide(&mut self) {
-        self.modal.hide();
     }
 
     pub fn is_file_selector_input(key: KeyEvent) -> bool {
@@ -196,16 +173,32 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                 } else {
                     current_text + &file.path
                 };
+                // TODO handle proper attachment
                 model.text_input_area.set_content(&new_text);
                 model.state = AppModalState::None;
             }
             MsgModalFileSelector::KeyInput(key) => {
                 if FileSelector::is_file_selector_input(key) {
-                    model.text_input_area.handle_input(key);
-                }
-
-                if key.code == KeyCode::Char(' ') {
-                    model.state = AppModalState::None;
+                    match key.code {
+                        KeyCode::Backspace => {
+                            if model.modal_file_selector.depth == 0 {
+                                model.state = AppModalState::None;
+                            } else {
+                                model.modal_file_selector.depth -= 1;
+                            }
+                            model.text_input_area.handle_input(key);
+                        }
+                        KeyCode::Char(c) => {
+                            if c == ' ' {
+                                model.state = AppModalState::None;
+                            } else {
+                                model.modal_file_selector.depth += 1;
+                                model.modal_file_selector.query += &format!("{}", c);
+                            }
+                            model.text_input_area.handle_input(key);
+                        }
+                        _ => {}
+                    }
                 }
             }
             MsgModalFileSelector::Cancel => {

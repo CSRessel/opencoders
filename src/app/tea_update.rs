@@ -454,7 +454,7 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                     // Handle the key input first
                     TextInputArea::update(submsg, &mut model);
                     // Then show file picker and load files
-                    model.modal_file_selector.show();
+                    model.modal_file_selector.modal.show();
                     model.state = AppModalState::ModalFileSelect;
                     // Load file status if we have a client
                     if let Some(client) = model.client.clone() {

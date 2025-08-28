@@ -63,10 +63,6 @@ impl ModelRef {
         &self.get().connection_status
     }
 
-    pub fn ui_is_rounded(&self) -> bool {
-        self.get().config.ui_block_is_rounded
-    }
-
     pub fn init(&self) -> &crate::app::tea_model::ModelInit {
         &self.get().init
     }
@@ -96,7 +92,7 @@ mod tests {
         ViewModelContext::with_model(&model, || {
             assert!(ViewModelContext::is_active());
             let model_ref = ViewModelContext::current();
-            assert_eq!(model_ref.ui_is_rounded(), model.config.ui_block_is_rounded);
+            assert_eq!(model_ref.client_base_url(), model.client_base_url());
         });
 
         // Context should not be active after with_model

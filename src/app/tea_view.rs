@@ -75,7 +75,7 @@ pub fn view(model: &Model, frame: &mut Frame) {
         // Then render the modals depending on state
         match &model.state {
             AppModalState::Help => frame.render_widget(Paragraph::new("help!"), frame.area()),
-            AppModalState::Connecting(ConnectionStatus::Error(e)) => render_error_screen(frame, e),
+            // AppModalState::Connecting(ConnectionStatus::Error(e)) => render_error_screen(frame, e),
             // AppModalState::Connecting(status) => frame.render_widget(
             //     Paragraph::new(format!("status: {:?}", status)),
             //     frame.area(),
@@ -93,29 +93,6 @@ pub fn view_clear(frame: &mut Frame) {
     // Write an empty frame to force full redraw of all cells
     frame.render_widget(Paragraph::new(""), frame.area());
 }
-
-// fn render_welcome_screen(frame: &mut Frame) {
-//     if model.init().inline_mode() {
-//         let vertical_chunks = Layout::default()
-//             .direction(Direction::Vertical)
-//             .constraints([Constraint::Min(line_height), Constraint::Min(0)])
-//             .split(frame.area());
-//         frame.render_widget(paragraph, vertical_chunks[0]);
-//     } else {
-//         let constraints = vec![
-//             Constraint::Length(welcome_text_height().saturating_add(2)),
-//             Constraint::Length(line_height),
-//         ];
-//
-//         let vertical_chunks = Layout::default()
-//             .direction(Direction::Vertical)
-//             .constraints(constraints)
-//             .split(frame.area());
-//
-//         frame.render_widget(create_welcome_text(), vertical_chunks[0]);
-//         frame.render_widget(paragraph, vertical_chunks[1]);
-//     };
-// }
 
 fn render_text_entry_screen(frame: &mut Frame) {
     let model = ViewModelContext::current();
@@ -164,29 +141,37 @@ fn render_text_entry_screen(frame: &mut Frame) {
     let spacer_chunk = vertical_chunks[1];
     let input_chunk = vertical_chunks[2];
 
-    // Split the input section into textarea and status bar
-    let input_section_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(text_input_height), // Textarea
-            Constraint::Length(status_bar_height), // Status bar
-        ])
-        .split(input_chunk);
-    let input_textarea = input_section_chunks[0];
-    let input_status = input_section_chunks[1];
-
-    if model.init().inline_mode() {
-        render_main_body(frame, spacer_chunk);
-        frame.render_widget(&model.get().text_input_area, input_textarea);
-        let status_bar = StatusBar::new();
-        frame.render_widget(&status_bar, input_status);
+    if matches!(
+        model.state(),
+        AppModalState::Connecting(ConnectionStatus::Disconnected)
+            | AppModalState::Connecting(ConnectionStatus::Error(_))
+    ) {
+        render_connecting_screen(frame, input_chunk);
     } else {
-        // Note: We can't send messages from the view layer in TEA architecture
-        // Scroll validation will happen during scroll events and when content changes
-        render_main_body(frame, fullscreen_chunk);
-        frame.render_widget(&model.get().text_input_area, input_textarea);
-        let status_bar = StatusBar::new();
-        frame.render_widget(&status_bar, input_status);
+        // Split the input section into textarea and status bar
+        let input_section_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(text_input_height), // Textarea
+                Constraint::Length(status_bar_height), // Status bar
+            ])
+            .split(input_chunk);
+        let input_textarea = input_section_chunks[0];
+        let input_status = input_section_chunks[1];
+
+        if model.init().inline_mode() {
+            render_main_body(frame, spacer_chunk);
+            frame.render_widget(&model.get().text_input_area, input_textarea);
+            let status_bar = StatusBar::new();
+            frame.render_widget(&status_bar, input_status);
+        } else {
+            // Note: We can't send messages from the view layer in TEA architecture
+            // Scroll validation will happen during scroll events and when content changes
+            render_main_body(frame, fullscreen_chunk);
+            frame.render_widget(&model.get().text_input_area, input_textarea);
+            let status_bar = StatusBar::new();
+            frame.render_widget(&status_bar, input_status);
+        }
     }
 }
 
@@ -213,47 +198,42 @@ fn render_main_body(frame: &mut Frame, buf: Rect) {
     }
 }
 
-fn render_connecting_screen(frame: &mut Frame) {
+fn render_connecting_screen(frame: &mut Frame, rect: Rect) {
     let model = ViewModelContext::current();
-    let text = Text::from(vec![
-        Line::from("Connecting to OpenCode server..."),
-        Line::from(""),
-        Line::from("Looking for running OpenCode processes..."),
-        Line::from("Press 'q' or 'Esc' to cancel"),
-    ]);
-    let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Yellow));
-
-    if model.init().inline_mode() {
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(4)])
-            .split(frame.area());
-        frame.render_widget(paragraph, vertical_chunks[1]);
-    } else {
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(0),
-                Constraint::Length(4),
-                Constraint::Min(0),
-            ])
-            .split(frame.area());
-        frame.render_widget(paragraph, vertical_chunks[1]);
-    }
-}
-
-fn render_initializing_session_screen(frame: &mut Frame) {
-    let model = ViewModelContext::current();
-    let client_url = model.client_base_url();
-
-    let text = Text::from(vec![
-        Line::from("Initializing session..."),
-        Line::from(""),
-        Line::from(format!("Connected to: {}", client_url)),
-        Line::from("Setting up your coding session..."),
-        Line::from("Press 'q' or 'Esc' to cancel"),
-    ]);
-    let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Blue));
+    let paragraph = match &model.get().state {
+        AppModalState::Connecting(ConnectionStatus::Connecting) => {
+            let text = Text::from(vec![
+                Line::from("Connecting to OpenCode server..."),
+                Line::from(""),
+                Line::from("Looking for running OpenCode processes..."),
+                Line::from(""),
+                Line::from("Press 'q' or 'Esc' to cancel"),
+            ]);
+            Paragraph::new(text).style(Style::default().fg(Color::Yellow))
+        }
+        AppModalState::Connecting(ConnectionStatus::InitializingSession) => {
+            let client_url = model.client_base_url();
+            let text = Text::from(vec![
+                Line::from("Initializing session..."),
+                Line::from(""),
+                Line::from(format!("Connected to: {}", client_url)),
+                Line::from("Setting up your coding session..."),
+                Line::from("Press 'q' or 'Esc' to cancel"),
+            ]);
+            Paragraph::new(text).style(Style::default().fg(Color::Blue))
+        }
+        AppModalState::Connecting(ConnectionStatus::Error(error)) => {
+            let text = Text::from(vec![
+                Line::from(format!("Connection Error! {}", error.to_string())),
+                Line::from("Suggestions:"),
+                Line::from("• Make sure OpenCode server is running"),
+                Line::from("• Check OPENCODE_SERVER_URL environment variable"),
+                Line::from("Press 'r' to retry, 'q' or 'Esc' to quit"),
+            ]);
+            Paragraph::new(text).style(Style::default().fg(Color::Red))
+        }
+        _ => Paragraph::new(""),
+    };
 
     if model.init().inline_mode() {
         let vertical_chunks = Layout::default()
@@ -266,42 +246,7 @@ fn render_initializing_session_screen(frame: &mut Frame) {
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Min(0),
-                Constraint::Length(5),
-                Constraint::Min(0),
-            ])
-            .split(frame.area());
-        frame.render_widget(paragraph, vertical_chunks[1]);
-    }
-}
-
-fn render_error_screen(frame: &mut Frame, error: &str) {
-    let model = ViewModelContext::current();
-    let text = Text::from(vec![
-        Line::from("Connection Error"),
-        Line::from(""),
-        Line::from(error),
-        Line::from(""),
-        Line::from("Suggestions:"),
-        Line::from("• Make sure OpenCode server is running"),
-        Line::from("• Check OPENCODE_SERVER_URL environment variable"),
-        Line::from("• Try running: opencode serve"),
-        Line::from(""),
-        Line::from("Press 'r' to retry, 'q' or 'Esc' to quit"),
-    ]);
-    let paragraph = Paragraph::new(text).style(Style::default().fg(Color::Red));
-
-    if model.init().inline_mode() {
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(10)])
-            .split(frame.area());
-        frame.render_widget(paragraph, vertical_chunks[1]);
-    } else {
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(0),
-                Constraint::Length(10),
+                Constraint::Length(4),
                 Constraint::Min(0),
             ])
             .split(frame.area());

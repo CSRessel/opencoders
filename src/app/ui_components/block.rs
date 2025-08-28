@@ -14,7 +14,7 @@ impl Block {
         let mut block = RatatuiBlock::new();
 
         // Apply default styling based on model state
-        if model.ui_is_rounded() {
+        if model.get().config.ui_block_is_rounded {
             block = block.border_type(BorderType::Rounded);
         } else {
             block = block.border_type(BorderType::Plain);
@@ -32,7 +32,7 @@ impl Block {
         let mut block = RatatuiBlock::bordered();
 
         // Apply default styling based on model state
-        if model.ui_is_rounded() {
+        if model.get().config.ui_block_is_rounded {
             block = block.border_type(BorderType::Rounded);
         } else {
             block = block.border_type(BorderType::Plain);
@@ -125,4 +125,3 @@ impl Styled for Block {
         self
     }
 }
-

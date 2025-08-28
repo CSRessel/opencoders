@@ -257,6 +257,13 @@ impl Model {
             )
     }
 
+    pub fn is_modal_open(&self) -> bool {
+        matches!(
+            self.state,
+            AppModalState::SelectSession | AppModalState::Help
+        )
+    }
+
     pub fn is_session_ready(&self) -> bool {
         self.client.is_some()
             && matches!(self.session_state, SessionState::Ready(_))

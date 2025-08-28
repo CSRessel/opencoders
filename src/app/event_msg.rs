@@ -2,53 +2,46 @@ use crate::{
     app::{
         event_async_task_manager::TaskId,
         tea_model::{AppModalState, RepeatShortcutKey},
-        ui_components::{MsgTextArea, MsgModalSessionSelector, MsgModalFileSelector},
+        ui_components::{MsgModalFileSelector, MsgModalSessionSelector, MsgTextArea},
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
 use opencode_sdk::models::{ConfigAgent, Event, Model, Session, SessionMessages200ResponseInner};
 
+type OpenCodeResponse<T> = Result<T, OpenCodeError>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Msg {
+    // State changes
+    InitializeClient,
+    SessionAbort,
     ChangeState(AppModalState),
     Quit,
+
+    // Major input events
     ScrollMessageLog(i16),
     ScrollMessageLogHorizontal(i16),
     ValidateScrollPosition(u16, u16), // viewport_height, viewport_width
     SubmitTextInput,
-
-    // Client initialization messages
-    InitializeClient,
-    ClientConnected(OpenCodeClient),
-    ClientConnectionFailed(OpenCodeError),
-
-    // Session management messages
-    SessionReady(Session),
-    SessionInitializationFailed(OpenCodeError),
-    SessionCreatedWithMessage(Session, String),
-    SessionCreationFailed(OpenCodeError),
-    SessionAbort,
-
-    // Leader actions that reset interval
+    CycleModeState,
+    ToggleVerbosity,
     LeaderChangeInline,
     LeaderShowSessionSelector,
+    MarkMessagesViewed,
 
-    // Session selector messages
-    SessionsLoaded(Vec<Session>),
-    SessionsLoadFailed(OpenCodeError),
+    // Unified repeat shortcut timeout events
+    RepeatShortcutPressed(RepeatShortcutKey),
+    ClearTimeout,
 
-    // Modes messages
-    ModesLoaded(ConfigAgent),
-    ModesLoadFailed(OpenCodeError),
-    CycleModeState,
-
-    // Session messages
-    SessionMessagesLoaded(Vec<SessionMessages200ResponseInner>),
-    SessionMessagesLoadFailed(OpenCodeError),
-
-    // User message sending
-    UserMessageSent(String), // The text that was sent
-    UserMessageSendFailed(OpenCodeError),
+    // Client initialization messages
+    ResponseClientConnect(OpenCodeResponse<OpenCodeClient>),
+    ResponseSessionInit(OpenCodeResponse<Session>),
+    ResponseSessionCreateWithMessage(OpenCodeResponse<(Session, String)>),
+    ResponseSessionsLoad(OpenCodeResponse<Vec<Session>>),
+    ResponseModesLoad(OpenCodeResponse<ConfigAgent>),
+    ResponseSessionMessagesLoad(OpenCodeResponse<Vec<SessionMessages200ResponseInner>>),
+    ResponseUserMessageSend(OpenCodeResponse<String>),
+    ResponseFileStatusesLoad(OpenCodeResponse<Vec<opencode_sdk::models::File>>),
 
     // Event stream messages
     EventReceived(Event),
@@ -63,27 +56,9 @@ pub enum Msg {
     TaskFailed(TaskId, String),
     RecordActiveTaskCount(usize),
 
-    // Progress reporting messages
-    ConnectionProgress(f32),
-    SessionProgress(f32),
-
-    // View state management
-    MarkMessagesViewed,
-
     // Terminal events
     TerminalResize(u16, u16), // width, height
     ChangeInlineHeight(u16),  // new height for inline mode
-
-    // Unified repeat shortcut timeout events
-    RepeatShortcutPressed(RepeatShortcutKey),
-    ClearTimeout,
-
-    // Verbosity control
-    ToggleVerbosity,
-
-    // File status loading
-    FileStatusLoaded(Vec<opencode_sdk::models::File>),
-    FileStatusLoadFailed(OpenCodeError),
 
     // Component messages
     TextArea(MsgTextArea),

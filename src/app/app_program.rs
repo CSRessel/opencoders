@@ -337,8 +337,8 @@ impl Program {
                 // Spawn async client discovery task
                 self.task_manager.spawn_task(async move {
                     match OpenCodeClient::discover().await {
-                        Ok(client) => Msg::ClientConnected(client),
-                        Err(error) => Msg::ClientConnectionFailed(error),
+                        Ok(client) => Msg::ResponseClientConnect(Ok(client)),
+                        Err(error) => Msg::ResponseClientConnect(Err(error)),
                     }
                 });
             }
@@ -362,8 +362,8 @@ impl Program {
 
                     // Get or create session (will use saved session if available)
                     match client.get_or_create_session().await {
-                        Ok(session) => Msg::SessionReady(session),
-                        Err(error) => Msg::SessionInitializationFailed(error),
+                        Ok(session) => Msg::ResponseSessionInit(Ok(session)),
+                        Err(error) => Msg::ResponseSessionInit(Err(error)),
                     }
                 });
             }
@@ -374,14 +374,16 @@ impl Program {
                     // Clear any existing session first
                     if let Err(error) = client.clear_current_session().await {
                         tracing::error!("clear session failed: {}", error);
-                        Msg::SessionCreationFailed(error)
+                        Msg::ResponseSessionCreateWithMessage(Err(error))
                     } else {
                         // Create new session
                         match client.create_new_session().await {
-                            Ok(session) => Msg::SessionCreatedWithMessage(session, first_message),
+                            Ok(session) => {
+                                Msg::ResponseSessionCreateWithMessage(Ok((session, first_message)))
+                            }
                             Err(error) => {
                                 tracing::error!("create session failed: {}", error);
-                                Msg::SessionCreationFailed(error)
+                                Msg::ResponseSessionCreateWithMessage(Err(error))
                             }
                         }
                     }
@@ -392,8 +394,8 @@ impl Program {
                 // Spawn async session loading task
                 self.task_manager.spawn_task(async move {
                     match client.list_sessions().await {
-                        Ok(sessions) => Msg::SessionsLoaded(sessions),
-                        Err(error) => Msg::SessionsLoadFailed(error),
+                        Ok(sessions) => Msg::ResponseSessionsLoad(Ok(sessions)),
+                        Err(error) => Msg::ResponseSessionsLoad(Err(error)),
                     }
                 });
             }
@@ -402,8 +404,8 @@ impl Program {
                 // Spawn async file status loading task
                 self.task_manager.spawn_task(async move {
                     match client.get_file_status().await {
-                        Ok(file_status) => Msg::FileStatusLoaded(file_status),
-                        Err(error) => Msg::FileStatusLoadFailed(error),
+                        Ok(file_status) => Msg::ResponseFileStatusesLoad(Ok(file_status)),
+                        Err(error) => Msg::ResponseFileStatusesLoad(Err(error)),
                     }
                 });
             }
@@ -412,8 +414,8 @@ impl Program {
                 // Spawn async modes loading task
                 self.task_manager.spawn_task(async move {
                     match client.get_agent_configs().await {
-                        Ok(agent_configs) => Msg::ModesLoaded(agent_configs),
-                        Err(error) => Msg::ModesLoadFailed(error),
+                        Ok(agent_configs) => Msg::ResponseModesLoad(Ok(agent_configs)),
+                        Err(error) => Msg::ResponseModesLoad(Err(error)),
                     }
                 });
             }
@@ -422,8 +424,8 @@ impl Program {
                 // Spawn async session messages loading task
                 self.task_manager.spawn_task(async move {
                     match client.get_messages(&session_id).await {
-                        Ok(messages) => Msg::SessionMessagesLoaded(messages),
-                        Err(error) => Msg::SessionMessagesLoadFailed(error),
+                        Ok(messages) => Msg::ResponseSessionMessagesLoad(Ok(messages)),
+                        Err(error) => Msg::ResponseSessionMessagesLoad(Err(error)),
                     }
                 });
             }
@@ -451,8 +453,8 @@ impl Program {
                         )
                         .await
                     {
-                        Ok(_) => Msg::UserMessageSent(text),
-                        Err(error) => Msg::UserMessageSendFailed(error),
+                        Ok(_) => Msg::ResponseUserMessageSend(Ok(text)),
+                        Err(error) => Msg::ResponseUserMessageSend(Err(error)),
                     }
                 });
             }

@@ -4,7 +4,7 @@ use crate::app::{
         banner::{create_welcome_text, welcome_text_height},
         message_part::StepRenderingMode,
         text_input::TEXT_INPUT_HEIGHT,
-        MessageContext, MessageLog, MessageRenderer, Paragraph, PopoverSelector, StatusBar,
+        Block, MessageContext, MessageLog, MessageRenderer, Paragraph, PopoverSelector, StatusBar,
     },
     view_model_context::ViewModelContext,
 };
@@ -16,7 +16,7 @@ use ratatui::{
     prelude::Widget,
     style::{Color, Style},
     text::{Line, Text, ToText},
-    widgets::Wrap,
+    widgets::{Borders, Wrap},
     Frame, Terminal,
 };
 use std::io;
@@ -69,23 +69,27 @@ pub fn render_manual_inline_history(
 
 pub fn view(model: &Model, frame: &mut Frame) {
     ViewModelContext::with_model(model, || {
-        // First render the text entry
-        render_text_entry_screen(frame);
+        if model.is_connnection_modal_active() {
+            render_connecting_screen(frame, frame.area());
+        } else {
+            // First render the text entry
+            render_base_screen(frame);
 
-        // Then render the modals depending on state
-        match &model.state {
-            AppModalState::Help => frame.render_widget(Paragraph::new("help!"), frame.area()),
-            // AppModalState::Connecting(ConnectionStatus::Error(e)) => render_error_screen(frame, e),
-            // AppModalState::Connecting(status) => frame.render_widget(
-            //     Paragraph::new(format!("status: {:?}", status)),
-            //     frame.area(),
-            // ),
-            AppModalState::SelectSession => {
-                // Then render the popover selector on top
-                frame.render_widget(&model.session_selector, frame.area());
-            }
-            AppModalState::Connecting(_) | AppModalState::None | AppModalState::Quit => {} // No rendering needed for quit state
-        };
+            // Then render the modals depending on state
+            match &model.state {
+                AppModalState::SelectSession => {
+                    // Then render the popover selector on top
+                    frame.render_widget(&model.session_selector, frame.area());
+                }
+                AppModalState::Help => frame.render_widget(
+                    Paragraph::new("help!!!!!")
+                        .block(Block::default().borders(Borders::ALL).title("Help")),
+                    frame.area(),
+                ),
+                // No modals/overlays/notifications needed
+                _ => {}
+            };
+        }
     })
 }
 
@@ -94,7 +98,7 @@ pub fn view_clear(frame: &mut Frame) {
     frame.render_widget(Paragraph::new(""), frame.area());
 }
 
-fn render_text_entry_screen(frame: &mut Frame) {
+fn render_base_screen(frame: &mut Frame) {
     let model = ViewModelContext::current();
     let terminal_width = frame.area().width;
     let content_width = match model.init().inline_mode() {
@@ -141,37 +145,29 @@ fn render_text_entry_screen(frame: &mut Frame) {
     let spacer_chunk = vertical_chunks[1];
     let input_chunk = vertical_chunks[2];
 
-    if matches!(
-        model.state(),
-        AppModalState::Connecting(ConnectionStatus::Disconnected)
-            | AppModalState::Connecting(ConnectionStatus::Error(_))
-    ) {
-        render_connecting_screen(frame, input_chunk);
-    } else {
-        // Split the input section into textarea and status bar
-        let input_section_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(text_input_height), // Textarea
-                Constraint::Length(status_bar_height), // Status bar
-            ])
-            .split(input_chunk);
-        let input_textarea = input_section_chunks[0];
-        let input_status = input_section_chunks[1];
+    // Split the input section into textarea and status bar
+    let input_section_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(text_input_height), // Textarea
+            Constraint::Length(status_bar_height), // Status bar
+        ])
+        .split(input_chunk);
+    let input_textarea = input_section_chunks[0];
+    let input_status = input_section_chunks[1];
 
-        if model.init().inline_mode() {
-            render_main_body(frame, spacer_chunk);
-            frame.render_widget(&model.get().text_input_area, input_textarea);
-            let status_bar = StatusBar::new();
-            frame.render_widget(&status_bar, input_status);
-        } else {
-            // Note: We can't send messages from the view layer in TEA architecture
-            // Scroll validation will happen during scroll events and when content changes
-            render_main_body(frame, fullscreen_chunk);
-            frame.render_widget(&model.get().text_input_area, input_textarea);
-            let status_bar = StatusBar::new();
-            frame.render_widget(&status_bar, input_status);
-        }
+    if model.init().inline_mode() {
+        render_main_body(frame, spacer_chunk);
+        frame.render_widget(&model.get().text_input_area, input_textarea);
+        let status_bar = StatusBar::new();
+        frame.render_widget(&status_bar, input_status);
+    } else {
+        // Note: We can't send messages from the view layer in TEA architecture
+        // Scroll validation will happen during scroll events and when content changes
+        render_main_body(frame, fullscreen_chunk);
+        frame.render_widget(&model.get().text_input_area, input_textarea);
+        let status_bar = StatusBar::new();
+        frame.render_widget(&status_bar, input_status);
     }
 }
 
@@ -200,6 +196,9 @@ fn render_main_body(frame: &mut Frame, buf: Rect) {
 
 fn render_connecting_screen(frame: &mut Frame, rect: Rect) {
     let model = ViewModelContext::current();
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title("Connection Status");
     let paragraph = match &model.get().state {
         AppModalState::Connecting(ConnectionStatus::Connecting) => {
             let text = Text::from(vec![
@@ -209,7 +208,9 @@ fn render_connecting_screen(frame: &mut Frame, rect: Rect) {
                 Line::from(""),
                 Line::from("Press 'q' or 'Esc' to cancel"),
             ]);
-            Paragraph::new(text).style(Style::default().fg(Color::Yellow))
+            Paragraph::new(text)
+                .style(Style::default().fg(Color::Yellow))
+                .block(block)
         }
         AppModalState::Connecting(ConnectionStatus::InitializingSession) => {
             let client_url = model.client_base_url();
@@ -220,7 +221,9 @@ fn render_connecting_screen(frame: &mut Frame, rect: Rect) {
                 Line::from("Setting up your coding session..."),
                 Line::from("Press 'q' or 'Esc' to cancel"),
             ]);
-            Paragraph::new(text).style(Style::default().fg(Color::Blue))
+            Paragraph::new(text)
+                .style(Style::default().fg(Color::Blue))
+                .block(block)
         }
         AppModalState::Connecting(ConnectionStatus::Error(error)) => {
             let text = Text::from(vec![
@@ -230,26 +233,21 @@ fn render_connecting_screen(frame: &mut Frame, rect: Rect) {
                 Line::from("• Check OPENCODE_SERVER_URL environment variable"),
                 Line::from("Press 'r' to retry, 'q' or 'Esc' to quit"),
             ]);
-            Paragraph::new(text).style(Style::default().fg(Color::Red))
+            Paragraph::new(text)
+                .style(Style::default().fg(Color::Red))
+                .block(block)
         }
         _ => Paragraph::new(""),
     };
 
-    if model.init().inline_mode() {
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(5)])
-            .split(frame.area());
-        frame.render_widget(paragraph, vertical_chunks[1]);
-    } else {
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(0),
-                Constraint::Length(4),
-                Constraint::Min(0),
-            ])
-            .split(frame.area());
-        frame.render_widget(paragraph, vertical_chunks[1]);
-    }
+    let vertical_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),
+            Constraint::Length(5),
+            Constraint::Min(0),
+        ])
+        .split(frame.area());
+    frame.render_widget(paragraph, vertical_chunks[1]);
+    // }
 }

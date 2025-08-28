@@ -10,26 +10,19 @@ use crate::{
 pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
     match msg {
         Msg::ChangeState(new_state) => {
-            // If trying to mark connected but session isn't ready, trigger session init
             if matches!(
                 new_state,
                 AppModalState::Connecting(ConnectionStatus::Connected)
             ) && !model.is_session_ready()
             {
-                // Same as selecting the "Create New" option
+                // Same as selecting the "Create New" option (pending session)
                 model.change_session(Some(0));
                 return CmdOrBatch::Single(Cmd::None);
             }
 
             let old_state = model.state.clone();
-            model.state = new_state.clone();
-            // if matches!(old_state, AppModalState::TextEntry) {
-            //     model.clear_input_state();
-            //     CmdOrBatch::Single(Cmd::None)
-            //     // }
-            // } else {
-            if matches!(model.state, AppModalState::None) {
-                // Auto-scroll to bottom when entering text entry mode
+            model.state = new_state;
+            if matches!(old_state, AppModalState::None) {
                 model.message_log.touch_scroll();
             }
             CmdOrBatch::Single(Cmd::None)

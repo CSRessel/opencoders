@@ -140,7 +140,6 @@ pub enum ConnectionStatus {
     Disconnected,
     Connecting,
     Connected,
-    ClientReady,
     InitializingSession,
     SessionReady,
     Error(String),
@@ -155,7 +154,6 @@ impl Display for ConnectionStatus {
                 ConnectionStatus::Disconnected => "Disconnected from server! Press 'r' to retry",
                 ConnectionStatus::Connecting => "Connecting to OpenCode server...",
                 ConnectionStatus::Connected => "Connected to server...",
-                ConnectionStatus::ClientReady => "✓ Connected! (no session)",
                 ConnectionStatus::InitializingSession => "Initializing session...",
                 ConnectionStatus::SessionReady => "✓ Session ready!",
                 ConnectionStatus::Error(ref _error) => "Connection failed! Press 'r' to retry",
@@ -251,17 +249,35 @@ impl Model {
         self.client.is_some()
             && matches!(
                 self.connection_status,
-                ConnectionStatus::Connected
-                    | ConnectionStatus::ClientReady
-                    | ConnectionStatus::SessionReady
+                ConnectionStatus::Connected | ConnectionStatus::SessionReady
             )
     }
 
-    pub fn is_modal_open(&self) -> bool {
+    pub fn is_connnection_modal_active(&self) -> bool {
         matches!(
             self.state,
-            AppModalState::SelectSession | AppModalState::Help
+            AppModalState::Connecting(ConnectionStatus::Disconnected)
+                | AppModalState::Connecting(ConnectionStatus::InitializingSession)
+                | AppModalState::Connecting(ConnectionStatus::Connecting)
+                | AppModalState::Connecting(ConnectionStatus::Error(_))
         )
+    }
+
+    pub fn is_modal_active(&self) -> bool {
+        matches!(
+            self.state,
+            // Add new modal/overlay states here
+            AppModalState::SelectSession | AppModalState::Help
+        ) || self.is_connnection_modal_active()
+    }
+
+    pub fn is_main_screen_active(&self) -> bool {
+        matches!(
+            self.state,
+            AppModalState::None
+                | AppModalState::Connecting(ConnectionStatus::Connected)
+                | AppModalState::Connecting(ConnectionStatus::SessionReady)
+        ) && !self.is_modal_active()
     }
 
     pub fn is_session_ready(&self) -> bool {

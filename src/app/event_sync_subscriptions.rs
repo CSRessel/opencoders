@@ -1,7 +1,7 @@
 use crate::app::{
     event_msg::{Msg, Sub},
     tea_model::{AppModalState, ConnectionStatus, EventStreamState, Model, RepeatShortcutKey},
-    ui_components::{MsgTextArea, SessionEvent},
+    ui_components::{MsgTextArea, MsgModalSessionSelector, MsgModalFileSelector, ModalSelectorEvent},
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers, MouseEventKind};
 
@@ -135,50 +135,19 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                 }
                 (AppModalState::ModalHelp, _, _, _) => None,
                 // Session selector events
-                (AppModalState::ModalSessionSelect, KeyCode::Up, _, _) => {
-                    Some(Msg::SessionSelectorEvent(SessionEvent::Up))
-                }
-                (AppModalState::ModalSessionSelect, KeyCode::Down, _, _)
-                | (AppModalState::ModalSessionSelect, KeyCode::Tab, _, _) => {
-                    Some(Msg::SessionSelectorEvent(SessionEvent::Down))
-                }
-                (AppModalState::ModalSessionSelect, KeyCode::Char('k'), _, _) => {
-                    Some(Msg::SessionSelectorEvent(SessionEvent::Up))
-                }
-                (AppModalState::ModalSessionSelect, KeyCode::Char('j'), _, _) => {
-                    Some(Msg::SessionSelectorEvent(SessionEvent::Down))
-                }
-                (AppModalState::ModalSessionSelect, KeyCode::Enter, _, _) => {
-                    Some(Msg::SessionSelectorEvent(SessionEvent::Select))
-                }
-                (AppModalState::ModalSessionSelect, KeyCode::Esc, _, _) => {
-                    Some(Msg::SessionSelectorEvent(SessionEvent::Cancel))
+                (AppModalState::ModalSessionSelect, key_code, key_modifiers, _) => {
+                    let key_event = crossterm::event::KeyEvent::new(key_code, key_modifiers);
+                    Some(Msg::ModalSessionSelector(MsgModalSessionSelector::Event(
+                        ModalSelectorEvent::KeyInput(key_event)
+                    )))
                 }
                 (AppModalState::ModalSessionSelect, _, _, _) => None,
                 // FileSelector events
-                (AppModalState::ModalFileSelect, KeyCode::Up, _, _) => {
-                    Some(Msg::FileSelectorNavigateUp)
-                }
-                (AppModalState::ModalFileSelect, KeyCode::Down, _, _) => {
-                    Some(Msg::FileSelectorNavigateDown)
-                }
-                (AppModalState::ModalFileSelect, KeyCode::Char('k'), _, _) => {
-                    Some(Msg::FileSelectorNavigateUp)
-                }
-                (AppModalState::ModalFileSelect, KeyCode::Char('j'), _, _) => {
-                    Some(Msg::FileSelectorNavigateDown)
-                }
-                (AppModalState::ModalFileSelect, KeyCode::Tab, KeyModifiers::SHIFT, _) => {
-                    Some(Msg::FileSelectorNavigateUp)
-                }
-                (AppModalState::ModalFileSelect, KeyCode::Tab, _, _) => {
-                    Some(Msg::FileSelectorNavigateDown)
-                }
-                (AppModalState::ModalFileSelect, KeyCode::Enter, _, _) => {
-                    Some(Msg::FileSelectorSelect)
-                }
-                (AppModalState::ModalFileSelect, KeyCode::Esc, _, _) => {
-                    Some(Msg::FileSelectorClose)
+                (AppModalState::ModalFileSelect, key_code, key_modifiers, _) => {
+                    let key_event = crossterm::event::KeyEvent::new(key_code, key_modifiers);
+                    Some(Msg::ModalFileSelector(MsgModalFileSelector::Event(
+                        ModalSelectorEvent::KeyInput(key_event)
+                    )))
                 }
                 (AppModalState::ModalFileSelect, _, _, _) => None,
 

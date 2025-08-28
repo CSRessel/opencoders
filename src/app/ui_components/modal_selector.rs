@@ -6,6 +6,7 @@ use ratatui::{
     widgets::{Block, Borders, Cell, List, ListItem, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table, TableState, Widget},
 };
 use std::marker::PhantomData;
+use crossterm::event::{KeyCode, KeyEvent};
 
 /// Configuration for table columns
 #[derive(Debug, Clone, PartialEq)]
@@ -83,6 +84,22 @@ pub trait SelectableData: Clone {
 pub enum SelectorMode {
     List,
     Table { columns: Vec<TableColumn> },
+}
+
+/// Generic events that can be handled by any modal selector
+#[derive(Debug, Clone, PartialEq)]
+pub enum ModalSelectorEvent<T> 
+where 
+    T: SelectableData + Clone,
+{
+    Show,
+    Hide,
+    KeyInput(KeyEvent),
+    SetItems(Vec<T>),
+    SetLoading(bool),
+    SetError(Option<String>),
+    SelectionChanged(Option<usize>),
+    ItemSelected(T),
 }
 
 /// Generic modal selector that can display different types of data
@@ -215,6 +232,73 @@ where
 
     pub fn items(&self) -> &[T] {
         &self.items
+    }
+
+    // Generic event handling
+    pub fn handle_event(&mut self, event: ModalSelectorEvent<T>) -> Option<ModalSelectorEvent<T>> {
+        match event {
+            ModalSelectorEvent::Show => {
+                self.show();
+                None
+            }
+            ModalSelectorEvent::Hide => {
+                self.hide();
+                None
+            }
+            ModalSelectorEvent::SetItems(items) => {
+                self.set_items(items);
+                None
+            }
+            ModalSelectorEvent::SetLoading(loading) => {
+                self.set_loading(loading);
+                None
+            }
+            ModalSelectorEvent::SetError(error) => {
+                self.set_error(error);
+                None
+            }
+            ModalSelectorEvent::KeyInput(key) => {
+                self.handle_key_input(key)
+            }
+            ModalSelectorEvent::SelectionChanged(_) => None, // Handled elsewhere
+            ModalSelectorEvent::ItemSelected(_) => None, // Handled elsewhere
+        }
+    }
+
+    fn handle_key_input(&mut self, key: KeyEvent) -> Option<ModalSelectorEvent<T>> {
+        match key.code {
+            KeyCode::Esc => {
+                Some(ModalSelectorEvent::Hide)
+            }
+            KeyCode::Up => {
+                let old_selection = self.selected_index();
+                self.navigate_up();
+                let new_selection = self.selected_index();
+                if old_selection != new_selection {
+                    Some(ModalSelectorEvent::SelectionChanged(new_selection))
+                } else {
+                    None
+                }
+            }
+            KeyCode::Down => {
+                let old_selection = self.selected_index();
+                self.navigate_down();
+                let new_selection = self.selected_index();
+                if old_selection != new_selection {
+                    Some(ModalSelectorEvent::SelectionChanged(new_selection))
+                } else {
+                    None
+                }
+            }
+            KeyCode::Enter => {
+                if let Some(item) = self.selected_item() {
+                    Some(ModalSelectorEvent::ItemSelected(item.clone()))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
     }
 
     // Rendering methods

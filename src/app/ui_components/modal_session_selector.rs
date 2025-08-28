@@ -1,4 +1,4 @@
-use crate::app::ui_components::{ModalSelector, SelectableData, SelectorConfig, SelectorMode};
+use crate::app::ui_components::{ModalSelector, ModalSelectorEvent, SelectableData, SelectorConfig, SelectorMode};
 use opencode_sdk::models::Session;
 use ratatui::{
     buffer::Buffer,
@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 /// Data wrapper for session selection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SessionData {
     pub session: Option<Session>,
     pub display_text: String,
@@ -72,6 +72,15 @@ pub enum SessionEvent {
     SetError(Option<String>),
     Show,
     Hide,
+}
+
+/// Submessage enum for the session selector that wraps generic events
+#[derive(Debug, Clone, PartialEq)]
+pub enum MsgModalSessionSelector {
+    Event(ModalSelectorEvent<SessionData>),
+    SessionSelected(usize),
+    CreateNew,
+    Cancel,
 }
 
 /// Session selector that wraps the generic ModalSelector

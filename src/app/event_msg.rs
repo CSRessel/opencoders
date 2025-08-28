@@ -2,7 +2,7 @@ use crate::{
     app::{
         event_async_task_manager::TaskId,
         tea_model::{AppModalState, RepeatShortcutKey},
-        ui_components::{MsgTextArea, SessionEvent},
+        ui_components::{MsgTextArea, MsgModalSessionSelector, MsgModalFileSelector},
     },
     sdk::{extensions::events::EventStreamHandle, OpenCodeClient, OpenCodeError},
 };
@@ -34,7 +34,6 @@ pub enum Msg {
     LeaderShowSessionSelector,
 
     // Session selector messages
-    SessionSelectorEvent(SessionEvent),
     SessionsLoaded(Vec<Session>),
     SessionsLoadFailed(OpenCodeError),
 
@@ -82,17 +81,14 @@ pub enum Msg {
     // Verbosity control
     ToggleVerbosity,
 
-    // FileSelector messages
-    FileSelectorOpen,
-    FileSelectorClose,
-    FileSelectorNavigateUp,
-    FileSelectorNavigateDown,
-    FileSelectorSelect,
+    // File status loading
     FileStatusLoaded(Vec<opencode_sdk::models::File>),
     FileStatusLoadFailed(OpenCodeError),
 
     // Component messages
     TextArea(MsgTextArea),
+    ModalSessionSelector(MsgModalSessionSelector),
+    ModalFileSelector(MsgModalFileSelector),
 }
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {

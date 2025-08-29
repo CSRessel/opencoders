@@ -217,91 +217,6 @@ To implement this handling of state, the application emits and consumes `Msg`
 and `Cmd` entities. Messages are for state changes, and commands are for side
 effects (which could later emit other messages asynchronously).
 
-<details>
-<summary>State transition diagram</summary>
-
-The application follows a complex state machine pattern with the following transitions:
-
-```mermaid
-flowchart TD
-    subgraph Screens
-    direction TB
-
-    Welcome[Welcome] 
-    TextEntry[TextEntry]
-    Quit[Quit]
-
-    %% Initial state and basic navigation
-    Welcome e0@-->|Msg::ChangeState TextEntry| TextEntry
-    Welcome e1@-->|Msg::Quit| Quit
-
-    %% Text entry mode transitions
-    TextEntry e2@-->|Msg::ChangeState Welcome| Welcome
-    TextEntry e3@-->|Msg::Quit| Quit
-
-    end
-    subgraph Connections
-
-    ConnectingToServer[ConnectingToServer]
-    InitializingSession[InitializingSession]
-    ConnectionError[ConnectionError]
-
-    %% from above, but here so nodes are correctly located
-    Welcome e4@-->|Msg::InitializeClient| ConnectingToServer
-    TextEntry e5@-->|Cmd::DiscoverAndConnectClient| ConnectingToServer
-
-    %% Connection flow
-    ConnectingToServer e6@-->|Cmd::DiscoverAndConnectClient| ConnectingToServer
-    ConnectingToServer e7@-->|Msg::ClientConnected| InitializingSession
-    ConnectingToServer e8@-->|Msg::ClientConnectionFailed| ConnectionError
-
-    %% Session initialization
-    InitializingSession e9@-->|Cmd::InitializeSessionForClient| InitializingSession
-    InitializingSession e10@-->|Msg::SessionReady| TextEntry
-    InitializingSession e11@-->|Msg::SessionInitializationFailed| ConnectionError
-
-    %% Error recovery
-    ConnectionError e12@-->|Msg::ChangeState Welcome| Welcome
-    ConnectionError e13@-->|Msg::InitializeClient| ConnectingToServer
-    ConnectionError e14@-->|Msg::Quit| Quit
-
-    end
-
-    %% Animation and thick for API request
-    e5@{ animate: true }
-    e6@{ animate: true }
-    e9@{ animate: true }
-    %% Animation and thin for API response
-    e7@{ animate: true }
-    e8@{ animate: true }
-    e10@{ animate: true }
-    e11@{ animate: true }
-
-    %% Style the links - purple for Cmd, blue for Msg
-    linkStyle 0 stroke:#4590ff,stroke-width:4px
-    linkStyle 1 stroke:#4590ff,stroke-width:4px
-    linkStyle 2 stroke:#4590ff,stroke-width:4px
-    linkStyle 3 stroke:#4590ff,stroke-width:4px
-    linkStyle 4 stroke:#4590ff,stroke-width:4px
-    linkStyle 5 stroke:#8a2be2,stroke-width:6px
-    linkStyle 6 stroke:#8a2be2,stroke-width:6px
-    linkStyle 7 stroke:#4590ff,stroke-width:2px
-    linkStyle 8 stroke:#4590ff,stroke-width:2px
-    linkStyle 9 stroke:#8a2be2,stroke-width:6px
-    linkStyle 10 stroke:#4590ff,stroke-width:2px
-    linkStyle 11 stroke:#4590ff,stroke-width:2px
-    linkStyle 12 stroke:#4590ff,stroke-width:4px
-    linkStyle 13 stroke:#4590ff,stroke-width:4px
-    linkStyle 14 stroke:#4590ff,stroke-width:4px
-```
-
-**Legend:**
-- **Purple edges**: `Cmd` (Commands - side effects like API calls)
-- **Blue edges**: `Msg` (Messages - pure state transitions)
-- **Animated edges**: API calls to and from the OpenCode server
-
-</details>
-
 ### Event Architecture
 
 The current approach uses tick intervals to sleep until events or input are
@@ -352,9 +267,8 @@ allow for async command execution.
 
 **Performance Benefits:**
 
-The implementation now properly balances responsiveness with efficiency - it responds instantly to events while using
-minimal CPU when idle, making it suitable for production use without the performance issues of the previous busy-wait
-approach.
+The implementation balances responsiveness with efficiency. It responds instantly to events,
+while also using minimal CPU when idle.
 </details>
 
 <details>
@@ -368,7 +282,7 @@ for all input handling is difficult to implement and maintain.
 
 **1. Requirements Satisfied**
 
-The fully asynchronous `select!` model is designed to meet the following critical performance and responsiveness
+The fully asynchronous `select!` model is designed for the following critical performance and responsiveness
 requirements:
 
 - Zero CPU Usage When Idle: It eliminates the "busy-wait" loop, allowing the application to consume virtually no CPU
@@ -382,7 +296,7 @@ experience.
 
 **2. General Implementation Outline**
 
-The refactoring of the `run_async` function will proceed in four main steps:
+The refactoring of the `run_async` function could proceed in four main steps:
 
 1. Introduce a Channel for Async Tasks: The `AsyncTaskManager` will be modified to use a `tokio::sync::mpsc` channel.
 Instead of being polled, it will now push Msg results from completed tasks directly into this channel.

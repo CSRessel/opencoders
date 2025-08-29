@@ -203,13 +203,22 @@ fn model_select_file(file: File, model: &mut Model) {
 
     // Add file attachment
     let attached_file = AttachedFile {
-        display_name: file.path.split('/').last().unwrap_or(&file.path).to_string(),
+        display_name: file
+            .path
+            .split('/')
+            .last()
+            .unwrap_or(&file.path)
+            .to_string(),
         part_id: generate_id(IdPrefix::Part),
         file: file.clone(),
     };
-    
+
     // Check if file already attached to avoid duplicates
-    if !model.attached_files.iter().any(|af| af.file.path == file.path) {
+    if !model
+        .attached_files
+        .iter()
+        .any(|af| af.file.path == file.path)
+    {
         model.attached_files.push(attached_file);
     }
 }
@@ -219,11 +228,23 @@ fn model_clear(model: &mut Model) {
     model.state = AppModalState::None;
 }
 
+fn model_search_files(model: &mut Model) {
+    // Set timeout for debounced file search
+    let query = model.modal_file_selector.query.clone();
+    let timeout_type = TimeoutType::DebounceFindFiles(query);
+    model.set_timeout(timeout_type, 200); // 200ms debounce
+}
+
 impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
     fn update(msg: MsgModalFileSelector, state: &mut Model) -> CmdOrBatch<()> {
         let model = state;
         match msg {
             MsgModalFileSelector::Event(event) => {
+                if matches!(event, ModalSelectorEvent::Show) {
+                    // On initial open, pull up the full file list
+                    model_search_files(model);
+                }
+
                 // Forward generic events to the file selector component
                 match model.modal_file_selector.modal.handle_event(event) {
                     ModalSelectorUpdate::Hide => {
@@ -247,10 +268,7 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                                 // Update query and set timeout for debounced search
                                 if !model.modal_file_selector.query.is_empty() {
                                     model.modal_file_selector.query.pop();
-                                    let query = model.modal_file_selector.query.clone();
-                                    let timeout_type =
-                                        TimeoutType::DebounceFindFiles(query.clone());
-                                    model.set_timeout(timeout_type, 200); // 200ms debounce
+                                    model_search_files(model);
                                 }
                             }
                             model.text_input_area.handle_input(key);
@@ -260,12 +278,8 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                                 model_clear(model);
                             } else {
                                 model.modal_file_selector.depth += 1;
-                                model.modal_file_selector.query += &format!("{}", c);
-
-                                // Set timeout for debounced file search
-                                let query = model.modal_file_selector.query.clone();
-                                let timeout_type = TimeoutType::DebounceFindFiles(query.clone());
-                                model.set_timeout(timeout_type, 200); // 200ms debounce
+                                model.modal_file_selector.query.push(c);
+                                model_search_files(model);
                             }
                             model.text_input_area.handle_input(key);
                         }

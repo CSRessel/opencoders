@@ -250,15 +250,33 @@ pub fn update(mut model: &mut Model, msg: Msg) -> CmdOrBatch<Cmd> {
                 let message_id = generate_id(IdPrefix::Message);
                 model.session_is_idle = false;
                 model.text_input_area.clear();
-                return CmdOrBatch::Single(Cmd::AsyncSendUserMessage(
-                    client,
-                    session_id,
-                    message_id,
-                    text,
-                    provider_id,
-                    model_id,
-                    mode,
-                ));
+
+                // Choose appropriate command based on whether we have attachments
+                if model.attached_files.is_empty() {
+                    return CmdOrBatch::Single(Cmd::AsyncSendUserMessage(
+                        client,
+                        session_id,
+                        message_id,
+                        text,
+                        provider_id,
+                        model_id,
+                        mode,
+                    ));
+                } else {
+                    let attached_files = model.attached_files.clone();
+                    // Clear attachments after sending
+                    model.attached_files.clear();
+                    return CmdOrBatch::Single(Cmd::AsyncSendUserMessageWithAttachments(
+                        client,
+                        session_id,
+                        message_id,
+                        text,
+                        attached_files,
+                        provider_id,
+                        model_id,
+                        mode,
+                    ));
+                }
             }
 
             CmdOrBatch::Single(Cmd::None)

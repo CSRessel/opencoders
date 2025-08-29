@@ -4,7 +4,7 @@ use crate::app::{
         banner::{create_welcome_text, welcome_text_height},
         message_part::StepRenderingMode,
         text_input::TEXT_INPUT_HEIGHT,
-        MessageContext, MessageLog, MessageRenderer, SessionSelector, StatusBar,
+        AttachmentDisplay, MessageContext, MessageLog, MessageRenderer, SessionSelector, StatusBar,
     },
     view_model_context::ViewModelContext,
 };
@@ -195,8 +195,26 @@ fn render_base_screen(frame: &mut Frame) {
             render_main_body(frame, spacer_chunk);
         }
         frame.render_widget(&model.get().text_input_area, input_textarea);
-        let status_bar = StatusBar::new();
-        frame.render_widget(&status_bar, input_status);
+        
+        // Render attachment indicator and status bar side by side
+        if !model.get().attached_files.is_empty() {
+            let status_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Length(20), // Attachment display
+                    Constraint::Min(0),     // Status bar
+                ])
+                .split(input_status);
+            
+            let attachment_display = AttachmentDisplay::new(model.get().attached_files.clone());
+            attachment_display.render_inline(status_chunks[0], frame.buffer_mut());
+            
+            let status_bar = StatusBar::new();
+            frame.render_widget(&status_bar, status_chunks[1]);
+        } else {
+            let status_bar = StatusBar::new();
+            frame.render_widget(&status_bar, input_status);
+        }
     } else {
         // In fullscreen mode, we have more space - render file selector above the text input
         if matches!(model.state(), AppModalState::ModalFileSelect) {
@@ -219,8 +237,26 @@ fn render_base_screen(frame: &mut Frame) {
         }
 
         frame.render_widget(&model.get().text_input_area, input_textarea);
-        let status_bar = StatusBar::new();
-        frame.render_widget(&status_bar, input_status);
+        
+        // Render attachment indicator and status bar side by side
+        if !model.get().attached_files.is_empty() {
+            let status_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Length(20), // Attachment display
+                    Constraint::Min(0),     // Status bar
+                ])
+                .split(input_status);
+            
+            let attachment_display = AttachmentDisplay::new(model.get().attached_files.clone());
+            attachment_display.render_inline(status_chunks[0], frame.buffer_mut());
+            
+            let status_bar = StatusBar::new();
+            frame.render_widget(&status_bar, status_chunks[1]);
+        } else {
+            let status_bar = StatusBar::new();
+            frame.render_widget(&status_bar, input_status);
+        }
     }
 }
 

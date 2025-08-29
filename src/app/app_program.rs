@@ -242,6 +242,7 @@ impl Program {
                         | Cmd::AsyncLoadFileStatus(_)
                         | Cmd::AsyncLoadFindFiles(_, _)
                         | Cmd::AsyncSendUserMessage(_, _, _, _, _, _, _)
+                        | Cmd::AsyncSendUserMessageWithAttachments(_, _, _, _, _, _, _, _)
                         | Cmd::AsyncCancelTask(_)
                         | Cmd::AsyncSessionAbort
                         | Cmd::AsyncStartEventStream(_)
@@ -459,6 +460,36 @@ impl Program {
                             &session_id,
                             &message_id,
                             &text,
+                            &provider_id,
+                            &model_id,
+                            mode.as_deref(),
+                        )
+                        .await
+                    {
+                        Ok(_) => Msg::ResponseUserMessageSend(Ok(text)),
+                        Err(error) => Msg::ResponseUserMessageSend(Err(error)),
+                    }
+                });
+            }
+
+            Cmd::AsyncSendUserMessageWithAttachments(
+                client,
+                session_id,
+                message_id,
+                text,
+                attached_files,
+                provider_id,
+                model_id,
+                mode,
+            ) => {
+                // Spawn async user message with attachments sending task
+                self.task_manager.spawn_task(async move {
+                    match client
+                        .send_user_message_with_attachments(
+                            &session_id,
+                            &message_id,
+                            &text,
+                            &attached_files,
                             &provider_id,
                             &model_id,
                             mode.as_deref(),

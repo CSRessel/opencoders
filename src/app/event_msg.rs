@@ -98,6 +98,16 @@ pub enum Cmd {
         String,
         Option<String>,
     ), // client, session_id, message_id, text, provider_id, model_id, mode
+    AsyncSendUserMessageWithAttachments(
+        OpenCodeClient,
+        String,
+        String,
+        String,
+        Vec<crate::app::tea_model::AttachedFile>,
+        String,
+        String,
+        Option<String>,
+    ), // client, session_id, message_id, text, attached_files, provider_id, model_id, mode
     AsyncCancelTask(TaskId),
     AsyncSessionAbort,
 

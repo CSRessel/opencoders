@@ -1,3 +1,4 @@
+pub mod attachment_display;
 pub mod banner;
 pub mod message_log;
 pub mod message_part;
@@ -7,6 +8,7 @@ pub mod modal_session_selector;
 pub mod status_bar;
 pub mod text_input;
 
+pub use attachment_display::AttachmentDisplay;
 pub use banner::create_welcome_text;
 pub use message_log::MessageLog;
 pub use message_part::{MessageContext, MessagePart, MessageRenderer};

@@ -48,6 +48,13 @@ pub struct PendingSessionInfo {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct AttachedFile {
+    pub file: File,           // From opencode_sdk::models::File
+    pub part_id: String,      // Generated ID for the file part
+    pub display_name: String, // For UI display (filename only)
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum SessionState {
     None,
     Pending(PendingSessionInfo),
@@ -99,6 +106,8 @@ pub struct Model {
     pub session_is_idle: bool,
     // File picker state
     pub file_status: Vec<File>,
+    // File attachment state
+    pub attached_files: Vec<AttachedFile>,
     // Unified repeat shortcut timeout system
     pub repeat_shortcut_timeout: Option<RepeatShortcutTimeout>,
     // General timeout system for debouncing and other purposes
@@ -223,6 +232,7 @@ impl Model {
             active_task_count: 0,
             session_is_idle: true,
             file_status: Vec::new(),
+            attached_files: Vec::new(),
             repeat_shortcut_timeout: None,
             active_timeouts: Vec::new(),
         }

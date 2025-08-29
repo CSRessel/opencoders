@@ -6,6 +6,7 @@ use crate::sdk::{
     extensions::events::{EventStream, EventStreamHandle},
     LogLevel,
 };
+use crate::app::tea_model::AttachedFile;
 use opencode_sdk::{
     apis::{configuration::Configuration, default_api},
     models::{
@@ -419,6 +420,41 @@ impl OpenCodeClient {
                 Err(OpenCodeError::from(e))
             }
         }
+    }
+
+    /// Send a user message with file attachments to a session
+    pub async fn send_user_message_with_attachments(
+        &self,
+        session_id: &str,
+        message_id: &str,
+        text: &str,
+        attached_files: &[AttachedFile],
+        provider_id: &str,
+        model_id: &str,
+        mode: Option<&str>,
+    ) -> Result<AssistantMessage> {
+        tracing::info!("Sending message with {} attachments to session {}", attached_files.len(), session_id);
+
+        let mut builder = self.message_builder(session_id)
+            .message_id(message_id)
+            .provider(provider_id)
+            .model(model_id)
+            .add_text_part(text);
+        
+        if let Some(m) = mode {
+            builder = builder.mode(m);
+        }
+        
+        // Add file parts for each attachment
+        for attached_file in attached_files {
+            builder = builder.add_file_part(
+                &attached_file.display_name,
+                "text/plain", // Could be inferred from file extension
+                &format!("file://{}", attached_file.file.path)
+            );
+        }
+        
+        builder.send(&self.config).await
     }
 
     /// Create a message builder for complex message construction

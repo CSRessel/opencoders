@@ -2,13 +2,14 @@ use std::{collections::HashSet, u16};
 
 use crate::app::{
     event_msg::{Cmd, CmdOrBatch},
-    tea_model::{AppModalState, Model, TimeoutType},
+    tea_model::{AppModalState, AttachedFile, Model, TimeoutType},
     tea_view::MAX_UI_WIDTH,
     ui_components::{
         modal_selector::ModalSelectorUpdate, Component, ModalSelector, ModalSelectorEvent,
         MsgModalSessionSelector, SelectableData, SelectorConfig, SelectorMode, TableColumn,
     },
 };
+use crate::sdk::client::{generate_id, IdPrefix};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use opencode_sdk::models::File;
 use ratatui::{
@@ -200,8 +201,17 @@ fn model_select_file(file: File, model: &mut Model) {
             .handle_input(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
     }
 
-    // TODO add attachment to here or to text input?
-    // TODO how does deleting attachments work?
+    // Add file attachment
+    let attached_file = AttachedFile {
+        display_name: file.path.split('/').last().unwrap_or(&file.path).to_string(),
+        part_id: generate_id(IdPrefix::Part),
+        file: file.clone(),
+    };
+    
+    // Check if file already attached to avoid duplicates
+    if !model.attached_files.iter().any(|af| af.file.path == file.path) {
+        model.attached_files.push(attached_file);
+    }
 }
 
 fn model_clear(model: &mut Model) {

@@ -9,68 +9,70 @@ The project leverages Rust's characteristics for an ideal TUI experience:
 strict compile-time type checking enforces allowable program states,
 and performant execution gives a responsiveness you can feel.
 
-And in the future:
-no multiple ownership provides for a concurrent and safe implementation of multi-session coding,
-and Rust wasm build targets can hook in `crossterm` against `xterm.js` for browser deployments.
+<details>
+<summary>feature roadmap</summary>
 
 > [!NOTE]
->
-> **Minimum Usable**:
-> - REPL loop
-> - basic printing
->     1. ~~files~~
->     1. ~~checklist~~
->     1. ~~shell commands~~
->     1. ~~other tools?~~
-> - [x] ~~fix the scroll flickering~~
-> - [x] ~~fix how the session list opens in text entry mode~~
-> - [x] `54e4ea6` ~~get one single patch (like `2545ad267044`) that fixes tagging~~
-> - [x] ~~fix error handling and recovery, tracing, logging, and add color eyre and remove anyhow/thiserror~~
-> - [x] ~~add owo colors for stdout messages~~
-> - [x] ~~status bar working only when busy~~
-> - [x] ~~fix live message loading~~
-> - [x] ~~dynamic text input box (text wrapping, vertical resizing, shortcut navigation)~~
-> - [x] ~~unify "new session" and "welcome" pages to one state~~
-> - [x] ~~basic input dropdown for files~~
->
-> **Minimum Releasable**
-> - [x] ~~fix inline mode walking down the page~~
-> - [ ] cleanup message/part/tool styling and colorization
-> - [x] ~~support multi-line textarea (shift+enter newlines, expanding height, scroll overflow)~~
-> - [ ] more input dropdowns (need slash commands: help, new, sessions, compact)
-> - [ ] better status bar styling (fix mode state for /agent, better colors, proper tokens/context, row items overflow to stacked)
-> - [ ] cleanup all of the scrollbars (selectors, message log, other?)
-> - [ ] basic env for non-interactive TTY execution with synthetic input for "golden tests" and for perf testing
-> - [ ] setup some basic perf tests with either divan or criterion
-> - [ ] prettify README, cleanup distribution steps, improve opencode dependency
-> - [ ] cleanup CI, add precommit, and use Actions for build/release/etc
->
-> **First Release:**
-> - prettier printing
->     1. diff pager
->     1. markdown highlighting
->     1. ~~checklist shape~~
->     1. shell highlighting
->     1. prettier tool call boxes
->     1. thinking tokens
->     1. file tree
->     1. UI token usage in status
-> - config handling (flags and rc)
->     1. inline vs alt screen
->     1. model selection
->     1. support for server specified storage
-> - CI/CD
->     1. full unit test suite
->     1. e2e test with local model
->     1. error handling and recovery
->     1. cargo deployment via git repo
-> - other features
->     1. ~~multi-session~~
->     1. cmd permissions
->     1. theming
->     1. UI model select
->     1. UI slash commands
->     1. ~~UI modal toggle (PLAN vs. BUILD vs. DEBUG)~~
+> To be removed, after first release! Once GitHub builds are up, with release CI/CD, an installer script, and the "minimum releasable" functionality below.
+
+**Minimum Usable**:
+- REPL loop
+- basic printing
+    1. ~~files~~
+    1. ~~checklist~~
+    1. ~~shell commands~~
+    1. ~~other tools?~~
+- [x] ~~fix the scroll flickering~~
+- [x] ~~fix how the session list opens in text entry mode~~
+- [x] `54e4ea6` ~~get one single patch (like `2545ad267044`) that fixes tagging~~
+- [x] ~~fix error handling and recovery, tracing, logging, and add color eyre and remove anyhow/thiserror~~
+- [x] ~~add owo colors for stdout messages~~
+- [x] ~~status bar working only when busy~~
+- [x] ~~fix live message loading~~
+- [x] ~~dynamic text input box (text wrapping, vertical resizing, shortcut navigation)~~
+- [x] ~~unify "new session" and "welcome" pages to one state~~
+- [x] ~~basic input dropdown for files~~
+
+**Minimum Releasable**
+- [x] ~~fix inline mode walking down the page~~
+- [ ] cleanup message/part/tool styling and colorization
+- [x] ~~support multi-line textarea (shift+enter newlines, expanding height, scroll overflow)~~
+- [ ] more input dropdowns (need slash commands: help, new, sessions, compact)
+- [ ] better status bar styling (fix mode state for /agent, better colors, proper tokens/context, row items overflow to stacked)
+- [ ] cleanup all of the scrollbars (selectors, message log, other?)
+- [ ] basic env for non-interactive TTY execution with synthetic input for "golden tests" and for perf testing
+- [ ] setup some basic perf tests with either divan or criterion
+- [ ] prettify README, cleanup distribution steps, improve opencode dependency
+- [ ] cleanup CI, add precommit, and use Actions for build/release/etc
+
+**First Release:**
+- prettier printing
+    1. diff pager
+    1. markdown highlighting
+    1. ~~checklist shape~~
+    1. shell highlighting
+    1. prettier tool call boxes
+    1. thinking tokens
+    1. file tree
+    1. UI token usage in status
+- config handling (flags and rc)
+    1. inline vs alt screen
+    1. model selection
+    1. support for server specified storage
+- CI/CD
+    1. full unit test suite
+    1. e2e test with local model
+    1. error handling and recovery
+    1. cargo deployment via git repo
+- other features
+    1. ~~multi-session~~
+    1. cmd permissions
+    1. theming
+    1. UI model select
+    1. UI slash commands
+    1. ~~UI modal toggle (PLAN vs. BUILD vs. DEBUG)~~
+
+</details>
 
 ## Quick Start
 
@@ -99,9 +101,14 @@ bun install
 cd packages/opencode/
 bun install
 
-# Navigate back and build the Rust TUI client
+# Navigate back to the projects
 cd ../../
-cargo build --release
+cargo check
+cargo test
+cargo build
+# And can rerun necessary scripts
+# ./scripts/generate-openapi.sh
+# ./scripts/generate-sdk.sh # requires openapi-generator-cli from npmjs
 
 # Launch the TUI
 cargo run
@@ -139,6 +146,9 @@ The OpenAPI specification is dynamically generated from the server to ensure per
 # Generate OpenAPI specification
 make generate-openapi
 
+# Generate rust SDK
+make generate-sdk
+
 # Build the project (includes OpenAPI generation)
 make build
 
@@ -162,30 +172,6 @@ make help
 ./scripts/generate-openapi.sh
 ```
 
-#### Continuous Integration
-
-Integrate OpenAPI generation into your CI pipeline:
-
-```yaml
-# GitHub Actions workflow
-name: Build opencoders
-on: [push, pull_request]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - name: Generate API bindings
-        run: |
-          cd packages/opencoders
-          make generate-openapi
-```
-
 ## Development
 
 ### Architecture
@@ -196,6 +182,7 @@ The application follows **The Elm Architecture** pattern for predictable state m
 - **View**: Declarative UI rendering with `ratatui`
 
 ### Key Dependencies
+
 - `ratatui` - Terminal UI framework
 - `tokio` - Async runtime
 - `reqwest` - HTTP client for server communication
@@ -211,9 +198,6 @@ cargo build --release
 
 # Run tests
 cargo test
-
-# Generate fresh API bindings
-make generate-openapi
 ```
 
 ### State Transitions

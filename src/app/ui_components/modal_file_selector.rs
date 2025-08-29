@@ -1,4 +1,4 @@
-use std::u16;
+use std::{collections::HashSet, u16};
 
 use crate::app::{
     event_msg::{Cmd, CmdOrBatch},
@@ -83,7 +83,6 @@ impl SelectableData for FileData {
 pub enum MsgModalFileSelector {
     Event(ModalSelectorEvent<FileData>),
     KeyInput(KeyEvent),
-    FileSelected(File),
     Cancel,
 }
 
@@ -151,27 +150,28 @@ impl FileSelector {
     }
 
     fn update_combined_files(&mut self) {
-        use std::collections::HashMap;
-        
+        let mut combined_files = self.file_status.clone();
+
         // Use HashMap to deduplicate by file path, with file_status taking precedence
-        let mut combined_files: HashMap<String, File> = HashMap::new();
-        
+        let mut file_status_keys: HashSet<String> = HashSet::new();
+
         // First add find files results
-        for file in &self.find_files_results {
-            combined_files.insert(file.path.clone(), file.clone());
-        }
-        
-        // Then add file status, overwriting find files results for same paths
         for file in &self.file_status {
-            combined_files.insert(file.path.clone(), file.clone());
+            file_status_keys.insert(file.path.clone());
         }
-        
-        // Convert to Vec and sort by path for consistent ordering
-        let mut files: Vec<File> = combined_files.into_values().collect();
-        files.sort_by(|a, b| a.path.cmp(&b.path));
-        
+
+        // Then add file status, overwriting find files results for same paths
+        for file in &self.find_files_results {
+            if !file_status_keys.contains(&file.path) {
+                combined_files.push(file.clone());
+            }
+        }
+
         // Convert to FileData and set in the modal
-        let file_data: Vec<FileData> = files.into_iter().map(FileData::from_file).collect();
+        let file_data: Vec<FileData> = combined_files
+            .into_iter()
+            .map(FileData::from_file)
+            .collect();
         self.modal.set_items(file_data);
     }
 
@@ -225,10 +225,6 @@ impl Component<Model, MsgModalFileSelector, ()> for FileSelector {
                     }
                     _ => {}
                 }
-            }
-            MsgModalFileSelector::FileSelected(file) => {
-                model_select_file(file, model);
-                model_clear(model);
             }
             MsgModalFileSelector::KeyInput(key) => {
                 if FileSelector::is_file_selector_input(key) {

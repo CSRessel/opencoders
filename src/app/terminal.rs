@@ -40,11 +40,11 @@ pub fn init_terminal(
     enable_raw_mode().wrap_err("Failed to enable raw mode")?;
 
     // Necessary for some terminals to report shift+enter and other modified keys
-    let flags = KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
-        | KeyboardEnhancementFlags::REPORT_EVENT_TYPES
-        | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES;
-    crossterm::execute!(std::io::stdout(), PushKeyboardEnhancementFlags(flags))
-        .wrap_err("Failed to push kb flags")?;
+    // let flags = KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+    //     | KeyboardEnhancementFlags::REPORT_EVENT_TYPES
+    //     | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES;
+    // crossterm::execute!(std::io::stdout(), PushKeyboardEnhancementFlags(flags))
+    //     .wrap_err("Failed to push kb flags")?;
 
     let mut stdout = stdout();
     execute!(stdout, EnableMouseCapture).wrap_err("Failed to enable mouse capture")?;
@@ -110,6 +110,8 @@ pub fn restore_terminal(init: &ModelInit, height: u16) -> io::Result<()> {
     } else {
         // For inline mode, ensure proper cursor positioning and screen clearing
         // to maintain position during inline toggle
+        // TODO fix! Need to move to the bottom of the viewport, not the bottom of the terminal
+        // probably need to pass in the viewport rect instead of the height?
         if let Ok((cols, rows)) = crossterm::terminal::size() {
             // Clear from cursor position down to prevent overlap
             execute!(

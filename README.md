@@ -2,6 +2,14 @@
 
 **A terminal-native, high-performance, model-agnostic client for coding tools.**
 
+> [!CAUTION]
+> **This tool is not yet stable!** Use at your own risk!
+>
+> As significant changes to the underlying OpenCode server take place, this
+> tool may break in the primary functionality.
+> Additionally, the current priority is on adding minimum necessary features
+> and as such significant user interface issues have not yet been resolved.
+
 This TUI provides a responsive and lighning fast interface for interacting with the [`sst/opencode`](https://github.com/sst/opencode) headless server.
 The primary goal is to build a seamless experience that integrates identical functionality between inline, fullscreen, and in-editor modes.
 
@@ -84,7 +92,7 @@ and performant execution gives a responsiveness you can feel.
 
 ## Quick Start
 
-> [!WARNING]
+> [!TIP]
 > **Currently this tool is WIP.**
 >
 > The below steps are for a development setup, and are not yet friendly for a

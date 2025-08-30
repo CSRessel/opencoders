@@ -5,13 +5,13 @@ set -e
 echo "🔧 Generating Rust SDK from OpenAPI spec..."
 
 # Check if openapi.json exists
-if [ ! -f "openapi.json" ]; then
-    echo "❌ openapi.json not found. Run 'make generate-openapi' first."
+if [ ! -f "assets/openapi.json" ]; then
+    echo "❌ assets/openapi.json not found. Run 'make generate-openapi' first."
     exit 1
 fi
 
 # Check if generated SDK already exists and is newer than openapi.json
-if [ -d "opencode-sdk" ] && [ "opencode-sdk" -nt "openapi.json" ]; then
+if [ -d "opencode-sdk" ] && [ "opencode-sdk" -nt "assets/openapi.json" ]; then
     echo "✅ SDK is up to date (generated files newer than openapi.json)"
     exit 0
 fi
@@ -33,8 +33,9 @@ rm -rf opencode-sdk/
 
 # Generate the SDK
 echo "⚙️  Generating SDK with openapi-generator-cli..."
-openapi-generator-cli generate \
-    -i openapi.json \
+openapi-generator-cli  --openapitools assets/openapitools.json \
+    generate \
+    -i assets/openapi.json \
     -g rust \
     -o opencode-sdk \
     --additional-properties=packageName=opencode-sdk,packageVersion=0.1.0 \

@@ -12,7 +12,7 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::{
         Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget,
-        Widget,
+        Widget, Wrap,
     },
 };
 
@@ -338,6 +338,7 @@ impl Widget for &MessageLog {
                     .title("Message Log".bold())
                     .gray(),
             )
+            .wrap(Wrap { trim: false })
             .scroll((
                 constrained_vertical_scroll as u16,
                 constrained_horizontal_scroll as u16,

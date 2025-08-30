@@ -14,7 +14,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Check if we need to regenerate (if openapi.json doesn't exist or if source files are newer)
-OPENAPI_FILE="openapi.json"
+OPENAPI_FILE="assets/openapi.json"
 NEEDS_REGEN=false
 
 if [ ! -f "$OPENAPI_FILE" ]; then

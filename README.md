@@ -9,6 +9,14 @@ The project leverages Rust's characteristics for an ideal TUI experience:
 strict compile-time type checking enforces allowable program states,
 and performant execution gives a responsiveness you can feel.
 
+<div align="center">
+
+| Inline | Alt Screen |
+|--------|------------|
+| ![Inline Mode](assets/example-screenshot1-inline.png) | ![Alt Screen Mode](assets/example-screenshot2-altscreen.png) |
+
+</div>
+
 <details>
 <summary>feature roadmap</summary>
 

@@ -48,7 +48,7 @@ impl Widget for &StatusBar {
         mode_len += mode_padding.len();
 
         let status_text = format!(
-            " {} {} (20.4k tokens / 9% context) >",
+            " {} {}", // TODO: (20.4k tokens / 9% context)
             model.get().sdk_provider,
             model.get().sdk_model,
         );

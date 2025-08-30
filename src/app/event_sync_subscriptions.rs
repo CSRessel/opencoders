@@ -127,6 +127,7 @@ pub fn crossterm_to_msg(event: Event, model: &Model) -> Option<Msg> {
                     _,
                     _,
                     _,
+                    // TODO! Bug not handling shift behavior on the key input???
                 ) => Some(Msg::TextArea(MsgTextArea::KeyInput(key))),
 
                 // Modal gated input handling
